@@ -76,12 +76,14 @@ class AnnotationSetup(
     Files.lines(path).iterator.asScala.toList
   }
 
-  val sentences = Vector(
-    "In the second half of the 1980s, Clarence Thomas is being groomed for a position on the Supreme Court, or senses he's being groomed.",
-    "He's the head of the EEOC in the Reagan Administration and decides to beef up on his reading in political theory, constitutional law, and American history.",
-    "He hires two Straussians, Ken Masugi and John Marini, to his staff on the EEOC.",
-    "Their assignment is to give him a reading list, which they do and which he reads, and to serve as tutors and conversation partners in all things intellectual, which also they do."
-  )
+  val data_fn = "test_input_ayal.txt"
+  val sentences = loadInputFile(data_fn).get.toVector
+//  val sentences = Vector(
+//    "In the second half of the 1980s, Clarence Thomas is being groomed for a position on the Supreme Court, or senses he's being groomed.",
+//    "He's the head of the EEOC in the Reagan Administration and decides to beef up on his reading in political theory, constitutional law, and American history.",
+//    "He hires two Straussians, Ken Masugi and John Marini, to his staff on the EEOC.",
+//    "Their assignment is to give him a reading list, which they do and which he reads, and to serve as tutors and conversation partners in all things intellectual, which also they do."
+//  )
   val tokenizedSentences = sentences.map(Tokenizer.tokenize)
   val posTaggedSentences = tokenizedSentences.map(PosTagger.posTag[Vector](_))
 
