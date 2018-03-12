@@ -52,7 +52,8 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   val inflections: Inflections
 ) extends StrictLogging {
 
-  def getKeyIndices(id: SID): Set[Int] = {
+  // collect indices of verbs in the sentence to generate prompt
+  def getVerbKeyIndices(id: SID): Set[Int] = {
     val posTaggedTokens = PosTagger.posTag(id.tokens)
     posTaggedTokens.collect {
       case Word(index, pos, token) if PosTags.verbPosTags.contains(pos) =>
@@ -76,9 +77,35 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     }.flatten.toSet
   }
 
-  lazy val allPrompts: Vector[QASRLGenerationPrompt[SID]] = for {
+  // collect indices of nouns in the sentence to generate noun-prompt
+  def getNounKeyIndices(id: SID): Set[Int] = {
+    val posTaggedTokens = PosTagger.posTag(id.tokens)
+    posTaggedTokens.collect {
+      case Word(index, pos, token) if PosTags.nounPosTags.contains(pos) => index
+    }.toSet
+  }
+
+  // collect indices of nouns in the sentence to generate noun-prompt
+  def getAdjectiveKeyIndices(id: SID): Set[Int] = {
+    val posTaggedTokens = PosTagger.posTag(id.tokens)
+    posTaggedTokens.collect {
+      case Word(index, pos, token) if PosTags.adjectivePosTags.contains(pos) => index
+    }.toSet
+  }
+
+  // collect indices of nouns in the sentence to generate noun-prompt
+  def getAdverbKeyIndices(id: SID): Set[Int] = {
+    val posTaggedTokens = PosTagger.posTag(id.tokens)
+    posTaggedTokens.collect {
+      case Word(index, pos, token) if PosTags.adverbPosTags.contains(pos) => index
+    }.toSet
+  }
+
+  // Yield all promts from verbs.
+  // TODO - add here promts for non-verbs
+    lazy val allPrompts: Vector[QASRLGenerationPrompt[SID]] = for {
     id <- allIds
-    verbIndex <- getKeyIndices(id).toList.sorted
+    verbIndex <- getVerbKeyIndices(id).toList.sorted
   } yield QASRLGenerationPrompt(id, verbIndex)
 
   implicit val ads = annotationDataService
