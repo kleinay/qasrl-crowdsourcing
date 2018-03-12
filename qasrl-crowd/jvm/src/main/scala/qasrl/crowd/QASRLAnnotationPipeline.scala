@@ -103,10 +103,28 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
 
   // Yield all promts from verbs.
   // TODO - add here promts for non-verbs
-    lazy val allPrompts: Vector[QASRLGenerationPrompt[SID]] = for {
+    lazy val allVerbPrompts: Vector[QASRLGenerationPrompt[SID]] = for {
     id <- allIds
     verbIndex <- getVerbKeyIndices(id).toList.sorted
-  } yield QASRLGenerationPrompt(id, verbIndex)
+  } yield QASRLGenerationPrompt(id, verbIndex, "verb")
+
+    lazy val allNounPrompts: Vector[QASRLGenerationPrompt[SID]] = for {
+    id <- allIds
+    targetIndex <- getNounKeyIndices(id).toList.sorted
+  } yield QASRLGenerationPrompt(id, targetIndex, "noun")
+
+    lazy val allAdjPrompts: Vector[QASRLGenerationPrompt[SID]] = for {
+    id <- allIds
+    targetIndex <- getAdjectiveKeyIndices(id).toList.sorted
+  } yield QASRLGenerationPrompt(id, targetIndex, "adjective")
+
+    lazy val allAdverbPrompts: Vector[QASRLGenerationPrompt[SID]] = for {
+    id <- allIds
+    targetIndex <- getAdverbKeyIndices(id).toList.sorted
+  } yield QASRLGenerationPrompt(id, targetIndex, "adverb")
+
+  lazy val allPrompts: Vector[QASRLGenerationPrompt[SID]] =
+    allNounPrompts ++ allVerbPrompts ++ allAdjPrompts ++ allAdverbPrompts
 
   implicit val ads = annotationDataService
 
@@ -270,7 +288,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
 
   lazy val genAjaxService = new Service[QASRLGenerationAjaxRequest[SID]] {
     override def processRequest(request: QASRLGenerationAjaxRequest[SID]) = request match {
-      case QASRLGenerationAjaxRequest(workerIdOpt, QASRLGenerationPrompt(id, verbIndex)) =>
+      case QASRLGenerationAjaxRequest(workerIdOpt, QASRLGenerationPrompt(id, verbIndex, targetType)) =>
         val questionListsOpt = for {
           genManagerP <- Option(genManagerPeek)
           workerId <- workerIdOpt
@@ -327,7 +345,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   }
 
   lazy val sampleValPrompt = QASRLValidationPrompt[SID](
-    allPrompts.head, "", "", "",
+    allVerbPrompts.head, "", "", "",
     List(VerbQA(0, "Who did someone look at?", List(Span(4, 4))),
          VerbQA(1, "Who looked at someone?", List(Span(0, 1))),
          VerbQA(1, "How did someone look at someone?", List(Span(5, 5)))))
@@ -387,7 +405,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
         // sentenceTracker,
         if(config.isProduction) numGenerationAssignmentsForPrompt else (_ => 1),
         if(config.isProduction) 100 else 3,
-        allPrompts.iterator)
+        allPrompts.iterator)  // the prompts itarator determines what genHITs are generated
       genManagerPeek
     }
   )

@@ -8,7 +8,8 @@ package object crowd {
 
   case class QASRLGenerationPrompt[SID](
     id: SID,
-    verbIndex: Int)
+    verbIndex: Int,
+    targetType: String)
 
   case class GenerationStatSummary(
     numVerbsCompleted: Int, // before validation: used to calculate coverage
