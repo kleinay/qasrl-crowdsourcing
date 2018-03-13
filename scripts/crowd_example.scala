@@ -103,6 +103,11 @@ def getGenActiveHITTypeIds = {
   config.service.listAllHITs.filter(_.getTitle.startsWith(generationTitlePrefix)).map(_.getHITTypeId).toSet
 }
 
+def getValActiveHITTypeIds = {
+  val validationTitlePrefix = "Answer simple questions"
+  config.service.listAllHITs.filter(_.getTitle.startsWith(validationTitlePrefix)).map(_.getHITTypeId).toSet
+}
+
 def getActiveHITIdsOfHITType(hitTypeId : String) = {
   config.service.listAllHITs.filter(_.getHITTypeId.equals(hitTypeId)).map(_.getHITId)
 }
