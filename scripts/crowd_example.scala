@@ -97,3 +97,16 @@ def disableHITById(hitId: String) = {
 def getActiveHITIds = {
   config.service.listAllHITs.map(_.getHITId)
 }
+
+def getGenActiveHITTypeIds = {
+  val generationTitlePrefix = "Write question-answer pairs"
+  config.service.listAllHITs.filter(_.getTitle.startsWith(generationTitlePrefix)).map(_.getHITTypeId).toSet
+}
+
+def getActiveHITIdsOfHITType(hitTypeId : String) = {
+  config.service.listAllHITs.filter(_.getHITTypeId.equals(hitTypeId)).map(_.getHITId)
+}
+
+def disableHITsOfTypeId(hitTypeId : String) = {
+  getActiveHITIdsOfHITType(hitTypeId) map disableHITById
+}
