@@ -269,6 +269,50 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     (headLinks, bodyLinks)
   }
 
+  val sdgenHITType = HITType(
+    title = s"Write question-answer pairs about a word",
+    description = s"""
+      Given a sentence and a word from that sentence,
+      write questions and answers about that word.
+      Questions must adhere to a certain template,
+      provided by autocomplete functionality.
+      Maintain high accuracy to stay qualified.
+    """.trim.replace("\\s+", " "),
+    reward = settings.generationReward,
+    keywords = "language,english,question answering",
+    qualRequirements = Array[QualificationRequirement](
+      approvalRateRequirement, localeRequirement, genAccuracyRequirement, genCoverageRequirement
+    ),
+    autoApprovalDelay = 2592000L, // 30 days
+    assignmentDuration = 600L)
+
+  lazy val sdgenAjaxService = new Service[QASRLGenerationAjaxRequest[SID]] {
+    override def processRequest(request: QASRLGenerationAjaxRequest[SID]) = request match {
+      case QASRLGenerationAjaxRequest(workerIdOpt, QASRLGenerationPrompt(id, verbIndex, targetType)) =>
+        val questionListsOpt = for {
+          genManagerP <- Option(genManagerPeek)
+          workerId <- workerIdOpt
+          qCounts <- genManagerP.coverageStats.get(workerId)
+        } yield qCounts
+        val questionLists = questionListsOpt.getOrElse(Nil)
+
+        val workerStatsOpt = for {
+          accTrackP <- Option(accuracyTrackerPeek)
+          workerId <- workerIdOpt
+          stats <- accTrackP.allWorkerStats.get(workerId)
+        } yield stats
+
+        val stats = GenerationStatSummary(
+          numVerbsCompleted = questionLists.size,
+          numQuestionsWritten = questionLists.sum,
+          workerStatsOpt = workerStatsOpt)
+
+        val tokens = id.tokens
+        val inflectedForms = inflections.getInflectedForms(tokens(verbIndex).lowerCase).get
+        QASRLGenerationAjaxResponse(stats, tokens, inflectedForms)
+    }
+  }
+
   val genHITType = HITType(
     title = s"Write question-answer pairs about a verb",
     description = s"""
@@ -387,7 +431,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   lazy val valActor = actorSystem.actorOf(Props(new TaskManager(valHelper, valManager)))
 
   val genTaskSpec = TaskSpecification.NoWebsockets[QASRLGenerationPrompt[SID], List[VerbQA], QASRLGenerationAjaxRequest[SID]](
-    settings.generationTaskKey, genHITType, genAjaxService, allPrompts,
+    settings.generationTaskKey, genHITType, genAjaxService, allVerbPrompts,
     taskPageHeadElements = taskPageHeadLinks,
     taskPageBodyElements = taskPageBodyLinks,
     frozenHITTypeId = frozenGenerationHITTypeId)
@@ -405,13 +449,50 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
         // sentenceTracker,
         if(config.isProduction) numGenerationAssignmentsForPrompt else (_ => 1),
         if(config.isProduction) 100 else 3,
-        allPrompts.iterator)  // the prompts itarator determines what genHITs are generated
+        allVerbPrompts.iterator)  // the prompts itarator determines what genHITs are generated
       genManagerPeek
     }
   )
   val genActor = actorSystem.actorOf(Props(new TaskManager(genHelper, genManager)))
 
-  lazy val server = new Server(List(genTaskSpec, valTaskSpec))
+  //**** lets try to create another HITType and TaskSepc for SDGen (Sem-Dep-Generation)
+  val sdgenTaskSpec = TaskSpecification.NoWebsockets[QASRLGenerationPrompt[SID], List[VerbQA], QASRLGenerationAjaxRequest[SID]](
+    settings.sdgenerationTaskKey, sdgenHITType, sdgenAjaxService, allNounPrompts,
+    taskPageHeadElements = taskPageHeadLinks,
+    taskPageBodyElements = taskPageBodyLinks,
+    frozenHITTypeId = frozenGenerationHITTypeId)
+
+  var sdgenManagerPeek: QASRLGenerationHITManager[SID] = null
+
+  val sdgenHelper = new HITManager.Helper(sdgenTaskSpec)
+  val sdgenManager: ActorRef = actorSystem.actorOf(
+    Props {
+      sdgenManagerPeek = new QASRLGenerationHITManager(
+        sdgenHelper,
+        valHelper,
+        valManager,
+        genCoverageDisqualTypeId,
+        // sentenceTracker,
+        if(config.isProduction) numGenerationAssignmentsForPrompt else (_ => 1),
+        if(config.isProduction) 100 else 3,
+        allNounPrompts.iterator)  // the prompts itarator determines what genHITs are generated
+      sdgenManagerPeek
+    }
+  )
+
+  val sdgenActor = actorSystem.actorOf(Props(new TaskManager(sdgenHelper, sdgenManager)))
+
+    /** until here is the "copy"- gen to sdgen.  new objects:
+      *   genHITType
+      *   genTaskSpec
+      *   genActor
+      *   genHelper
+      *   genManager
+      *   genManagerPeek
+      *   genAjaxService
+      */
+
+  lazy val server = new Server(List(genTaskSpec, valTaskSpec, sdgenTaskSpec))
 
   // used to schedule data-saves
   private[this] var schedule: List[Cancellable] = Nil

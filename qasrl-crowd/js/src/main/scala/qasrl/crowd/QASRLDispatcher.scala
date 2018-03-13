@@ -21,6 +21,7 @@ abstract class QASRLDispatcher[SID : Reader : Writer](implicit settings: QASRLSe
 
   final override lazy val taskMapping = Map[String, () => Unit](
     settings.generationTaskKey -> genClient.main,
-    settings.validationTaskKey -> valClient.main)
+    settings.validationTaskKey -> valClient.main,
+    settings.sdgenerationTaskKey -> genClient.main)
 
 }
