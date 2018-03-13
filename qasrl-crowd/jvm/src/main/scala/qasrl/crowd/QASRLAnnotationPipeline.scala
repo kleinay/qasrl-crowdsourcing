@@ -519,30 +519,36 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     server
     startSaves()
     genActor ! Start(interval, delay = 0 seconds)
+    sdgenActor ! Start(interval, delay = 0 seconds)
     valActor ! Start(interval, delay = 3 seconds)
   }
   def stop() = {
     genActor ! Stop
+    sdgenActor ! Stop
     valActor ! Stop
     stopSaves
   }
   def delete() = {
     genActor ! Delete
+    sdgenActor ! Delete
     valActor ! Delete
   }
   def expire() = {
     genActor ! Expire
+    sdgenActor ! Expire
     valActor ! Expire
   }
   def update() = {
     server
     genActor ! Update
+    sdgenActor ! Update
     valActor ! Update
   }
   def save() = {
     // sentenceTracker ! SaveData
     accuracyTracker ! SaveData
     genManager ! SaveData
+    sdgenManager ! SaveData
     valManager ! SaveData
   }
 
