@@ -25,6 +25,7 @@ import nlpdata.util.Text
 import nlpdata.util.PosTags
 import nlpdata.util.LowerCaseStrings._
 import nlpdata.datasets.wiktionary.Inflections
+import nlpdata.datasets.wiktionary.InflectedForms
 
 import spacro._
 import spacro.tasks._
@@ -70,7 +71,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
             (posTaggedTokens.lift(index + 1).map(_.token.lowerCase).nonEmptyAnd(Inflections.negationWords.contains) || // negation appears directly after, or
                posTaggedTokens.drop(index + 1).forall(w => w.pos != "VB" && w.pos != "VBP") || // there is no stem or non-3rd-person present verb afterward (to mitigate pos tagger mistakes), or
                posTaggedTokens.drop(index + 1) // after the "do" verb,
-               .takeWhile(w => w.pos != "VBP" && w.pos != "VBP") // until the next VB or VBP verb,
+               .takeWhile(w => w.pos != "VB" && w.pos != "VBP") // until the next VB or VBP verb,
                .forall(w => Inflections.negationWords.contains(w.token.lowerCase) || PosTags.adverbPosTags.contains(w.pos)) // everything is an adverb or negation (though I guess negs are RB)
             )
         ) None else inflections.getInflectedForms(token.lowerCase).map(_ => index)

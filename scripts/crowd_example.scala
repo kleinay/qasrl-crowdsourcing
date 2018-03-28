@@ -5,6 +5,7 @@ import spacro.tasks._
 import spacro.util._
 import akka.pattern.ask
 import scala.concurrent.duration._
+import cats.implicits._
 
 import com.amazonaws.services.mturk._
 import com.amazonaws.services.mturk.model._
