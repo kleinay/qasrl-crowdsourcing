@@ -1,35 +1,103 @@
 package qasrl.crowd
 
+//import nlpdata.structure._
+import cats.data.NonEmptyList
+import cats.data.EitherT
+import cats.implicits._
 
-class QASDQuestionProcessor(sentence : String, targetWord : Word, targetType : String) {
+import monocle.Iso
 
-  val questions : QASDQuestions = match targetType {
-    case "noun": QASDQuestions(targetWord, QASDNounTemplates.list)
-    case "adjective": QASDQuestions(targetWord, QASDAdjectiveTemplates.list)
-    case "adverb": QASDQuestions(targetWord, QASDAdverbTemplates.list)
+import nlpdata.util.LowerCaseStrings._
+
+class QASDQuestionProcessor(sentence : String, targetWord : String, targetType : String) {
+
+  import QASDQuestionProcessor._
+
+  val questions : QASDQuestions = targetType match {
+    case "noun" => QASDQuestions(targetWord, QASDNounTemplates.list)
+    case "adjective" => QASDQuestions(targetWord, QASDAdjectiveTemplates.list)
+    case "adverb" => QASDQuestions(targetWord, QASDAdverbTemplates.list)
   }
 
   var state : String = "" // the state of current question- the text inserted so far by user
 
   def changeState(newState : String) : Unit = {
-    state = newState
+    state = newState.toLowerCase
   }
 
   // what subset of qlist is available from current state
   def getAvailableQs : List[String] = {
-    questions.qlist filter (_.startsWith(state))
+    questions.qlist filter (_.toLowerCase.startsWith(state))
   }
 
   // is there any possible question available for state
   def isValid : Boolean = {
-    !getAvailableQs().isEmpty
+    !getAvailableQs.isEmpty
   }
 
   // does state corresponds to an entrance of possibleQs
   def isComplete : Boolean = {
-    val availables = getAvailableQs()
-    availables.size == 1 &&
-      questions.qlist.contains(availables(0))
+    getAvailableQs.size == 1 &&
+      questions.qlist.contains(state)
+  }
+
+  // ***** here is copied API from qasrl.QuestionProcessor *****
+  // public - this is used by Client
+  // my main change- this return a single state (Invalid or Valid)
+  def processStringFully(input: String): Either[InvalidState, NonEmptyList[ValidState]] = {
+    changeState(input)
+    if (!isValid)
+      Left(InvalidState())
+    else if (isComplete)
+      Right(NonEmptyList.of(CompleteState(state)))
+    else {
+      /*
+      current state have several possible suggestions.
+      return list of inProgressState with possible completions available from current state
+       */
+      val possibleStates = for (avblQ <- getAvailableQs) yield InProgressState(avblQ)
+      Right(NonEmptyList.fromList(possibleStates).get)
+    }
+  }
+
+  def isAlmostComplete(ips : InProgressState) : Boolean = {
+    getAvailableQs.size == 1
+  }
+
+
+}
+
+object QASDQuestionProcessor {
+
+  case class InvalidState()
+
+  sealed trait ValidState {
+    def fullText : String
+    def isComplete: Boolean
+  }
+  object ValidState {
+    def eitherIso: Iso[ValidState, Either[InProgressState, CompleteState]] =
+      Iso[ValidState, Either[InProgressState, CompleteState]](
+        vs => vs match {
+          case ips: InProgressState => Left(ips)
+          case cs: CompleteState => Right(cs)
+        })(
+        eith => eith match {
+          case Left(ips) => ips: ValidState
+          case Right(cs) => cs: ValidState
+        }
+      )
+  }
+
+  case class CompleteState(override val fullText : String)
+    extends ValidState {
+    override def isComplete = true
+  }
+
+  case class InProgressState(override val fullText : String)
+    extends ValidState {
+    override def isComplete = false
   }
 
 }
+

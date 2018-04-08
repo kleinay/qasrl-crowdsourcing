@@ -17,11 +17,13 @@ import spacro.tasks._
 import spacro.ui._
 import spacro.util.Span
 
-import qasrl.Autocomplete
+//import qasrl.Autocomplete
 import qasrl.ArgumentSlot
 import qasrl.Frame
 import qasrl.QuestionProcessor
 import qasrl.TemplateStateMachine
+
+//import QASDQuestionProcessor
 
 import nlpdata.util.Text
 import nlpdata.util.LowerCaseStrings._
@@ -85,7 +87,8 @@ class QASRL_SD_GenerationClient[SID : Reader : Writer](
       case _ => false
     }
   }
-  case class Complete(frames: Set[QuestionProcessor.CompleteState]) extends QAState
+  //case class Complete(frames: Set[QuestionProcessor.CompleteState]) extends QAState
+  case class Complete(options: Set[QASDQuestionProcessor.CompleteState]) extends QAState
   case object InProgress extends QAState
   case object Invalid extends QAState
   case object Redundant extends QAState
@@ -99,15 +102,16 @@ class QASRL_SD_GenerationClient[SID : Reader : Writer](
   }
 
   @Lenses case class State(
-                            template: QuestionProcessor,
+                            template: QASDQuestionProcessor,
                             qas: List[QAPair],
                             curFocus: Option[Int])
   object State {
     val empty: State = State(null, Nil, None)
     def initFromResponse(response: QASRLGenerationAjaxResponse): State = response match {
       case QASRLGenerationAjaxResponse(_, sentence, forms) =>
-        val slots = new TemplateStateMachine(sentence, forms)
-        val template = new QuestionProcessor(slots)
+        //val slots = new TemplateStateMachine(sentence, forms)
+        val targetWord : String = sentence(prompt.verbIndex)
+        val template = new QASDQuestionProcessor(sentence.mkString(" "), targetWord, prompt.targetType)
         State(template, List(QAPair.empty), None)
     }
   }
@@ -150,7 +154,9 @@ class QASRL_SD_GenerationClient[SID : Reader : Writer](
       val question = s.qas(qaIndex).question
 
       template.processStringFully(question) match {
-        case Left(QuestionProcessor.AggregatedInvalidState(_, _)) =>
+          // todo understand why goodStates is a list and not just a state ??
+          // good states are all possible states (j state-machine) that are reachable
+        case Left(invalid : QASDQuestionProcessor.InvalidState) =>
           qaStateLens(qaIndex).set(Invalid)(s)
         case Right(goodStates) =>
           if(goodStates.exists(_.isComplete)) {
@@ -158,7 +164,7 @@ class QASRL_SD_GenerationClient[SID : Reader : Writer](
               qaStateLens(qaIndex).set(Redundant)(s)
             } else {
               val completeStates = goodStates.toList.collect {
-                case cs: QuestionProcessor.CompleteState => cs
+                case cs: QASDQuestionProcessor.CompleteState => cs
               }.toSet
               qaStateLens(qaIndex).set(Complete(completeStates))(s)
             }
@@ -207,7 +213,7 @@ class QASRL_SD_GenerationClient[SID : Reader : Writer](
         // NOTE this is empty iff question is complete/valid
         val autocompleteResultOpt = if(!isFocused) None else Some {
 
-          val autocomplete = new Autocomplete(template)
+          val autocomplete = new QASDAutocomplete(template)
           autocomplete(
             question.lowerCase, qas.map(_.state).collect {
               case Complete(completeStates) => completeStates
@@ -226,7 +232,7 @@ class QASRL_SD_GenerationClient[SID : Reader : Writer](
               initialValue = 0,
               render = (highlightedIndex: Int, setHighlightedIndex: Int => Callback) => {
 
-                def selectItem(suggestion: Autocomplete.Suggestion): Callback = handleQuestionChange(suggestion.fullText)
+                def selectItem(suggestion: QASDAutocomplete.Suggestion): Callback = handleQuestionChange(suggestion.fullText)
 
                 def handleKey(e: ReactKeyboardEvent): Callback = {
                   val genHandlers = CallbackOption.keyCodeSwitch(e) {
@@ -242,8 +248,8 @@ class QASRL_SD_GenerationClient[SID : Reader : Writer](
                       }
                     } else {
                       autocompleteResultOpt.foldMap {
-                        case Autocomplete.Complete(_) => CallbackOption.pass
-                        case Autocomplete.Incomplete(suggestions, badStartIndexOpt) =>
+                        case QASDAutocomplete.Complete(_) => CallbackOption.pass
+                        case QASDAutocomplete.Incomplete(suggestions, badStartIndexOpt) =>
                           val menuItems = suggestions
                           def next = setHighlightedIndex((highlightedIndex + 1) % menuItems.size.toInt)
                           def prev = setHighlightedIndex((highlightedIndex - 1 + menuItems.size.toInt) % menuItems.size.toInt)
@@ -286,7 +292,7 @@ class QASRL_SD_GenerationClient[SID : Reader : Writer](
                     ^.value := question
                   ).ref(setInputRef(qaIndex)),
                   (for {
-                    Autocomplete.Incomplete(suggestions, badStartIndexOpt) <- autocompleteResultOpt
+                    QASDAutocomplete.Incomplete(suggestions, badStartIndexOpt) <- autocompleteResultOpt
                     ref <- allInputRefs.get(qaIndex)
                   } yield {
                     val rect = ref.getBoundingClientRect
@@ -317,7 +323,7 @@ class QASRL_SD_GenerationClient[SID : Reader : Writer](
                       ^.onMouseMove --> setBlurEnabled(false),
                       ^.onMouseLeave --> setBlurEnabled(true),
                       suggestions.zipWithIndex.toList.toVdomArray {
-                        case (ts @ Autocomplete.Suggestion(text, isCompletion), tokenIndex) =>
+                        case (ts @ QASDAutocomplete.Suggestion(text, isCompletion), tokenIndex) =>
                           <.div(
                             itemBgStyle(tokenIndex, isCompletion).whenDefined,
                             ^.padding := "2px 6px",
