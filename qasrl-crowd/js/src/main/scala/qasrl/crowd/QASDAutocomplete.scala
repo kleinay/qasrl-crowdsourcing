@@ -36,7 +36,12 @@ class QASDAutocomplete(questionProcessor: QASDQuestionProcessor) {
 //          completeStates => Autocomplete.incomplete(NonEmptyList.of(Suggestion(completeStates.head.fullText, true)), Some(badStartIndex)),
 //          suggestions => Autocomplete.incomplete(suggestions, Some(badStartIndex))
 //        )
-          QASDAutocomplete.incomplete(List(), Some(3))  // my invalid state is incomplete with no suggestion
+        // suggest Qs using longest common prefix to current question and any of the templates
+        val commonPrefix = questionProcessor.getCommonPrefix
+        val possibleQs = questionProcessor.getAvailableQsFrom(commonPrefix)
+        val suggestions = for (q <- possibleQs) yield Suggestion(q, false)
+        val badIndexStart = commonPrefix.size
+        QASDAutocomplete.incomplete(suggestions, Some(badIndexStart))  // my invalid state is incomplete with no suggestion
 
       case Right(goodStates) =>
 

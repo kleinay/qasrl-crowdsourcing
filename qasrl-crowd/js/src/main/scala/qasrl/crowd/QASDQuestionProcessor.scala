@@ -25,9 +25,14 @@ class QASDQuestionProcessor(sentence : String, targetWord : String, targetType :
     state = newState.toLowerCase
   }
 
+  // what subset of qlist is available from a prefix
+  def getAvailableQsFrom(prefix : String) : List[String] = {
+    questions.qlist filter (_.toLowerCase.startsWith(prefix))
+  }
+
   // what subset of qlist is available from current state
   def getAvailableQs : List[String] = {
-    questions.qlist filter (_.toLowerCase.startsWith(state))
+    getAvailableQsFrom(state)
   }
 
   // is there any possible question available for state
@@ -41,6 +46,17 @@ class QASDQuestionProcessor(sentence : String, targetWord : String, targetType :
       questions.qlist.contains(state)
   }
 
+  // return the longest prefix of state that is shared with at least one possible question
+  def getCommonPrefix : String = {
+    var pref = ""
+    for (ch <- state) {
+      val new_pref = pref + ch
+      if (getAvailableQsFrom(new_pref).isEmpty)
+        return pref
+      pref = new_pref
+    }
+    state
+  }
   // ***** here is copied API from qasrl.QuestionProcessor *****
   // public - this is used by Client
   // my main change- this return a single state (Invalid or Valid)
