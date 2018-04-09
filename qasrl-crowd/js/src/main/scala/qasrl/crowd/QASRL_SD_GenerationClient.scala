@@ -154,13 +154,12 @@ class QASRL_SD_GenerationClient[SID : Reader : Writer](
       val question = s.qas(qaIndex).question
 
       template.processStringFully(question) match {
-          // todo understand why goodStates is a list and not just a state ??
-          // good states are all possible states (j state-machine) that are reachable
         case Left(invalid : QASDQuestionProcessor.InvalidState) =>
           qaStateLens(qaIndex).set(Invalid)(s)
+        // good states are all possible states (in state-machine) that are reachable
         case Right(goodStates) =>
           if(goodStates.exists(_.isComplete)) {
-            if(s.qas.map(_.question).indexOf(question) < qaIndex) {
+            if(s.qas.map(_.question).count(_==question) > 1) {
               qaStateLens(qaIndex).set(Redundant)(s)
             } else {
               val completeStates = goodStates.toList.collect {
