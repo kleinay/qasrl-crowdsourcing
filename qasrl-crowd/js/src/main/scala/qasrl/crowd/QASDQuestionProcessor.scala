@@ -42,8 +42,7 @@ class QASDQuestionProcessor(sentence : String, targetWord : String, targetType :
 
   // does state corresponds to an entrance of possibleQs
   def isComplete : Boolean = {
-    getAvailableQs.size == 1 &&
-      questions.qlist.contains(state)
+    questions.qlist.map(_.toLowerCase).contains(state)
   }
 
   // return the longest prefix of state that is shared with at least one possible question
