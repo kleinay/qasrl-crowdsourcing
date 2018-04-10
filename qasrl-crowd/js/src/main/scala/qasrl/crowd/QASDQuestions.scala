@@ -5,7 +5,7 @@ package qasrl.crowd
 
 *   [W]     is replaced with the target word
 *   <PREP>  is replaced with each of the prepositions
-*   (word) is generating two templates, with and without the word in parantheses (only one allowed in single template)
+*   (word) is generating two templates, with and without the word in parantheses
 
  */
 
@@ -25,10 +25,24 @@ case class QASDQuestions(targetWord : String, templateList : List[String]) {
       yield sentence.replace(QASDQuestions.PREP_SYMBOL, prep)
   }
 
+  // recursive function to expand all optional (parantheses) parts in templates
   def handleParatheses(sentence : String) : List[String] = {
-    val sentWithoutPrn = sentence.replaceAll("\\(.*?\\)", "");
-    val sentWithPrn = sentence.replace("(", "").replace(")", "")
-    Set(sentWithPrn, sentWithoutPrn).toList
+    val paranRegex = """\([^()]*\)""".r
+    def inside(s: String): String = s.slice(1, s.size - 1)
+    var validPrefixes = List[String]()
+    paranRegex.findFirstMatchIn(sentence) match {
+      case None => List(sentence)
+      case Some(firstMatch) => {
+        val suffix: String = firstMatch.after.toString
+        val prnContent: String = inside(firstMatch.toString)
+        val prefix: String = firstMatch.before.toString
+        // return both options for prefix with\out parantheses with each suffix option
+        val suffList: List[String] = handleParatheses(suffix)
+        (for (suff <- suffList)
+          yield List(prefix + suff, prefix + prnContent + suff)
+          ).flatten
+      }
+    }
   }
 
 
