@@ -76,7 +76,7 @@ class AnnotationSetup(
     Files.lines(path).iterator.asScala.toList
   }
 
-  val data_fn = "test_input_ayal.txt"
+  val data_fn = "source.txt"
   val sentences = loadInputFile(data_fn).get.toVector
 //  val sentences = Vector(
 //    "In the second half of the 1980s, Clarence Thomas is being groomed for a position on the Supreme Court, or senses he's being groomed.",
