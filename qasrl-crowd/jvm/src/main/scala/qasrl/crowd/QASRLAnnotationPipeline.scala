@@ -127,6 +127,9 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   lazy val allPrompts: Vector[QASRLGenerationPrompt[SID]] =
     allNounPrompts ++ allVerbPrompts ++ allAdjPrompts ++ allAdverbPrompts
 
+  lazy val allSDPrompts: Vector[QASRLGenerationPrompt[SID]] =
+    allNounPrompts ++ allAdjPrompts ++ allAdverbPrompts
+
   implicit val ads = annotationDataService
 
   import config.hitDataService
@@ -458,7 +461,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
 
   //**** lets try to create another HITType and TaskSepc for SDGen (Sem-Dep-Generation)
   val sdgenTaskSpec = TaskSpecification.NoWebsockets[QASRLGenerationPrompt[SID], List[VerbQA], QASRLGenerationAjaxRequest[SID]](
-    settings.sdgenerationTaskKey, sdgenHITType, sdgenAjaxService, allNounPrompts,
+    settings.sdgenerationTaskKey, sdgenHITType, sdgenAjaxService, allSDPrompts,
     taskPageHeadElements = taskPageHeadLinks,
     taskPageBodyElements = taskPageBodyLinks,
     frozenHITTypeId = frozenGenerationHITTypeId)
@@ -476,7 +479,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
         // sentenceTracker,
         if(config.isProduction) numGenerationAssignmentsForPrompt else (_ => 1),
         if(config.isProduction) 100 else 3,
-        allNounPrompts.iterator)  // the prompts itarator determines what genHITs are generated
+        allSDPrompts.iterator)  // the prompts itarator determines what genHITs are generated
       sdgenManagerPeek
     }
   )
