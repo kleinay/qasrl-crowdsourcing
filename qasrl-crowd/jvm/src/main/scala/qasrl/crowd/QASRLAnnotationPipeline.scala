@@ -288,7 +288,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
       approvalRateRequirement, localeRequirement, genAccuracyRequirement, genCoverageRequirement
     ),
     autoApprovalDelay = 2592000L, // 30 days
-    assignmentDuration = 600L)
+    assignmentDuration = 3600L)
 
   lazy val sdgenAjaxService = new Service[QASRLGenerationAjaxRequest[SID]] {
     override def processRequest(request: QASRLGenerationAjaxRequest[SID]) = request match {
@@ -332,7 +332,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
       approvalRateRequirement, localeRequirement, genAccuracyRequirement, genCoverageRequirement
     ),
     autoApprovalDelay = 2592000L, // 30 days
-    assignmentDuration = 600L)
+    assignmentDuration = 3600L)
 
   lazy val genAjaxService = new Service[QASRLGenerationAjaxRequest[SID]] {
     override def processRequest(request: QASRLGenerationAjaxRequest[SID]) = request match {
@@ -377,7 +377,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
       approvalRateRequirement, localeRequirement, valAgreementRequirement
     ),
     autoApprovalDelay = 2592000L, // 30 days
-    assignmentDuration = 600L)
+    assignmentDuration = 3600L)
 
   lazy val valAjaxService = new Service[QASRLValidationAjaxRequest[SID]] {
     override def processRequest(request: QASRLValidationAjaxRequest[SID]) = request match {
@@ -496,13 +496,13 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
       *   genAjaxService
       */
 
-  lazy val server = new Server(List(genTaskSpec, valTaskSpec, sdgenTaskSpec))
+  lazy val server = new Server(List(genTaskSpec, sdgenTaskSpec, valTaskSpec))
 
   // used to schedule data-saves
   private[this] var schedule: List[Cancellable] = Nil
   def startSaves(interval: FiniteDuration = 5 minutes): Unit = {
     if(schedule.exists(_.isCancelled) || schedule.isEmpty) {
-      schedule = List(genManager, valManager, accuracyTracker).map(actor =>
+      schedule = List(genManager, sdgenManager, valManager, accuracyTracker).map(actor =>
         config.actorSystem.scheduler.schedule(
           2 seconds, interval, actor, SaveData)(
           config.actorSystem.dispatcher, actor)
@@ -513,6 +513,9 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
 
   def setGenHITsActiveEach(n: Int) = {
     genManager ! SetNumHITsActive(n)
+  }
+  def setSDGenHITsActiveEach(n: Int) = {
+    sdgenManager ! SetNumHITsActive(n)
   }
   def setValHITsActive(n: Int) = {
     valManager ! SetNumHITsActive(n)
@@ -560,6 +563,8 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   // in the future you could have a nice dashboard UI that will help you examine common sources of issues
 
   def allGenInfos = hitDataService.getAllHITInfo[QASRLGenerationPrompt[SID], List[VerbQA]](genTaskSpec.hitTypeId).get
+
+  def allSDGenInfos = hitDataService.getAllHITInfo[QASRLGenerationPrompt[SID], List[VerbQA]](sdgenTaskSpec.hitTypeId).get
 
   def allValInfos = hitDataService.getAllHITInfo[QASRLValidationPrompt[SID], List[QASRLValidationAnswer]](valTaskSpec.hitTypeId).get
 

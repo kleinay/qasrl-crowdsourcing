@@ -9,11 +9,11 @@ object QASDNounTemplates {
       |How many [W]?
       |[W] for how long?
       |Where is [W]?
-      |What was the time of [W]?
-      |What is [W] of?
-      |What is the [W] of?
-      |What is [W]?
-      |Who is [W]?"""
+      |What was the time of (the )[W]?
+      |What is (not )[W]?
+      |What is (the )[W] of?
+      |What is (the )[W] <PREP>?
+      |Who is (not )[W]?"""
       .stripMargin
       .split("\n")
       .toList
