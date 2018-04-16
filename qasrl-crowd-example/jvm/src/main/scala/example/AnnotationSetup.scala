@@ -87,10 +87,11 @@ class AnnotationSetup(
   val tokenizedSentences = sentences.map(Tokenizer.tokenize)
   val posTaggedSentences = tokenizedSentences.map(PosTagger.posTag[Vector](_))
 
-  val allIds = (0 until 4).map(SentenceId(_)).toVector
-  val trainIds = allIds.slice(0, 2)
-  val devIds = allIds.slice(2, 3)
-  val testIds = allIds.slice(3, 4)
+  val numOfSentenses = posTaggedSentences.size
+  val allIds = (0 until numOfSentenses).map(SentenceId(_)).toVector
+  val trainIds = allIds.slice(0, numOfSentenses / 2)
+  val devIds = allIds.slice(numOfSentenses / 2, numOfSentenses / 4 * 3)
+  val testIds = allIds.slice(numOfSentenses / 4 * 3, numOfSentenses)
 
   def isTrain(sid: SentenceId) = trainIds.contains(sid)
   def isDev(sid: SentenceId) = devIds.contains(sid)
