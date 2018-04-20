@@ -3,6 +3,8 @@ package example
 import cats._
 import cats.implicits._
 
+import qasrl.crowd.util.Tokenizer
+import qasrl.crowd.util.PosTagger
 import qasrl.crowd._
 import qasrl.labeling._
 
@@ -84,14 +86,14 @@ class AnnotationSetup(
 //    "He hires two Straussians, Ken Masugi and John Marini, to his staff on the EEOC.",
 //    "Their assignment is to give him a reading list, which they do and which he reads, and to serve as tutors and conversation partners in all things intellectual, which also they do."
 //  )
-  val tokenizedSentences = sentences.map(Tokenizer.tokenize)
+  val tokenizedSentences = sentences.map(Tokenizer.tokenize_with_ner)
   val posTaggedSentences = tokenizedSentences.map(PosTagger.posTag[Vector](_))
 
-  val numOfSentenses = posTaggedSentences.size
-  val allIds = (0 until numOfSentenses).map(SentenceId(_)).toVector
-  val trainIds = allIds.slice(0, numOfSentenses / 2)
-  val devIds = allIds.slice(numOfSentenses / 2, numOfSentenses / 4 * 3)
-  val testIds = allIds.slice(numOfSentenses / 4 * 3, numOfSentenses)
+  val numOfSentences = tokenizedSentences.size
+  val allIds = (0 until numOfSentences).map(SentenceId(_)).toVector
+  val trainIds = allIds.slice(0, numOfSentences / 2)
+  val devIds = allIds.slice(numOfSentences / 2, numOfSentences / 4 * 3)
+  val testIds = allIds.slice(numOfSentences / 4 * 3, numOfSentences)
 
   def isTrain(sid: SentenceId) = trainIds.contains(sid)
   def isDev(sid: SentenceId) = devIds.contains(sid)
