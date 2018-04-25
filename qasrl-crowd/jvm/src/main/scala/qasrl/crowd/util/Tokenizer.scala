@@ -18,8 +18,8 @@ object Tokenizer {
   import edu.stanford.nlp.ie.crf._
   import edu.stanford.nlp.ling.CoreLabel
   import edu.stanford.nlp.ling.TaggedWord
-  // todo make the classifier model available from ivy cache without having to use absolute path of server
-  val NERclassifierPath= "/home/ir/kleinay/stanford_NER/stanford-ner-2018-02-27/classifiers/english.all.3class.distsim.crf.ser.gz"
+
+  val NERclassifierPath= "edu/stanford/nlp/models/ner/english.all.3class.distsim.crf.ser.gz"
   val classifier = CRFClassifier.getClassifier(NERclassifierPath)
 
   case class nlpWord(word:String, beginPosition:Int, endPosition:Int)
