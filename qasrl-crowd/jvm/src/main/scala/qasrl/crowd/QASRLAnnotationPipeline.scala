@@ -461,7 +461,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
 
   //**** lets try to create another HITType and TaskSepc for SDGen (Sem-Dep-Generation)
   val sdgenTaskSpec = TaskSpecification.NoWebsockets[QASRLGenerationPrompt[SID], List[VerbQA], QASRLGenerationAjaxRequest[SID]](
-    settings.sdgenerationTaskKey, sdgenHITType, sdgenAjaxService, allSDPrompts,
+    settings.sdgenerationTaskKey, sdgenHITType, sdgenAjaxService, allNounPrompts,
     taskPageHeadElements = taskPageHeadLinks,
     taskPageBodyElements = taskPageBodyLinks,
     frozenHITTypeId = frozenGenerationHITTypeId)
@@ -479,7 +479,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
         // sentenceTracker,
         if(config.isProduction) numGenerationAssignmentsForPrompt else (_ => 1),
         if(config.isProduction) 100 else 3,
-        allSDPrompts.iterator)  // the prompts itarator determines what genHITs are generated
+        allNounPrompts.iterator)  // the prompts itarator determines what genHITs are generated
       sdgenManagerPeek
     }
   )
@@ -755,13 +755,18 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   def printGenFeedback(n: Int) = genManagerPeek.feedbacks.take(n).foreach(a =>
     println(a.workerId + " " + a.feedback)
   )
+  def printSDGenFeedback(n: Int) = sdgenManagerPeek.feedbacks.take(n).foreach(a =>
+    println(a.workerId + " " + a.feedback)
+  )
   def printValFeedback(n: Int) = valManagerPeek.feedbacks.take(n).foreach(a =>
     println(a.workerId + " " + a.feedback)
   )
 
   def printAllFeedbacks(n: Int = Int.MaxValue) = {
-    println("Generation:")
+    println("Generation (verbs):")
     printGenFeedback(n)
+    println("\nGeneration (non-verbs):")
+    printSDGenFeedback(n)
     println("\nValidation:")
     printValFeedback(n)
   }

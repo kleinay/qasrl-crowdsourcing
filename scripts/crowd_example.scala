@@ -121,3 +121,7 @@ def disableHITsOfTypeId(hitTypeId : String) = {
 def getOurActiveHITIds = {
   (getGenActiveHITTypeIds ++ getValActiveHITTypeIds).map(getActiveHITIdsOfHITType).flatten
 }
+
+def disableAllOurHITs = {
+  getOurActiveHITIds map disableHITById
+}
