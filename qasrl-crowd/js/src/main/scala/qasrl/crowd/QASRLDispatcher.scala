@@ -13,10 +13,11 @@ import japgolly.scalajs.react.vdom.html_<^.VdomTag
 abstract class QASRLDispatcher[SID : Reader : Writer](implicit settings: QASRLSettings) extends TaskDispatcher {
 
   def generationInstructions: VdomTag
+  def sdgenerationInstructions: VdomTag
   def validationInstructions: VdomTag
 
   lazy val genClient = new QASRLGenerationClient[SID](generationInstructions)
-  lazy val sdgenClient = new QASRL_SD_GenerationClient[SID](generationInstructions)
+  lazy val sdgenClient = new QASRL_SD_GenerationClient[SID](sdgenerationInstructions)
 
   lazy val valClient = new QASRLValidationClient[SID](validationInstructions)
 
