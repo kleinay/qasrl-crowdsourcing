@@ -13,7 +13,7 @@ trait QASRLSettings {
   // annotation pipeline hyperparameters
 
   val generationRewardCents = 5
-  val generationReward = generationRewardCents * 0.01
+  def generationReward = generationRewardCents * 0.01
 
   def generationBonus(nValidQAs: Int) = {
     // no bonus for the first question, hence -1

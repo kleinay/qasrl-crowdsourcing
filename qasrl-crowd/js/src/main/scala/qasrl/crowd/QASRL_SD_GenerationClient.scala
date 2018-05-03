@@ -56,12 +56,12 @@ import japgolly.scalajs.react.CatsReact._
 
 class QASRL_SD_GenerationClient[SID : Reader : Writer](
     instructions: VdomTag)(
-    implicit settings: QASRLSettings,
-    promptReader: Reader[QASRLGenerationPrompt[SID]], // macro serializers don't work for superclass constructor parameters
+    implicit promptReader: Reader[QASRLGenerationPrompt[SID]], // macro serializers don't work for superclass constructor parameters
     responseWriter: Writer[List[VerbQA]], // same as above
     ajaxRequestWriter: Writer[QASRLGenerationAjaxRequest[SID]] // "
   ) extends TaskClient[QASRLGenerationPrompt[SID], List[VerbQA], QASRLGenerationAjaxRequest[SID]] {
 
+  val settings = QASDSettings.default
   // for monoid on Callback
   implicit def appMonoid[F[_]: Applicative, A: Monoid] = Applicative.monoid[F, A]
 
