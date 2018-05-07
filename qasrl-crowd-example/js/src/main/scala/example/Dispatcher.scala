@@ -22,4 +22,6 @@ object Dispatcher extends QASRLDispatcher[SentenceId] with JSApp {
   override val sdgenerationInstructions = SDGenerationInstructions.instructions
 
   override val validationInstructions = ValidationInstructions.instructions
+
+  override val sdvalidationInstructions = SDValidationInstructions.instructions
 }

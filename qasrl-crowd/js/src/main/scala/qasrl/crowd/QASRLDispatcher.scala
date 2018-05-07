@@ -15,6 +15,7 @@ abstract class QASRLDispatcher[SID : Reader : Writer](implicit settings: QASRLSe
   def generationInstructions: VdomTag
   def sdgenerationInstructions: VdomTag
   def validationInstructions: VdomTag
+  def sdvalidationInstructions: VdomTag
 
   lazy val genClient = new QASRLGenerationClient[SID](generationInstructions)
   lazy val sdgenClient = new QASRL_SD_GenerationClient[SID](sdgenerationInstructions)
