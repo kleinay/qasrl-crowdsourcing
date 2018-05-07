@@ -441,7 +441,9 @@ class TemplateStateMachine(
       "Why" -> modify(FrameState.whWord.set(Some("why".lowerCase))).as(auxRequiringSubject),
       "How" -> modify(FrameState.whWord.set(Some("how".lowerCase))).as(auxRequiringSubject),
       "How much" -> modify(FrameState.whWord.set(Some("how much".lowerCase))).as(auxRequiringSubject),
-      "How long" -> modify(FrameState.whWord.set(Some("how long".lowerCase))).as(auxRequiringSubject)
+      "How long" -> modify(FrameState.whWord.set(Some("how long".lowerCase))).as(auxRequiringSubject),
+      "In what circumstances" -> modify(FrameState.whWord.set(Some("in what circumstances".lowerCase))).as(auxRequiringSubject),
+      "For what purpose" -> modify(FrameState.whWord.set(Some("for what purpose".lowerCase))).as(auxRequiringSubject)
     )
   }
 
