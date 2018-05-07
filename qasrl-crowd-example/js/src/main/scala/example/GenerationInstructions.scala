@@ -1,5 +1,4 @@
 package example
-//import Instructions._
 
 import spacro.ui._
 
@@ -19,22 +18,6 @@ import upickle.default._
 object GenerationInstructions extends Instructions {
   import settings._
   import InstructionsComponent._
-
-  val instructions = <.div(
-    Instructions(
-      InstructionsProps(
-        instructionsId = "instructions",
-        collapseCookieId = "generationCollapseCookie",
-        tabs = List(
-          "Overview" -> generationOverview,
-          "Interface & Controls" -> generationControls,
-          "Question Format" -> generationQuestionFormat,
-          "Conditions & Bonuses" -> generationConditions,
-          "Examples" -> <.div(verb_span_examples)
-        )
-      )
-    )
-  )
 
   val verb_span_examples = <.div(
     TooltipsComponent(
@@ -180,7 +163,7 @@ object GenerationInstructions extends Instructions {
     )
   )
 
-  //<editor-fold desc="Overview">
+
   val generationOverview = <.div(
     <.p(Styles.badRed, """Read through all of the instructions and make sure you understand the interface controls before beginning. A full understanding of the requirements will help make sure validators approve your work and you can retain your qualification."""),
     <.p("""This task is for an academic research project by the natural language processing group at the University of Washington.
@@ -240,7 +223,6 @@ object GenerationInstructions extends Instructions {
       " that are appropriate to the sentence's meaning to the best of your ability. "),
     <.p("If you are not sure about certain cases, please check the examples.")
   )
-  //</editor-fold>
 
 
   val generationControls = <.div(
@@ -282,7 +264,7 @@ object GenerationInstructions extends Instructions {
     )
   )
 
-  //<editor-fold desc="generationConditions">
+
   val generationConditions = <.div(
     <.p(s"""Each question-answer pair after the first will earn you a bonus:
           ${dollarsToCents(generationReward)}c for the second question, ${dollarsToCents(generationReward) + 1}c for the third
@@ -303,7 +285,6 @@ object GenerationInstructions extends Instructions {
           If this number drops below ${(100 * generationAccuracyBlockingThreshold).toInt},
           you will be disqualified from this task. """)
   )
-  //</editor-fold>
 
 
   val generationQuestionFormat = <.div(
@@ -326,4 +307,22 @@ object GenerationInstructions extends Instructions {
       )
     )
   )
+
+
+  val instructions = <.div(
+    Instructions(
+      InstructionsProps(
+        instructionsId = "instructions",
+        collapseCookieId = "generationCollapseCookie",
+        tabs = List(
+          "Overview" -> generationOverview,
+          "Interface & Controls" -> generationControls,
+          "Question Format" -> generationQuestionFormat,
+          "Conditions & Bonuses" -> generationConditions,
+          "Examples" -> <.div(verb_span_examples)
+        )
+      )
+    )
+  )
+
 }
