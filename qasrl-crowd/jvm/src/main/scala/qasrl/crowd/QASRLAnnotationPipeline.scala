@@ -53,6 +53,8 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   val inflections: Inflections
 ) extends StrictLogging {
 
+  val qasdSettings = QASDSettings.default
+
   // collect indices of verbs in the sentence to generate prompt
   def getVerbKeyIndices(id: SID): Set[Int] = {
     val posTaggedTokens = PosTagger.posTag(id.tokens)
@@ -282,7 +284,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
       provided by autocomplete functionality.
       Maintain high accuracy to stay qualified.
     """.trim.replace("\\s+", " "),
-    reward = settings.generationReward,
+    reward = qasdSettings.generationReward,
     keywords = "language,english,question answering",
     qualRequirements = Array[QualificationRequirement](
       approvalRateRequirement, localeRequirement, genAccuracyRequirement, genCoverageRequirement
@@ -294,7 +296,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     override def processRequest(request: QASRLGenerationAjaxRequest[SID]) = request match {
       case QASRLGenerationAjaxRequest(workerIdOpt, QASRLGenerationPrompt(id, verbIndex, targetType)) =>
         val questionListsOpt = for {
-          genManagerP <- Option(genManagerPeek)
+          genManagerP <- Option(sdgenManagerPeek)
           workerId <- workerIdOpt
           qCounts <- genManagerP.coverageStats.get(workerId)
         } yield qCounts
@@ -526,7 +528,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     server
     startSaves()
     genActor ! Start(interval, delay = 0 seconds)
-    sdgenActor ! Start(interval, delay = 0 seconds)
+    sdgenActor ! Start(interval, delay = 3 seconds)
     valActor ! Start(interval, delay = 3 seconds)
   }
   def stop() = {
