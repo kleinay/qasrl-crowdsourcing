@@ -314,8 +314,8 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
           workerStatsOpt = workerStatsOpt)
 
         val tokens = id.tokens
-        val inflectedForms = inflections.getInflectedForms(tokens(verbIndex).lowerCase).get
-        QASRLGenerationAjaxResponse(stats, tokens, inflectedForms)
+        val inflectedFormsOpt = inflections.getInflectedForms(tokens(verbIndex).lowerCase)
+        QASRLGenerationAjaxResponse(stats, tokens, inflectedFormsOpt)
     }
   }
 
@@ -358,7 +358,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
           workerStatsOpt = workerStatsOpt)
 
         val tokens = id.tokens
-        val inflectedForms = inflections.getInflectedForms(tokens(verbIndex).lowerCase).get
+        val inflectedForms = inflections.getInflectedForms(tokens(verbIndex).lowerCase)
         QASRLGenerationAjaxResponse(stats, tokens, inflectedForms)
     }
   }

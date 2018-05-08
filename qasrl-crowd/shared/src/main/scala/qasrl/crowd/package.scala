@@ -34,7 +34,7 @@ package object crowd {
   case class QASRLGenerationAjaxResponse(
     stats: GenerationStatSummary,
     tokens: Vector[String],
-    inflectedForms: InflectedForms)
+    inflectedForms: Option[InflectedForms])
 
   case class QASRLValidationAjaxRequest[SID](
     workerIdOpt: Option[String],
