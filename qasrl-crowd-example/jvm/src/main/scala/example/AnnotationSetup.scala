@@ -124,7 +124,8 @@ class AnnotationSetup(
     frozenValidationHITTypeId = frozenValidationHITTypeId,
     generationAccuracyDisqualTypeLabel = None,
     generationCoverageDisqualTypeLabel = None,
-    validationAgreementDisqualTypeLabel = None)
+    validationAgreementDisqualTypeLabel = None,
+    sdvalidationAgreementDisqualTypeLabel = Some("Non-verb"))
 
   def saveAnnotationData[A](
     filename: String,

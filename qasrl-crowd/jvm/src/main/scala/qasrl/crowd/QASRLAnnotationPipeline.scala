@@ -47,7 +47,8 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   frozenValidationHITTypeId: Option[String] = None,
   generationAccuracyDisqualTypeLabel: Option[String] = None,
   generationCoverageDisqualTypeLabel: Option[String] = None,
-  validationAgreementDisqualTypeLabel: Option[String] = None)(
+  validationAgreementDisqualTypeLabel: Option[String] = None,
+  sdvalidationAgreementDisqualTypeLabel: Option[String] = None)(
   implicit val config: TaskConfig,
   val settings: QASRLSettings,
   val inflections: Inflections
@@ -226,6 +227,34 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     .withComparator("DoesNotExist")
     .withRequiredToPreview(false)
 
+  // copy last paragraph for sdvalidation qualification
+  val sdvalAgrDisqualTypeLabelString = sdvalidationAgreementDisqualTypeLabel.fold("")(x => s"[$x] ")
+  val sdvalAgrDisqualTypeName = s"${sdvalAgrDisqualTypeLabelString}Question answering agreement disqualification"
+  val sdvalAgrDisqualType = config.service.listQualificationTypes(
+    new ListQualificationTypesRequest()
+      .withQuery(sdvalAgrDisqualTypeName)
+      .withMustBeOwnedByCaller(true)
+      .withMustBeRequestable(false)
+      .withMaxResults(100)
+  ).getQualificationTypes.asScala.toList.find(_.getName == sdvalAgrDisqualTypeName).getOrElse {
+    System.out.println("Generating sdvalidation disqualification type...")
+    config.service.createQualificationType(
+      new CreateQualificationTypeRequest()
+        .withName(sdvalAgrDisqualTypeName)
+        .withKeywords("language,english,question answering")
+        .withDescription("""Agreement with other annotators on answers and validity judgments
+          in our question answering task is too low.""".replaceAll("\\s+", " "))
+        .withQualificationTypeStatus(QualificationTypeStatus.Active)
+        .withAutoGranted(false)
+    ).getQualificationType
+  }
+  val sdvalAgrDisqualTypeId = sdvalAgrDisqualType.getQualificationTypeId
+  val sdvalAgreementRequirement = new QualificationRequirement()
+    .withQualificationTypeId(sdvalAgrDisqualTypeId)
+    .withComparator("DoesNotExist")
+    .withRequiredToPreview(false)
+
+
   // NOTE may need to call multiple times to cover all workers... sigh TODO pagination
   def resetAllQualificationValues = {
     def revokeAllWorkerQuals(qualTypeId: String) = {
@@ -245,6 +274,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     revokeAllWorkerQuals(genAccDisqualTypeId)
     revokeAllWorkerQuals(genCoverageDisqualTypeId)
     revokeAllWorkerQuals(valAgrDisqualTypeId)
+    revokeAllWorkerQuals(sdvalAgrDisqualTypeId)
   }
 
   lazy val (taskPageHeadLinks, taskPageBodyLinks) = {
@@ -406,6 +436,47 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     taskPageBodyElements = taskPageBodyLinks,
     frozenHITTypeId = frozenValidationHITTypeId)
 
+  // Same for SD validation - seperate hitType, taskSpec, AjaxService
+  val sdvalHITType = HITType(
+    title = s"Answer simple questions about a word in a sentence",
+    description = s"""
+      Given a sentence with a highlighted word and several questions about it,
+      highlight the part of the sentence that answers each question,
+      and mark questions that are invalid or redundant.
+      Maintain high agreement with others to stay qualified.
+    """.trim,
+    reward = qasdSettings.validationReward,
+    keywords = "language,english,question answering",
+    qualRequirements = Array[QualificationRequirement](
+      approvalRateRequirement, localeRequirement, sdvalAgreementRequirement
+    ),
+    autoApprovalDelay = 2592000L, // 30 days
+    assignmentDuration = 3600L)
+
+  lazy val sdvalAjaxService = new Service[QASRLValidationAjaxRequest[SID]] {
+    override def processRequest(request: QASRLValidationAjaxRequest[SID]) = request match {
+      case QASRLValidationAjaxRequest(workerIdOpt, id) =>
+        val workerInfoSummaryOpt = for {
+          valManagerP <- Option(sdvalManagerPeek)
+          workerId <- workerIdOpt
+          info <- valManagerP.allWorkerInfo.get(workerId)
+        } yield info.summary
+
+        QASRLValidationAjaxResponse(workerInfoSummaryOpt, id.tokens)
+    }
+  }
+
+  lazy val sdsampleValPrompt = QASRLValidationPrompt[SID](
+    allNounPrompts.head, "", "", "",
+    List(VerbQA(0, "Who did someone look at?", List(Span(4, 4))),
+      VerbQA(1, "How did someone look at someone?", List(Span(5, 5)))))
+
+  lazy val sdvalTaskSpec = TaskSpecification.NoWebsockets[QASRLValidationPrompt[SID], List[QASRLValidationAnswer], QASRLValidationAjaxRequest[SID]](
+    settings.sdvalidationTaskKey, sdvalHITType, sdvalAjaxService, Vector(sdsampleValPrompt),
+    taskPageHeadElements = taskPageHeadLinks,
+    taskPageBodyElements = taskPageBodyLinks,
+    frozenHITTypeId = frozenValidationHITTypeId)
+
   // hit management --- circularly defined so they can communicate
 
   import config.actorSystem
@@ -435,6 +506,27 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     })
 
   lazy val valActor = actorSystem.actorOf(Props(new TaskManager(valHelper, valManager)))
+
+  // copy for SDValidation - Helper, Manager, ManagerPeek, Actor (Task Manager)
+  var sdvalManagerPeek: QASRLValidationHITManager[SID] = null
+
+  lazy val sdvalHelper = new HITManager.Helper(sdvalTaskSpec)
+  lazy val sdvalManager: ActorRef = actorSystem.actorOf(
+    Props {
+      // use same class but override file naming using suffix
+      sdvalManagerPeek = new QASRLValidationHITManager(
+        sdvalHelper,
+        valAgrDisqualTypeId,
+        accuracyTracker,
+        // sentenceTracker,
+        if(config.isProduction) (_ => 2) else (_ => 1), // how many validators per HIT?
+        if(config.isProduction) 100 else 3,
+        "NonVerb")
+      sdvalManagerPeek
+    })
+
+  lazy val sdvalActor = actorSystem.actorOf(Props(new TaskManager(sdvalHelper, sdvalManager)))
+
 
   val genTaskSpec = TaskSpecification.NoWebsockets[QASRLGenerationPrompt[SID], List[VerbQA], QASRLGenerationAjaxRequest[SID]](
     settings.generationTaskKey, genHITType, genAjaxService, allVerbPrompts,
@@ -475,8 +567,8 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     Props {
       sdgenManagerPeek = new QASRLGenerationHITManager(
         sdgenHelper,
-        valHelper,
-        valManager,
+        sdvalHelper,
+        sdvalManager, // here we pass the valManager to genManager, so that when reviewing assignment it add promtp to valManager
         genCoverageDisqualTypeId,
         // sentenceTracker,
         if(config.isProduction) numGenerationAssignmentsForPrompt else (_ => 1),
@@ -498,13 +590,13 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
       *   genAjaxService
       */
 
-  lazy val server = new Server(List(genTaskSpec, sdgenTaskSpec, valTaskSpec))
+  lazy val server = new Server(List(genTaskSpec, sdgenTaskSpec, valTaskSpec, sdvalTaskSpec))
 
   // used to schedule data-saves
   private[this] var schedule: List[Cancellable] = Nil
   def startSaves(interval: FiniteDuration = 5 minutes): Unit = {
     if(schedule.exists(_.isCancelled) || schedule.isEmpty) {
-      schedule = List(genManager, sdgenManager, valManager, accuracyTracker).map(actor =>
+      schedule = List(genManager, sdgenManager, valManager, sdvalManager, accuracyTracker).map(actor =>
         config.actorSystem.scheduler.schedule(
           2 seconds, interval, actor, SaveData)(
           config.actorSystem.dispatcher, actor)
@@ -522,6 +614,9 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   def setValHITsActive(n: Int) = {
     valManager ! SetNumHITsActive(n)
   }
+  def setSDValHITsActive(n: Int) = {
+    sdvalManager ! SetNumHITsActive(n)
+  }
 
   import TaskManager.Message._
   def start(interval: FiniteDuration = 30 seconds) = {
@@ -530,28 +625,33 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     genActor ! Start(interval, delay = 0 seconds)
     sdgenActor ! Start(interval, delay = 3 seconds)
     valActor ! Start(interval, delay = 3 seconds)
+    sdvalActor ! Start(interval, delay = 3 seconds)
   }
   def stop() = {
     genActor ! Stop
     sdgenActor ! Stop
     valActor ! Stop
+    sdvalActor ! Stop
     stopSaves
   }
   def delete() = {
     genActor ! Delete
     sdgenActor ! Delete
     valActor ! Delete
+    sdvalActor ! Delete
   }
   def expire() = {
     genActor ! Expire
     sdgenActor ! Expire
     valActor ! Expire
+    sdvalActor ! Expire
   }
   def update() = {
     server
     genActor ! Update
     sdgenActor ! Update
     valActor ! Update
+    sdvalActor ! Update
   }
   def save() = {
     // sentenceTracker ! SaveData
@@ -559,6 +659,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     genManager ! SaveData
     sdgenManager ! SaveData
     valManager ! SaveData
+    sdvalManager ! SaveData
   }
 
   // for use while it's running. Ideally instead of having to futz around at the console calling these functions,
@@ -569,6 +670,8 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   def allSDGenInfos = hitDataService.getAllHITInfo[QASRLGenerationPrompt[SID], List[VerbQA]](sdgenTaskSpec.hitTypeId).get
 
   def allValInfos = hitDataService.getAllHITInfo[QASRLValidationPrompt[SID], List[QASRLValidationAnswer]](valTaskSpec.hitTypeId).get
+
+  def allSDValInfos = hitDataService.getAllHITInfo[QASRLValidationPrompt[SID], List[QASRLValidationAnswer]](sdvalTaskSpec.hitTypeId).get
 
   def currentGenSentences: List[(SID, String)] = {
     genHelper.activeHITInfosByPromptIterator.map(_._1.id).map(id =>

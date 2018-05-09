@@ -29,7 +29,8 @@ class QASRLValidationHITManager[SID : Reader : Writer](
   valDisqualificationTypeId: String,
   accuracyStatsActor: ActorRef,
   numAssignmentsForPrompt: QASRLValidationPrompt[SID] => Int,
-  initNumHITsToKeepActive: Int)(
+  initNumHITsToKeepActive: Int,
+  namingSuffix: String = "")(
   implicit annotationDataService: AnnotationDataService,
   settings: QASRLSettings
 ) extends NumAssignmentsHITManager[QASRLValidationPrompt[SID], List[QASRLValidationAnswer]](
@@ -37,7 +38,7 @@ class QASRLValidationHITManager[SID : Reader : Writer](
 
   override lazy val receiveAux2: PartialFunction[Any, Unit] = {
     case SaveData => save
-    case Pring => println("Validation manager pringed.")
+    case Pring => println("Validation"+namingSuffix+" manager pringed.")
     case ChristenWorker(workerId, numAgreementsToAdd) => christenWorker(workerId, numAgreementsToAdd)
   }
 
@@ -66,7 +67,7 @@ class QASRLValidationHITManager[SID : Reader : Writer](
     }
   }
 
-  val validationPromptsFilename = "validationPrompts"
+  val validationPromptsFilename = "validationPrompts" + namingSuffix
 
   private[this] var allPrompts = {
     val prompts = annotationDataService.loadLiveData(validationPromptsFilename)
@@ -78,7 +79,7 @@ class QASRLValidationHITManager[SID : Reader : Writer](
     prompts
   }
 
-  val workerInfoFilename = "validationWorkerInfo"
+  val workerInfoFilename = "validationWorkerInfo" + namingSuffix
 
   var allWorkerInfo = {
     annotationDataService.loadLiveData(workerInfoFilename)
@@ -89,7 +90,7 @@ class QASRLValidationHITManager[SID : Reader : Writer](
     }
   }
 
-  val promptToAssignmentsFilename = "promptToAssignments"
+  val promptToAssignmentsFilename = "promptToAssignments" + namingSuffix
 
   private[this] var promptToAssignments = {
     annotationDataService.loadLiveData(promptToAssignmentsFilename)
@@ -100,7 +101,7 @@ class QASRLValidationHITManager[SID : Reader : Writer](
     }
   }
 
-  val feedbackFilename = "valFeedback"
+  val feedbackFilename = "valFeedback" + namingSuffix
 
   var feedbacks =
     annotationDataService.loadLiveData(feedbackFilename)
@@ -109,7 +110,7 @@ class QASRLValidationHITManager[SID : Reader : Writer](
       .toOption
       .getOrElse(List.empty[Assignment[List[QASRLValidationAnswer]]])
 
-  val blockedValidatorsFilename = "blockedValidators"
+  val blockedValidatorsFilename = "blockedValidators" + namingSuffix
 
   var blockedValidators =
     annotationDataService.loadLiveData(blockedValidatorsFilename)
@@ -134,7 +135,7 @@ class QASRLValidationHITManager[SID : Reader : Writer](
     annotationDataService.saveLiveData(
       blockedValidatorsFilename,
       write[Set[String]](blockedValidators))
-    logger.info("Validation data saved.")
+    logger.info("Validation"+namingSuffix+" data saved.")
   }
 
   import scala.collection.JavaConverters._

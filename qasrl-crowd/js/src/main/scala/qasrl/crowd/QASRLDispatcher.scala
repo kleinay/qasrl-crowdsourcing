@@ -21,10 +21,12 @@ abstract class QASRLDispatcher[SID : Reader : Writer](implicit settings: QASRLSe
   lazy val sdgenClient = new QASRL_SD_GenerationClient[SID](sdgenerationInstructions)
 
   lazy val valClient = new QASRLValidationClient[SID](validationInstructions)
+  lazy val sdvalClient = new QASRLValidationClient[SID](sdvalidationInstructions)
 
   final override lazy val taskMapping = Map[String, () => Unit](
     settings.generationTaskKey -> genClient.main,
     settings.validationTaskKey -> valClient.main,
-    settings.sdgenerationTaskKey -> sdgenClient.main)
+    settings.sdgenerationTaskKey -> sdgenClient.main,
+    settings.sdvalidationTaskKey -> sdvalClient.main)
 
 }
