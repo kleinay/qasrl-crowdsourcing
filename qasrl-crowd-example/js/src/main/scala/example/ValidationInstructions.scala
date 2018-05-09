@@ -20,20 +20,6 @@ object ValidationInstructions extends Instructions {
   import settings._
   import InstructionsComponent._
 
-  val instructions = <.div(
-    Instructions(
-      InstructionsProps(
-        instructionsId = "instructions",
-        collapseCookieId = "validationCollapseCookie",
-        tabs = List(
-          "Overview" -> validationOverview,
-          "Controls" -> validationControls,
-          "Conditions & Payment" -> validationConditions,
-          "Examples" -> GenerationInstructions.verb_span_examples
-        )
-      )
-    )
-  )
 
   val validationOverview = <.div(
     <.p(Styles.badRed, """Read through all of the instructions and make sure you understand the interface controls before beginning. A full understanding of the requirements will help maximize your agreement with other workers so you can retain your qualification."""),
@@ -131,6 +117,22 @@ object ValidationInstructions extends Instructions {
         (Note that other validators will sometimes make mistakes,
         so there is an element of randomness to it: don't read too deeply into small changes in your agreement rate.)
         Your work will be approved and the bonus will be paid within an hour.""")
+  )
+
+
+  val instructions = <.div(
+    Instructions(
+      InstructionsProps(
+        instructionsId = "instructions",
+        collapseCookieId = "validationCollapseCookie",
+        tabs = List(
+          "Overview" -> validationOverview,
+          "Controls" -> validationControls,
+          "Conditions & Payment" -> validationConditions,
+          "Examples" -> GenerationInstructions.verb_span_examples
+        )
+      )
+    )
   )
 
 }
