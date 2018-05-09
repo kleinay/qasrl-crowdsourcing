@@ -106,23 +106,22 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   }
 
   // Yield all promts from verbs.
-  // TODO - add here promts for non-verbs
-    lazy val allVerbPrompts: Vector[QASRLGenerationPrompt[SID]] = for {
+  lazy val allVerbPrompts: Vector[QASRLGenerationPrompt[SID]] = for {
     id <- allIds
     verbIndex <- getVerbKeyIndices(id).toList.sorted
   } yield QASRLGenerationPrompt(id, verbIndex, "verb")
 
-    lazy val allNounPrompts: Vector[QASRLGenerationPrompt[SID]] = for {
+  lazy val allNounPrompts: Vector[QASRLGenerationPrompt[SID]] = for {
     id <- allIds
     targetIndex <- getNounKeyIndices(id).toList.sorted
   } yield QASRLGenerationPrompt(id, targetIndex, "noun")
 
-    lazy val allAdjPrompts: Vector[QASRLGenerationPrompt[SID]] = for {
+  lazy val allAdjPrompts: Vector[QASRLGenerationPrompt[SID]] = for {
     id <- allIds
     targetIndex <- getAdjectiveKeyIndices(id).toList.sorted
   } yield QASRLGenerationPrompt(id, targetIndex, "adjective")
 
-    lazy val allAdverbPrompts: Vector[QASRLGenerationPrompt[SID]] = for {
+  lazy val allAdverbPrompts: Vector[QASRLGenerationPrompt[SID]] = for {
     id <- allIds
     targetIndex <- getAdverbKeyIndices(id).toList.sorted
   } yield QASRLGenerationPrompt(id, targetIndex, "adverb")
