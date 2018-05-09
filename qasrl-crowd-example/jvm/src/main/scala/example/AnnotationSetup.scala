@@ -72,8 +72,8 @@ class AnnotationSetup(
     Files.lines(path).iterator.asScala.toList
   }
 
-  def loadInputFile(name: String): Try[List[String]] = Try {
-    val path = staticDataPath.resolve("in").resolve(name)
+  def loadInputFile(fileName: String): Try[List[String]] = Try {
+    val path = Paths.get(fileName)
     import scala.collection.JavaConverters._
     Files.lines(path).iterator.asScala.toList
   }
