@@ -58,81 +58,6 @@ object SDGenerationInstructions extends Instructions {
   )
 
 
-  val nonverb_span_examples = <.div(
-    TooltipsComponent(
-      <.div(
-        <.p("Below, for each target word, we list a complete set of good questions (green) and some bad ones (red). ",
-          " Hover the mouse over the underlined examples for an explanation. "),
-        <.blockquote(
-          ^.classSet1("blockquote"),
-          "His recent ", <.span(Styles.bolded,"appearance"), " at the Metropolitan Museum felt more like a party , or a highly polished jam session with a few friends , than a classical concert . "),
-        <.ul(
-          example(
-            "Where was the appearance?",
-            "Metropolitan Museum",
-            true),
-          example(
-            "When was the appearance?",
-            "recent",
-            true,
-            """ 'Which appearance?' would also have been okay. """),
-          example(
-            "Whose appearance?",
-            "His",
-            true),
-          example(
-            "What is the appearance of?",
-            "jam session",
-            false,
-            """This Q &A is not asserted from the sentence, as it is only claimed that the apperance felt like a jam session. """)
-        ),
-
-        <.blockquote(
-          ^.classSet1("blockquote"),
-          "His recent appearance at the Metropolitan Museum felt more like a party , or a highly ", <.span(Styles.bolded,"polished"), " jam session with a few friends , than a classical concert . "),
-        <.ul(
-          example(
-            "To what degree is something polished?",
-            "highly",
-            true),
-          example(
-            "What is polished?",
-            "jam session",
-            true),
-          example(
-            "What is polished?",
-            "a highly polished jam session",
-            false,
-            """The answer shouldn’t usually include the target word. I this case, it is sufficient to highlight ‘jam session’ to refer the mention of the relevant answer. """)
-        ),
-
-        <.blockquote(
-          ^.classSet1("blockquote"),
-          "His recent appearance at the Metropolitan Museum felt more like a party , or a highly polished jam session with a few friends , than a classical ", <.span(Styles.bolded,"concert"), " . "),
-        <.ul(
-          example(
-            "What kind of concert?",
-            "classical",
-            true,
-            """The concert the highlighted word is referring to is described as classical, which makes this question and answer correct. The fact that the referred concert is not a factual event in the context of the whole sentence is not important - the questions should refer the entity or property described by the word itself.""")
-        ),
-
-        <.blockquote(
-          ^.classSet1("blockquote"),
-          "His recent appearance at the Metropolitan Museum felt more like a party , or a highly polished jam ", <.span(Styles.bolded,"session"), " with a few friends , than a classical concert . "),
-        <.ul(
-          example(
-            "What kind of session?",
-            "jam / highly polished",
-            true,
-            """When answering, list all the phrases in the sentence that answer the question correctly. Notice that independent modifiers of the same noun should be regarded as multiple answers. """)
-        )
-
-      )
-    )
-  )
-
-
   val sdgenerationControls = <.div(
     <.ul(
       <.li(
@@ -197,7 +122,7 @@ object SDGenerationInstructions extends Instructions {
           "Overview" -> sdgenerationOverview,
           "Interface & Controls" -> sdgenerationControls,
           "Conditions & Bonuses" -> sdgenerationConditions,
-          "Examples" -> <.div(nonverb_span_examples)
+          "Examples" -> <.div(CommonInstructions.nonverb_span_examples)
         )
       )
     )

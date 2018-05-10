@@ -18,7 +18,7 @@ import upickle.default._
 
 object SDValidationInstructions extends Instructions {
 
-  import settings._
+  import qasrl.crowd.QASDSettings.default._
   import InstructionsComponent._
 
 
@@ -93,9 +93,9 @@ object SDValidationInstructions extends Instructions {
         collapseCookieId = "sdvalidationCollapseCookie",
         tabs = List(
           "Overview" -> sdvalidationOverview,
-          "Controls" -> ValidationInstructions.validationControls,
-          "Conditions & Payment" -> ValidationInstructions.validationConditions,
-          "Examples" -> SDGenerationInstructions.nonverb_span_examples
+          "Controls" -> CommonInstructions.validationControls,
+          "Conditions & Payment" -> CommonInstructions.validationConditions(qasrl.crowd.QASDSettings.default),
+          "Examples" -> CommonInstructions.nonverb_span_examples
         )
       )
     )

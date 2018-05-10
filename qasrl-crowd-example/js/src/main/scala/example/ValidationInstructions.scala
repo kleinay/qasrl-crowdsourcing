@@ -85,41 +85,6 @@ object ValidationInstructions extends Instructions {
   )
 
 
-  val validationControls = <.div(
-    <.ul(
-      <.li(
-        <.span(Styles.bolded, "Navigation. "),
-        "Change questions using the mouse, the up and down arrow keys, or W and S."),
-      <.li(
-        <.span(Styles.bolded, "Invalid Questions. "),
-        "Click the button labeled \"Invalid\" or press the space bar to toggle a question as invalid."),
-      <.li(
-        <.span(Styles.bolded, "Answers. "),
-        "To highlight an answer, first click on the first word in the answer, which will turn ",
-        <.span(^.backgroundColor := "#FF8000", "orange"),
-        ". Then click on the last word in the answer (which may be the same word) and the whole phrase will turn ",
-        <.span(^.backgroundColor := "#FFFF00", "yellow"),
-        ". (You may also click them in the opposite order.) You can highlight multiple answers to the same question in this way. ",
-        " To delete an answer, click on a word in that answer while it is highlighted yellow. ",
-        """ None of your answers may overlap with each other; answers to questions other than the currently selected one
-        will be highlighted in """,
-        <.span(^.backgroundColor := "#DDDDDD", "grey"), "."))
-  )
-
-
-  val validationConditions = <.div(
-    <.p(s"""You will be paid a bonus of ${dollarsToCents(validationBonusPerQuestion)}c
-        for every question beyond $validationBonusThreshold, which will be paid when the assignment is approved.
-        Your judgments will be cross-checked with other workers,
-        and your agreement rate will be shown to you in the interface.
-        If this number drops below ${(100 * validationAgreementBlockingThreshold).toInt}
-        you will no longer qualify for the task.
-        (Note that other validators will sometimes make mistakes,
-        so there is an element of randomness to it: don't read too deeply into small changes in your agreement rate.)
-        Your work will be approved and the bonus will be paid within an hour.""")
-  )
-
-
   val instructions = <.div(
     Instructions(
       InstructionsProps(
@@ -127,9 +92,9 @@ object ValidationInstructions extends Instructions {
         collapseCookieId = "validationCollapseCookie",
         tabs = List(
           "Overview" -> validationOverview,
-          "Controls" -> validationControls,
-          "Conditions & Payment" -> validationConditions,
-          "Examples" -> GenerationInstructions.verb_span_examples
+          "Controls" -> CommonInstructions.validationControls,
+          "Conditions & Payment" -> CommonInstructions.validationConditions(settings),
+          "Examples" -> CommonInstructions.verb_span_examples
         )
       )
     )
