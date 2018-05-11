@@ -307,8 +307,10 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   val sdgenHITType = HITType(
     title = s"Write question-answer pairs about a word",
     description = s"""
-      Given a sentence and a word from that sentence,
-      write questions and answers about that word.
+      Given a sentence containing a single highlighted word,
+      Your goals are: (1) write questions about that word which
+      are answerable by the sentence and (2) mark their
+      respective answers in the sentence.
       Questions must adhere to a certain template,
       provided by autocomplete functionality.
       Maintain high accuracy to stay qualified.
