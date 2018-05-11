@@ -42,7 +42,7 @@ object SDGenerationInstructions extends Instructions {
       <.li(
         <.span(Styles.bolded, "Correctness. "),
         """Each answer must be a true answer to the question according to the sentence given. For example, """,
-        <.span(Styles.bolded, "Whose corruption? --> local officials"), s""" is invalid, since one cannot assert that from the sentence, but only that protesters so claim.
+        <.span(Styles.bolded, "Whose scandal? --> local officials"), s""" is invalid, since one cannot assert that from the sentence, but only that protesters so claim.
              Your questions will be judged by other annotators, and you must retain an accuracy of
              ${(100.0 * generationAccuracyBlockingThreshold).toInt}% in order to remain qualified. """),
       <.li(

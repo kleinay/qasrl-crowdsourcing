@@ -23,8 +23,8 @@ object ValidationInstructions extends Instructions {
 
   val validationOverview = <.div(
     <.p(Styles.badRed, """Read through all of the instructions and make sure you understand the interface controls before beginning. A full understanding of the requirements will help maximize your agreement with other workers so you can retain your qualification."""),
-    <.p(s"""This task is for an academic research project by the natural language processing group at the University of Washington.
-           We wish to deconstruct the meanings of English sentences into lists of questions and answers.
+    <.p("""This task is for an academic research project of natural language processing.
+           We wish to deconstruct the meanings of verbs in English sentences into lists of questions and answers.
            You will be presented with a selection of English text and a list of questions prepared by other annotators."""),
     <.p("""You will highlight the words in the sentence that correctly answer each question,
            as well as mark whether questions are invalid.""",

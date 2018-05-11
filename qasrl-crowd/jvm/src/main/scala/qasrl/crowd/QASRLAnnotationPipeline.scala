@@ -425,9 +425,8 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
 
   lazy val sampleValPrompt = QASRLValidationPrompt[SID](
     allVerbPrompts.head, "", "", "",
-    List(VerbQA(0, "Who did someone look at?", List(Span(4, 4))),
-         VerbQA(1, "Who looked at someone?", List(Span(0, 1))),
-         VerbQA(1, "How did someone look at someone?", List(Span(5, 5)))))
+    List(VerbQA(3, "Who expects something?", List(Span(0, 0), Span(2, 2))),
+         VerbQA(3, "What does someone expects?", List(Span(4, 15)))))
 
   lazy val valTaskSpec = TaskSpecification.NoWebsockets[QASRLValidationPrompt[SID], List[QASRLValidationAnswer], QASRLValidationAjaxRequest[SID]](
     settings.validationTaskKey, valHITType, valAjaxService, Vector(sampleValPrompt),
@@ -467,8 +466,8 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
 
   lazy val sdsampleValPrompt = QASRLValidationPrompt[SID](
     allNounPrompts.head, "", "", "",
-    List(VerbQA(0, "Who did someone look at?", List(Span(4, 4))),
-      VerbQA(1, "How did someone look at someone?", List(Span(5, 5)))))
+    List(VerbQA(6, "Whose sales?", List(Span(0, 0), Span(4, 4))),
+      VerbQA(1, "Where are the sales?", List(Span(5, 5)))))
 
   lazy val sdvalTaskSpec = TaskSpecification.NoWebsockets[QASRLValidationPrompt[SID], List[QASRLValidationAnswer], QASRLValidationAjaxRequest[SID]](
     settings.sdvalidationTaskKey, sdvalHITType, sdvalAjaxService, Vector(sdsampleValPrompt),

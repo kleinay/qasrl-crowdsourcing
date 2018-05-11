@@ -22,7 +22,7 @@ object GenerationInstructions extends Instructions {
 
   val generationOverview = <.div(
     <.p(Styles.badRed, """Read through all of the instructions and make sure you understand the interface controls before beginning. A full understanding of the requirements will help make sure validators approve your work and you can retain your qualification."""),
-    <.p("""This task is for an academic research project by the natural language processing group at the University of Washington.
+    <.p("""This task is for an academic research project of natural language processing.
         We wish to deconstruct the meanings of verbs in English sentences into lists of questions and answers.
         You will be presented with a selection of English text with a verb written in bold."""),
     <.p("""You will write questions about the verb and highlight their answers in the original sentence. """,

@@ -33,42 +33,38 @@ object SDValidationInstructions extends Instructions {
       """For example, consider the following sentence:"""),
     <.blockquote(
       ^.classSet1("blockquote"),
-      "Protesters ", <.span(Styles.bolded, " blamed "), " the corruption scandal on local officials, who today ",
-      " refused to promise that they would resume the investigation before year's end. "),
+      "During the 1730s Britain 's ", <.span(Styles.bolded, " relationship ")," with Spain had slowly declined . "),
     <.p("""You should choose all of the following answers:"""),
     <.ul(
-      <.li("Who blamed someone? --> ", <.span(Styles.goodGreen, " Protesters ")),
-      <.li("Who did someone blame something on? --> ", <.span(Styles.goodGreen, " local officials / they")),
-      <.li("What did someone blame on someone? --> ", <.span(Styles.goodGreen, " the corruption scandal"))),
+      <.li("Whose relationship? --> ", <.span(Styles.goodGreen, " Britain 's ")),
+      <.li("What is the relationship with? --> ", <.span(Styles.goodGreen, " Spain "))),
     <.p(s"""You will be paid a ${dollarsToCents(validationBonusPerQuestion)}c bonus per question after the first $validationBonusThreshold questions if there are more than $validationBonusThreshold."""),
     <.h2("""Guidelines"""),
     <.ol(
       <.li(
         <.span(Styles.bolded, "Correctness. "),
-        """Each answer must satisfy the litmus test that if you substitute it back into the question,
-           the result is a grammatical statement, and it is true according to the sentence given. For example, """,
-        <.span(Styles.bolded, "Who blamed someone? --> Protesters"), """ becomes """,
-        <.span(Styles.goodGreen, "Protesters blamed someone, "), """ which is valid, while """,
-        <.span(Styles.bolded, "Who blamed? --> Protesters"), """ would become """,
-        <.span(Styles.badRed, "Protesters blamed, "), s""" which is ungrammatical, so it is invalid.
-           Your responses will be compared to other annotators, and you must agree with them
+        """Each answer must be a true answer to the question according to the sentence given. For example, """,
+        <.span(Styles.bolded, "Whose scandal? --> local officials"),
+        s""" is invalid, since one cannot assert that from the sentence, but only that protesters so claim.
+        Your responses will be compared to other annotators, and you must agree with them
            ${(100.0 * validationAgreementBlockingThreshold).toInt}% of the time in order to remain qualified. """),
       <.li(
-        <.span(Styles.bolded, "Verb-relevance. "),
-        """ Answers to the questions must pertain to the participants, time, place, reason, etc., of """,
-        <.span(Styles.bolded, " the target verb in the sentence, "),
+        <.span(Styles.bolded, "Target-relevance. "),
+        """ The question should be interpreted as referring """,
+        <.span(Styles.bolded, " the target word in the sentence, "),
         " which is bolded and colored blue in the interface. ",
         """ For example, if the sentence is """,
         <.span(Styles.bolded,
-          " He ",
-          <.span(Styles.niceBlue, Styles.underlined, "promised"),
-          " to come tomorrow "),
+          " Using this new format, one can combine many MP3 ",
+          <.span(Styles.niceBlue, Styles.underlined, "files"),
+          " into one or two large files."),
         """ and the question is """,
-        <.span(Styles.badRed, " When did someone promise to do something? "),
-        """ you must mark it """,
-        <.span(Styles.badRed, " Invalid "),
-        """ because the time mentioned, """, <.i(" tomorrow, "), " is ", <.i(" not "),
-        " the time that he made the promise, but rather the time that he might come."),
+        <.span(Styles.goodGreen, " How many files? "),
+        """ you should mark """,
+        <.span(Styles.goodGreen, " many "),
+        """, but not """,
+        <.span(Styles.badRed, " one or two "),
+        """, because the question is only referring the highlighted occurrence of 'files'."""),
       <.li(
         <.span(Styles.bolded, "Exhaustiveness. "),
         s"""You must provide every possible answer to each question.
@@ -79,8 +75,12 @@ object SDValidationInstructions extends Instructions {
            If the only possible answers to a question were already used for previous questions, please mark it invalid."""
       )
     ),
-    <.p(" All ungrammatical questions should be counted invalid. However, ",
-      " If the sentence has grammatical errors or is not a complete sentence, please answer ",
+    <.p(" The questions were composed automatically and selected by annotators to describe ",
+      " the relation between the target word and the answer spans. ",
+      " Thus, questions might suffer some grammatical flaws, but should be nevertheless ",
+      " considered as valid, ",
+      <.span(Styles.bolded, "as long as you can clearly understand their meanings and their appropriate answers.")),
+    <.p(" If the sentence has grammatical errors or is not a complete sentence, please answer ",
       " questions according to the sentence's meaning to the best of your ability. "),
     <.p("Please read through the examples if you need more details.")
   )
