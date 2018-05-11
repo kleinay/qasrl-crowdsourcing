@@ -57,6 +57,7 @@ def deleteAll = {
   exp.setGenHITsActiveEach(0)
   exp.setSDGenHITsActiveEach(0)
   exp.setValHITsActive(0)
+  exp.setSDValHITsActive(0)
   Thread.sleep(200)
   exp.expire
   exp.delete
