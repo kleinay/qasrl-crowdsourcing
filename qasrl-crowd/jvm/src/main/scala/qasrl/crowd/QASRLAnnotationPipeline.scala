@@ -200,6 +200,34 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     .withComparator("DoesNotExist")
     .withRequiredToPreview(false)
 
+  // duplicate generation-coverage qualification for non-verbs
+  val sdgenCoverageDisqualTypeLabelString = generationCoverageDisqualTypeLabel.fold("")(x => s"[$x] ")
+  val sdgenCoverageDisqualTypeName = s"${sdgenCoverageDisqualTypeLabelString} Questions asked per target word disqualification"
+  val sdgenCoverageDisqualType = config.service.listQualificationTypes(
+    new ListQualificationTypesRequest()
+      .withQuery(sdgenCoverageDisqualTypeName)
+      .withMustBeOwnedByCaller(true)
+      .withMustBeRequestable(false)
+      .withMaxResults(100)
+  ).getQualificationTypes.asScala.toList.find(_.getName == sdgenCoverageDisqualTypeName).getOrElse {
+    System.out.println("Generating sdgeneration coverage disqualification type...")
+    config.service.createQualificationType(
+      new CreateQualificationTypeRequest()
+        .withName(sdgenCoverageDisqualTypeName)
+        .withKeywords("language,english,question answering")
+        .withDescription("""Number of questions asked for each target word
+          in our question-answer pair generation task is too low.""".replaceAll("\\s+", " "))
+        .withQualificationTypeStatus(QualificationTypeStatus.Active)
+        .withAutoGranted(false)
+    ).getQualificationType
+  }
+  val sdgenCoverageDisqualTypeId = sdgenCoverageDisqualType.getQualificationTypeId
+  val sdgenCoverageRequirement = new QualificationRequirement()
+    .withQualificationTypeId(sdgenCoverageDisqualTypeId)
+    .withComparator("DoesNotExist")
+    .withRequiredToPreview(false)
+
+
   val valAgrDisqualTypeLabelString = validationAgreementDisqualTypeLabel.fold("")(x => s"[$x] ")
   val valAgrDisqualTypeName = s"${valAgrDisqualTypeLabelString}Question answering agreement disqualification"
   val valAgrDisqualType = config.service.listQualificationTypes(
@@ -272,6 +300,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     }
     revokeAllWorkerQuals(genAccDisqualTypeId)
     revokeAllWorkerQuals(genCoverageDisqualTypeId)
+    revokeAllWorkerQuals(sdgenCoverageDisqualTypeId)
     revokeAllWorkerQuals(valAgrDisqualTypeId)
     revokeAllWorkerQuals(sdvalAgrDisqualTypeId)
   }
@@ -318,7 +347,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     reward = qasdSettings.generationReward,
     keywords = "language,english,question answering",
     qualRequirements = Array[QualificationRequirement](
-      approvalRateRequirement, localeRequirement, genAccuracyRequirement, genCoverageRequirement
+      approvalRateRequirement, localeRequirement, genAccuracyRequirement, sdgenCoverageRequirement
     ),
     autoApprovalDelay = 2592000L, // 30 days
     assignmentDuration = 3600L)
@@ -569,7 +598,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
         sdgenHelper,
         sdvalHelper,
         sdvalManager, // here we pass the valManager to genManager, so that when reviewing assignment it add promtp to valManager
-        genCoverageDisqualTypeId,
+        sdgenCoverageDisqualTypeId,
         // sentenceTracker,
         if(config.isProduction) numGenerationAssignmentsForPrompt else (_ => 1),
         if(config.isProduction) 100 else 3,
