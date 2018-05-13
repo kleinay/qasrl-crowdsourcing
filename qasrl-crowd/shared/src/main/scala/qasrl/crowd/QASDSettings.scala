@@ -13,6 +13,11 @@ trait QASDSettings extends QASRLSettings {
 
   override val generationCoverageQuestionsPerVerbThreshold = 0.25
 
+  // validation conditions
+  override val validationReward = 0.05
+  override val validationBonusPerQuestion = 0.02
+  override val validationBonusThreshold = 2
+
 }
 
 object QASDSettings {
