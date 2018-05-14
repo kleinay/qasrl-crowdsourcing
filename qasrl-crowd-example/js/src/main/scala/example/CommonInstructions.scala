@@ -192,7 +192,20 @@ object CommonInstructions extends Instructions {
             "What is the appearance of?",
             "jam session",
             false,
-            """This Q &A is not asserted from the sentence, as it is only claimed that the apperance felt like a jam session. """)
+            """This Q&A is not asserted from the sentence, as it is only claimed that the apperance felt like a jam session. """)
+        ),
+
+        <.blockquote(
+          ^.classSet1("blockquote"),
+          "His recent appearance at the ", <.span(Styles.bolded,"Metropolitan Museum"), "felt more like a party , or a highly polished jam session with a few friends , than a classical conecrt . "),
+        <.span(
+          Styles.badRed,
+          TagMod(
+            Styles.underlined,
+            dataToggle := "tooltip",
+            dataPlacement := "top",
+            ^.title := "Notice how no other word is shedding further information about the entity referred by the target."),
+          <.span("This target has no appropriate questions to ask about.")
         ),
 
         <.blockquote(
@@ -205,13 +218,14 @@ object CommonInstructions extends Instructions {
             true),
           example(
             "What is polished?",
-            "jam session",
-            true),
+            "session",
+            true,
+            """ 'jam session' is also correct. Shorter answer spans are usually preferred."""),
           example(
             "What is polished?",
             "a highly polished jam session",
             false,
-            """The answer shouldn’t usually include the target word. I this case, it is sufficient to highlight ‘jam session’ to refer the mention of the relevant answer. """)
+            """The answer shouldn’t usually include the target word. In this case, it is sufficient to highlight ‘jam session’ to refer the mention of the relevant answer. """)
         ),
 
         <.blockquote(

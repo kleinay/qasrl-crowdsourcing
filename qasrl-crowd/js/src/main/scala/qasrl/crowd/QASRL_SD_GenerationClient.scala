@@ -317,7 +317,7 @@ class QASRL_SD_GenerationClient[SID : Reader : Writer](
                       ^.padding := "2px 0",
                       ^.fontSize := "90%",
                       ^.overflow := "auto",
-                      ^.maxHeight := "600px",
+                      ^.maxHeight := "200px",
                       ^.onMouseMove --> setBlurEnabled(false),
                       ^.onMouseLeave --> setBlurEnabled(true),
                       suggestions.zipWithIndex.toList.toVdomArray {
@@ -457,9 +457,9 @@ class QASRL_SD_GenerationClient[SID : Reader : Writer](
                                 },
                                 f"$questionsPerVerb%.1f"
                               ),
-                              s" questions per verb. This must remain above ${settings.generationCoverageQuestionsPerVerbThreshold}",
+                              s" questions per target. This must remain above ${settings.generationCoverageQuestionsPerVerbThreshold}",
                               remainingInCoverageGracePeriodOpt.fold(".")(remaining =>
-                                s" after the end of the grace period ($remaining verbs remaining)."
+                                s" after the end of the grace period ($remaining targets remaining)."
                               )
                             ),
                             accuracyOpt.whenDefined(accuracy =>
@@ -477,7 +477,7 @@ class QASRL_SD_GenerationClient[SID : Reader : Writer](
                                 ),
                                 f""" were judged valid by other annotators. This must remain above ${settings.generationAccuracyBlockingThreshold * 100.0}%.1f%%""",
                                 remainingInAccuracyGracePeriodOpt.fold(".")(remaining =>
-                                  s" after the end of the grace period ($remaining verbs remaining)."
+                                  s" after the end of the grace period ($remaining targets remaining)."
                                 )
                               )
                             )

@@ -24,8 +24,9 @@ object SDGenerationInstructions extends Instructions {
   val sdgenerationOverview = <.div(
     <.p(Styles.badRed, """Read through all of the instructions and make sure you understand the task and interface controls before beginning. A full understanding of the requirements will help make sure validators approve your work and you can retain your qualification."""),
     <.p("""This task is for an academic research project of natural language processing.
-        We wish to deconstruct the meanings of English sentences into relations between words in the sentence.
-        You will be presented with a selection of English text with a target word written in bold."""),
+        We wish to deconstruct the meanings of English sentences into relations between words in the sentence. """),
+    <.span("You will be presented with a selection of English text with a designated "),
+    <.span(Styles.niceBlue, Styles.underlined, "target word"), <.span("."),
     <.p("""You will write questions about the target word and highlight their answers in the original sentence. """,
       <.b(""" Note: it takes exactly 2 clicks to highlight each answer; see the Interface & Controls tab for details. """),
       """ Questions are taken from a closed list of options, which is suggested by a drop-down menu list. An autocomplete functionality in the interface is provided in order to aid the search of an appropriate question. """,
@@ -47,14 +48,19 @@ object SDGenerationInstructions extends Instructions {
              ${(100.0 * generationAccuracyBlockingThreshold).toInt}% in order to remain qualified. """),
       <.li(
         <.span(Styles.bolded, "Exhaustiveness. "),
-        s"""You must write as many questions, and as many answers to each question, as possible.
-             You must retain an average of 0.5 question per target in order to remain qualified for the HIT. Notice however that some prompts have no appropriate question to ask about. If this is the case, you can just submit an empty form. You will be awarded a bonus for each new question,
-             starting at ${generationRewardCents}c and going up by 1c for each additional question.
-             However, note that none of the answers to your questions may overlap.
-             If there is more than one possible question that has the same answer, just write one of them."""
-      )
+        s"""You must write as many questions as possible.
+            Notice however that some prompts have no appropriate question to ask about. If this is the case, you can just submit an empty form.
+             You must retain an average of ${generationCoverageQuestionsPerVerbThreshold}
+             question per target in order to remain qualified for the HIT.""")
     ),
-    <.p("If you are not sure about certain cases, please check the examples.")
+    <.h3("Additional Notes"),
+    <.ul(
+      <.li(s"""You will be awarded a bonus for each new question,
+             starting at ${generationRewardCents}c and going up by 1c for each additional question."""),
+      <.li("""None of the answers to your questions may overlap."""),
+      <.li("""If there is more than one possible question that has the same answer, just write one of them."""),
+      <.li("For a better understading, or if you arn't sure about certain cases, please review the examples.")
+    )
   )
 
 
@@ -101,7 +107,7 @@ object SDGenerationInstructions extends Instructions {
           """),
     <.p("""Your questions will be evaluated by other annotators, and """,
       <.b(""" you will only be awarded bonuses for your valid question-answer pairs. """),
-      s""" (However, your questions-per-verb average will include invalid questions.)
+      s""" (However, your questions-per-target average will include invalid questions.)
           The bonus will be awarded as soon as validators have checked all of your question-answer pairs,
           which will happen shortly after you submit (but will vary depending on worker availability).
           Your accuracy will be updated as your questions are validated
