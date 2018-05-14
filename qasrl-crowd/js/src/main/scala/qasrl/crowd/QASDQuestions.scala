@@ -6,6 +6,7 @@ package qasrl.crowd
 *   [W]     is replaced with the target word
 *   <PREP>  is replaced with each of the prepositions
 *   (word) is generating two templates, with and without the word in parantheses
+*   w1/w2/../wi is generating i templates, one with each slashed word alone
 
  */
 
@@ -16,6 +17,7 @@ case class QASDQuestions(targetWord : String, templateList : List[String]) {
         .map(_.replace(QASDQuestions.TRGT_SYMBOL, targetWord))  // replace TRGT_SYMBOL
         .map(replacePrep).flatten // expand PREP_SYMBOL with all prepositions
         .map(handleParatheses).flatten // replace paranthese with two templates (with\out content)
+        .map(handleSlash).flatten // expand every slashed option
         .toSet.toList
 
   }
@@ -45,6 +47,39 @@ case class QASDQuestions(targetWord : String, templateList : List[String]) {
     }
   }
 
+  def handleSlash(sentence : String) : List[String] = {
+
+    // for a token that is a regular word, return List(word);
+    // for slashed words (as "a/an"), return List of the slashed words (e.g. List(a, an))
+    def optionalWordsForTokens(token : String) : List[String] = {
+      "/".r.findFirstMatchIn(token) match {
+        case None => if (token.nonEmpty) List(token)
+                      else List()
+        case Some(slashMatch) => {
+          val wordBeforeSlash = slashMatch.before.toString.split(" ").last
+          val strAfterSlash = slashMatch.after.toString.split(" ")(0)   // this string may contain further slashes
+          // Recursively remove expand slashes from strAfterSlash
+          List(wordBeforeSlash) ++ optionalWordsForTokens(strAfterSlash)
+        }
+      }
+    }
+
+    "/".r.findFirstMatchIn(sentence) match {
+      case None => List(sentence)
+      case Some(slashMatch) => {
+        val beforeWords = slashMatch.before.toString.split(" ")
+        val prefix = beforeWords.take(beforeWords.size - 1).mkString(" ")
+        val afterWords = slashMatch.after.toString.split(" ")
+        val suffix = afterWords.takeRight(afterWords.size - 1).mkString(" ")
+        val currentOptions = List(beforeWords.last) ++ optionalWordsForTokens(afterWords(0))
+        // recursion on suffix (string sfter slashed-token, perhaps containing more slashes)
+        val suffList: List[String] = handleSlash(suffix)
+        for (cur <- currentOptions;
+             suff <- suffList)
+          yield Seq(prefix,cur,suff).mkString(" ")
+      }
+    }
+  }
 
 }
 
