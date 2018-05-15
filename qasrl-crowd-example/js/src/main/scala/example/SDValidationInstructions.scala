@@ -69,11 +69,13 @@ object SDValidationInstructions extends Instructions {
       <.li(
         <.span(Styles.bolded, "Exhaustiveness. "),
         s"""You must provide every possible answer to each question.
-           When highlighting answers, please only include the necessary words to provide a complete, grammatical answer,
-           but if all else is equal, prefer to use longer answers.
            Also please include pronouns in the sentence that refer an answer you've already given.
            However, note that none of the answers to your questions may overlap.
            If the only possible answers to a question were already used for previous questions, please mark it invalid."""
+      ),
+      <.li(
+        <.span(Styles.bolded, "Short Answers. "),
+        s"""When highlighting answers, prefer to use shorter answers, ideally a single word or a common phrase."""
       )
     ),
     <.p(" The questions were composed automatically and selected by annotators to describe ",
