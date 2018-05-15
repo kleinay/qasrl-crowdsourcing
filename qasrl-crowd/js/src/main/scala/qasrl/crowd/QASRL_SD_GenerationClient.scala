@@ -547,10 +547,11 @@ class QASRL_SD_GenerationClient[SID : Reader : Writer](
                           ^.classSet1("btn btn-primary btn-lg btn-block"),
                           ^.margin := "5px",
                           ^.`type` := "submit",
-                          ^.disabled := isNotAssigned),
+                          ^.disabled := isNotAssigned || s.curFocus!=None),
                         ^.id := FieldLabels.submitButtonLabel,
                         ^.value := (
                           if(isNotAssigned) "You must accept the HIT to submit results"
+                          else if (s.curFocus!=None) "Submit (disabled while a question is focused)"
                           else "Submit"
                           )
                       )
