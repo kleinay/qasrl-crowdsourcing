@@ -197,7 +197,7 @@ object CommonInstructions extends Instructions {
 
         <.blockquote(
           ^.classSet1("blockquote"),
-          "His recent appearance at the ", <.span(Styles.bolded,"Metropolitan Museum"), "felt more like a party , or a highly polished jam session with a few friends , than a classical conecrt . "),
+          "His recent appearance at the ", <.span(Styles.bolded,"Metropolitan Museum"), " felt more like a party , or a highly polished jam session with a few friends , than a classical conecrt . "),
         <.span(
           Styles.badRed,
           TagMod(

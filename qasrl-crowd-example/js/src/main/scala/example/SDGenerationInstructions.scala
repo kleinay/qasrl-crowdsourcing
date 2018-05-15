@@ -27,10 +27,10 @@ object SDGenerationInstructions extends Instructions {
         We wish to deconstruct the meanings of English sentences into relations between words in the sentence. """),
     <.span("You will be presented with a selection of English text with a designated "),
     <.span(Styles.niceBlue, Styles.underlined, "target word"), <.span("."),
-    <.p("""You will write questions about the target word and highlight their answers in the original sentence. """,
-      <.b(""" Note: it takes exactly 2 clicks to highlight each answer; see the Interface & Controls tab for details. """),
-      """ Questions are taken from a closed list of options, which is suggested by a drop-down menu list. An autocomplete functionality in the interface is provided in order to aid the search of an appropriate question. """,
-      """ For example, the prompt below should elicit the following questions and answers: """),
+    <.p("""Your task is to write questions about the target word and highlight their answers in the original sentence.""",
+      """ Questions are taken from a list of options, which is suggested by a drop-down menu list.""",
+      """ An autocomplete functionality in the interface is provided in order to aid the search of an appropriate question. """),
+    <.p("""For example, the prompt below should elicit the following questions and answers: """),
     <.blockquote(
       ^.classSet1("blockquote"),
       "Protesters blamed the recent corruption ", <.span(Styles.bolded, "scandal"), " on local officials, who today refused to promise that they would resume the investigation before year's end. "),
@@ -57,6 +57,7 @@ object SDGenerationInstructions extends Instructions {
     <.ul(
       <.li(s"""You will be awarded a bonus for each new question,
              starting at ${generationRewardCents}c and going up by 1c for each additional question."""),
+      <.li("""You can highlight multiple answers for a single question."""),
       <.li("""None of the answers to your questions may overlap."""),
       <.li("""If there is more than one possible question that has the same answer, just write one of them."""),
       <.li("For a better understading, or if you arn't sure about certain cases, please review the examples.")
@@ -87,11 +88,11 @@ object SDGenerationInstructions extends Instructions {
       When a question-answer pair is complete (the question is finished and it has at least one answer),
       its input field will turn """,
       <.span(^.backgroundColor := "rgba(0, 255, 0, 0.3)", "green"),
-      """. If it violates the required formatting, it will turn """, <.span(
+      """. If the question is invalid, it will turn """, <.span(
         ^.backgroundColor := "rgba(255, 0, 0, 0.3)", "red"
       ), """. If it is a repeat of a previous question, it will turn """, <.span(
         ^.backgroundColor := "rgba(255, 255, 0, 0.3)", "yellow"
-      ), """. Only complete (green) question-answer pairs will count towards your requirements and bonus. """
+      ), """ (it's also invalid). Only complete (green) question-answer pairs will count towards your requirements and bonus. """
     )
   )
 
@@ -126,9 +127,9 @@ object SDGenerationInstructions extends Instructions {
         collapseCookieId = "sdgenerationCollapseCookie",
         tabs = List(
           "Overview" -> sdgenerationOverview,
+          "Examples" -> <.div(CommonInstructions.nonverb_span_examples),
           "Interface & Controls" -> sdgenerationControls,
-          "Conditions & Bonuses" -> sdgenerationConditions,
-          "Examples" -> <.div(CommonInstructions.nonverb_span_examples)
+          "Conditions & Payment" -> sdgenerationConditions
         )
       )
     )

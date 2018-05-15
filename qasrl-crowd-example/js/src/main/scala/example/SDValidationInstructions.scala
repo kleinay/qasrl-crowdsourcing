@@ -25,8 +25,9 @@ object SDValidationInstructions extends Instructions {
   val sdvalidationOverview = <.div(
     <.p(Styles.badRed, """Read through all of the instructions and make sure you understand the interface controls before beginning. A full understanding of the requirements will help maximize your agreement with other workers so you can retain your qualification."""),
     <.p("""This task is for an academic research project of natural language processing.
-          We wish to deconstruct the meanings of English sentences into relations between words in the sentence.
-          You will be presented with a selection of English text with a target word written in bold, and a list of questions prepared by other annotators regarding that word."""),
+          We wish to deconstruct the meanings of English sentences into relations between words in the sentence."""),
+    <.span("You will be presented with a selection of English text with a designated "),
+    <.span(Styles.niceBlue, Styles.underlined, "target word"), <.span(" written in bold, and a list of questions prepared by other annotators regarding that word."),
     <.p("""You will highlight the words in the sentence that correctly answer each question,
            as well as mark whether questions are invalid.""",
       <.b(""" Note: it takes exactly 2 clicks to highlight each answer; see the Controls tab for details. """),
@@ -93,9 +94,9 @@ object SDValidationInstructions extends Instructions {
         collapseCookieId = "sdvalidationCollapseCookie",
         tabs = List(
           "Overview" -> sdvalidationOverview,
+          "Examples" -> CommonInstructions.nonverb_span_examples,
           "Controls" -> CommonInstructions.validationControls,
-          "Conditions & Payment" -> CommonInstructions.validationConditions(qasrl.crowd.QASDSettings.default),
-          "Examples" -> CommonInstructions.nonverb_span_examples
+          "Conditions & Payment" -> CommonInstructions.validationConditions(qasrl.crowd.QASDSettings.default)
         )
       )
     )
