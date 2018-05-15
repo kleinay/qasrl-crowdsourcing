@@ -8,8 +8,7 @@ object QASDAdjectiveTemplates {
       |What is not [W]?
       |What kind of [W]?
       |How much [W]?
-      |To what extent is something [W]?
-      |To what degree is something [W]?"""
+      |To what degree/extent is something (not )[W]?"""
       .stripMargin
       .split("\n")
       .toList
