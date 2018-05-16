@@ -22,7 +22,7 @@ object SDGenerationInstructions extends Instructions {
 
 
   val sdgenerationOverview = <.div(
-    <.p(Styles.badRed, """Read through all of the instructions and make sure you understand the task and interface controls before beginning. A full understanding of the requirements will help make sure validators approve your work and you can retain your qualification."""),
+    <.p(Styles.badRed, """Read through all of the instructions below, and make sure you understand the task and interface controls before beginning. A full understanding of the requirements will help make sure validators approve your work and you can retain your qualification."""),
     <.p("""This task is for an academic research project of natural language processing.
         We wish to deconstruct the meanings of English sentences into relations between words in the sentence. """),
     <.span("You will be presented with a selection of English text with a designated "),

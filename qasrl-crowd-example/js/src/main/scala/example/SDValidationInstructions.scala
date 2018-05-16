@@ -23,19 +23,23 @@ object SDValidationInstructions extends Instructions {
 
 
   val sdvalidationOverview = <.div(
-    <.p(Styles.badRed, """Read through all of the instructions and make sure you understand the interface controls before beginning. A full understanding of the requirements will help maximize your agreement with other workers so you can retain your qualification."""),
+    <.p(Styles.badRed, """Read through all of the instructions below, and make sure you understand the task and interface controls before beginning. A full understanding of the requirements will help maximize your agreement with other workers so you can retain your qualification."""),
     <.p("""This task is for an academic research project of natural language processing.
           We wish to deconstruct the meanings of English sentences into relations between words in the sentence."""),
     <.span("You will be presented with a selection of English text with a designated "),
-    <.span(Styles.niceBlue, Styles.underlined, "target word"), <.span(" written in bold, and a list of questions prepared by other annotators regarding that word."),
-    <.p("""You will highlight the words in the sentence that correctly answer each question,
+    <.span(Styles.niceBlue, Styles.underlined, "target word"),
+    <.span(", and a list of questions prepared by other annotators regarding that word. "),
+    <.span("""Your task is to highlight the words in the sentence that correctly answer each question,
            as well as mark whether questions are invalid.""",
-      <.b(""" Note: it takes exactly 2 clicks to highlight each answer; see the Controls tab for details. """),
-      """For example, consider the following sentence:"""),
+      """ You will highlight an answer span using """,
+      <.b("""exactly 2 clicks """), <.span(
+        """- one click on the first word of the answer, and one click on the last word
+          (see the Controls tab for further details). """)),
+    <.p("""For example, consider the following sentence:"""),
     <.blockquote(
       ^.classSet1("blockquote"),
       "During the 1730s Britain 's ", <.span(Styles.bolded, " relationship ")," with Spain had slowly declined . "),
-    <.p("""You should choose all of the following answers:"""),
+    <.p("""You should highlight the following answers:"""),
     <.ul(
       <.li("Whose relationship? --> ", <.span(Styles.goodGreen, " Britain 's ")),
       <.li("What is the relationship with? --> ", <.span(Styles.goodGreen, " Spain "))),
@@ -44,9 +48,10 @@ object SDValidationInstructions extends Instructions {
     <.ol(
       <.li(
         <.span(Styles.bolded, "Correctness. "),
-        """Each answer must be a true answer to the question according to the sentence given. For example, """,
-        <.span(Styles.bolded, "Whose scandal? --> local officials"),
-        s""" is invalid, since one cannot assert that from the sentence, but only that protesters so claim.
+        """Each answer must be a true answer to the question according to the sentence given.
+           You should be strict with regard to what can be asserted from the sentence. For example, """,
+        <.span(Styles.bolded, "When was the relationship? --> During the 1730s"),
+        s""" is invalid, since the answer phrase is not referring to the time of the relationship, but to the time of it's decline.
         Your responses will be compared to other annotators, and you must agree with them
            ${(100.0 * validationAgreementBlockingThreshold).toInt}% of the time in order to remain qualified. """),
       <.li(
