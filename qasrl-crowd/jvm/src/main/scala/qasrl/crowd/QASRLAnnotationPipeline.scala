@@ -43,12 +43,14 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   val allIds: Vector[SID], // IDs of sentences to annotate
   numGenerationAssignmentsForPrompt: QASRLGenerationPrompt[SID] => Int,
   annotationDataService: AnnotationDataService,
+  qualTestOpt : Option[QualTest] = None,
   frozenGenerationHITTypeId: Option[String] = None,
   frozenValidationHITTypeId: Option[String] = None,
   generationAccuracyDisqualTypeLabel: Option[String] = None,
   generationCoverageDisqualTypeLabel: Option[String] = None,
   validationAgreementDisqualTypeLabel: Option[String] = None,
-  sdvalidationAgreementDisqualTypeLabel: Option[String] = None)(
+  sdvalidationAgreementDisqualTypeLabel: Option[String] = None,
+  sdvalidationTestQualTypeLabel: Option[String] = None)(
   implicit val config: TaskConfig,
   val settings: QASRLSettings,
   val inflections: Inflections
@@ -127,10 +129,10 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   } yield QASRLGenerationPrompt(id, targetIndex, "adverb")
 
   lazy val allPrompts: Vector[QASRLGenerationPrompt[SID]] =
-    allNounPrompts ++ allVerbPrompts ++ allAdjPrompts ++ allAdverbPrompts
+    allNounPrompts ++ allVerbPrompts ++ allAdjPrompts
 
   lazy val allSDPrompts: Vector[QASRLGenerationPrompt[SID]] =
-    allNounPrompts ++ allAdjPrompts ++ allAdverbPrompts
+    allNounPrompts ++ allAdjPrompts
 
   implicit val ads = annotationDataService
 
@@ -281,6 +283,45 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     .withComparator("DoesNotExist")
     .withRequiredToPreview(false)
 
+  // Optoinal: add Qualification Test as qualification to sdvalidation
+
+  val sdvalTestQualTypeLabelString = sdvalidationTestQualTypeLabel.fold("")(x => s"[$x] ")
+  val sdvalTestQualTypeName = if(config.isProduction)
+                                s"${sdvalTestQualTypeLabelString}Question answering test score (%)"
+                              else "Sandbox sdvalidation test score qual"
+  val sdvalTestQualTypeOpt = qualTestOpt.flatMap(qualTest => Some({
+    config.service.listQualificationTypes (
+    new ListQualificationTypesRequest ()
+      .withQuery (sdvalTestQualTypeName)
+      .withMustBeOwnedByCaller (true)
+      .withMustBeRequestable (false)
+      .withMaxResults(100)
+    ).getQualificationTypes.asScala.toList.find(_.getName == sdvalTestQualTypeName).getOrElse {
+      System.out.println ("Generating sdvalidation test qualification type...")
+      config.service.createQualificationType (
+      new CreateQualificationTypeRequest ()
+        .withName (sdvalTestQualTypeName)
+        .withKeywords ("language,english,question answering")
+        .withDescription ("""Score on the qualification test for the question answering task,
+                as a test of your understanding of the instructions.""".replaceAll ("\\s+", " ") )
+        .withQualificationTypeStatus (QualificationTypeStatus.Active)
+        .withRetryDelayInSeconds (300L)
+        .withTest (qualTest.testString)
+        .withAnswerKey (qualTest.answerKeyString)
+        .withTestDurationInSeconds (1200L)
+        .withAutoGranted (false)
+      ).getQualificationType
+    }
+  }))
+  val sdvalTestQualTypeIdOpt = sdvalTestQualTypeOpt.map(_.getQualificationTypeId)
+  val sdvalTestRequirementOpt = sdvalTestQualTypeIdOpt.map(qualTypeId =>
+    new QualificationRequirement()
+    .withQualificationTypeId(qualTypeId)
+    .withComparator("GreaterThanOrEqualTo")
+    .withIntegerValues(75)
+    .withRequiredToPreview(false)
+  )
+
 
   // NOTE may need to call multiple times to cover all workers... sigh TODO pagination
   def resetAllQualificationValues = {
@@ -298,11 +339,14 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
         )
       )
     }
-    revokeAllWorkerQuals(genAccDisqualTypeId)
-    revokeAllWorkerQuals(genCoverageDisqualTypeId)
-    revokeAllWorkerQuals(sdgenCoverageDisqualTypeId)
-    revokeAllWorkerQuals(valAgrDisqualTypeId)
-    revokeAllWorkerQuals(sdvalAgrDisqualTypeId)
+    val activeQualsList = List(
+      genAccDisqualTypeId,
+      genCoverageDisqualTypeId,
+      sdgenCoverageDisqualTypeId,
+      valAgrDisqualTypeId,
+      sdvalAgrDisqualTypeId) ++ sdvalTestQualTypeIdOpt
+
+    activeQualsList.foreach(revokeAllWorkerQuals)
   }
 
   lazy val (taskPageHeadLinks, taskPageBodyLinks) = {
@@ -477,8 +521,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     reward = qasdSettings.validationReward,
     keywords = "language,english,question answering",
     qualRequirements = Array[QualificationRequirement](
-      approvalRateRequirement, localeRequirement, sdvalAgreementRequirement
-    ),
+      approvalRateRequirement, localeRequirement, sdvalAgreementRequirement) ++ sdvalTestRequirementOpt,
     autoApprovalDelay = 2592000L, // 30 days
     assignmentDuration = 3600L)
 
@@ -584,7 +627,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
 
   //**** lets try to create another HITType and TaskSepc for SDGen (Sem-Dep-Generation)
   val sdgenTaskSpec = TaskSpecification.NoWebsockets[QASRLGenerationPrompt[SID], List[VerbQA], QASRLGenerationAjaxRequest[SID]](
-    settings.sdgenerationTaskKey, sdgenHITType, sdgenAjaxService, allNounPrompts,
+    settings.sdgenerationTaskKey, sdgenHITType, sdgenAjaxService, allSDPrompts,
     taskPageHeadElements = taskPageHeadLinks,
     taskPageBodyElements = taskPageBodyLinks,
     frozenHITTypeId = frozenGenerationHITTypeId)
@@ -602,7 +645,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
         // sentenceTracker,
         if(config.isProduction) numGenerationAssignmentsForPrompt else (_ => 1),
         if(config.isProduction) 100 else 3,
-        allNounPrompts.iterator)  // the prompts itarator determines what genHITs are generated
+        allSDPrompts.iterator)  // the prompts itarator determines what genHITs are generated
       sdgenManagerPeek
     }
   )
