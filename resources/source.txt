@@ -1,0 +1,1 @@
+../qasrl_dev_newswire_12_sample.txt

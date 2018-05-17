@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<QuestionForm xmlns="http://mechanicalturk.amazonaws.com/AWSMechanicalTurkDataSchemas/2005-10-01/QuestionForm.xsd">
+<Overview>
+<Title>Answering simple questions about a word in a sentence</Title>
+<Text>Please carefully read over the instructions for our task named "Answer simple questions about a word in a sentence". This qualification test will evaluate your understanding of those instructions, focusing on some of the trickier cases. It is very important for us that you follow the guidelines, because everyone has slightly different intuitions about how to answer these questions, but we need everyone to perform consistently so that you can accurately be judged by how well you agree with each other.
+</Text>
+<Text>It's a good idea have a tab open with the task preview so you can consult the instructions during this test. Feel free to take it as many times as necessary; your score can be a good form of feedback on how well you understand the expectations.</Text>
+<Text>Suppose you get a HIT with the following sentence (target word in bold) and list of questions. Please select the correct answer span for each question (or judge the question as Invalid):</Text>
+<FormattedContent><![CDATA[
+  <p><cite>According to the Nonexistent Centre for Imperialism Studies, exploitation  <b>colonialism</b> involves fewer colonists and focuses on access to resources for export, typically to the metropole.</cite></p>
+]]></FormattedContent>
+</Overview>
+<Question>
+  <QuestionIdentifier>q1</QuestionIdentifier>
+  <IsRequired>true</IsRequired>
+  <QuestionContent><Text>1. What kind of colonialism?</Text></QuestionContent>
+  <AnswerSpecification>
+    <SelectionAnswer>
+      <StyleSuggestion>radiobutton</StyleSuggestion>
+      <Selections>
+        <Selection>
+        <SelectionIdentifier>q1-a1</SelectionIdentifier>
+        <Text>focuses on access to resources for export, typically to the metropole</Text>
+        </Selection>
+        <Selection>
+        <SelectionIdentifier>q1-a2</SelectionIdentifier>
+        <Text>exploitation</Text>
+        </Selection>
+        <Selection>
+        <SelectionIdentifier>q1-invalid</SelectionIdentifier>
+        <Text>N/A: Invalid question</Text>
+        </Selection>
+      </Selections>
+    </SelectionAnswer>
+  </AnswerSpecification>
+</Question>
+<Question>
+  <QuestionIdentifier>q2</QuestionIdentifier>
+  <IsRequired>true</IsRequired>
+  <QuestionContent><Text>2. How much colonialism?</Text></QuestionContent>
+  <AnswerSpecification>
+    <SelectionAnswer>
+      <StyleSuggestion>radiobutton</StyleSuggestion>
+      <Selections>
+        <Selection>
+        <SelectionIdentifier>q2-a1</SelectionIdentifier>
+        <Text>Exploitation colonialism</Text>
+        </Selection>
+        <Selection>
+        <SelectionIdentifier>q2-a2</SelectionIdentifier>
+        <Text>fewer</Text>
+        </Selection>
+        <Selection>
+        <SelectionIdentifier>q2-invalid</SelectionIdentifier>
+        <Text>N/A: Invalid question</Text>
+        </Selection>
+      </Selections>
+    </SelectionAnswer>
+  </AnswerSpecification>
+</Question>
+<Overview>
+<FormattedContent><![CDATA[
+  <p><cite>According to the Nonexistent Centre for Imperialism Studies, exploitation colonialism involves fewer colonists and focuses on <b>access</b> to resources for export, typically to the metropole.</cite></p>
+]]></FormattedContent>
+</Overview>
+<Question>
+  <QuestionIdentifier>q3</QuestionIdentifier>
+  <IsRequired>true</IsRequired>
+  <QuestionContent><Text>3. What is the access to?</Text></QuestionContent>
+  <AnswerSpecification>
+    <SelectionAnswer>
+      <StyleSuggestion>radiobutton</StyleSuggestion>
+      <Selections>
+        <Selection>
+        <SelectionIdentifier>q3-a1</SelectionIdentifier>
+        <Text>resources for export, typically to the metropole.</Text>
+        </Selection>
+        <Selection>
+        <SelectionIdentifier>q3-a2</SelectionIdentifier>
+        <Text>resources for export</Text>
+        </Selection>
+        <Selection>
+        <SelectionIdentifier>q3-a3</SelectionIdentifier>
+        <Text>resources for export  /  the metropole</Text>
+        </Selection>
+        <Selection>
+        <SelectionIdentifier>q3-a4</SelectionIdentifier>
+        <Text>the metropole</Text>
+        </Selection>
+        <Selection>
+        <SelectionIdentifier>q3-invalid</SelectionIdentifier>
+        <Text>N/A: Invalid question</Text>
+        </Selection>
+      </Selections>
+    </SelectionAnswer>
+  </AnswerSpecification>
+</Question>
+
+</QuestionForm>
+	

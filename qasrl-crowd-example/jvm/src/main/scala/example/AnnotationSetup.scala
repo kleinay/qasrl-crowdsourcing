@@ -49,7 +49,8 @@ class AnnotationSetup(
   frozenValidationHITTypeId: Option[String] = None)(
   implicit config: TaskConfig) {
 
-  val resourcePath = java.nio.file.Paths.get("datasets")
+  val datasetsPath = java.nio.file.Paths.get("datasets")
+  val resourcePath = java.nio.file.Paths.get("resources")
 
   import java.nio.file.{Paths, Path, Files}
   private[this] val liveDataPath = Paths.get(s"data/example/$label/live")
@@ -73,7 +74,7 @@ class AnnotationSetup(
   }
 
   def loadInputFile(fileName: String): Try[List[String]] = Try {
-    val path = Paths.get(fileName)
+    val path = resourcePath.resolve(fileName)
     import scala.collection.JavaConverters._
     Files.lines(path).iterator.asScala.toList
   }
@@ -100,7 +101,7 @@ class AnnotationSetup(
   def isTest(sid: SentenceId) = testIds.contains(sid)
 
   lazy val Wiktionary = new wiktionary.WiktionaryFileSystemService(
-    resourcePath.resolve("wiktionary")
+    datasetsPath.resolve("wiktionary")
   )
 
   implicit object SentenceIdHasTokens extends HasTokens[SentenceId] {
