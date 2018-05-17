@@ -384,8 +384,9 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
       Your goals are: (1) write questions about that word which
       are answerable by the sentence and (2) mark their
       respective answers in the sentence.
-      Questions must adhere to a certain template,
+      Questions must adhere to certain templates,
       provided by autocomplete functionality.
+      Bonuses are granted for each generated question.
       Maintain high accuracy to stay qualified.
     """.trim.replace("\\s+", " "),
     reward = qasdSettings.generationReward,
