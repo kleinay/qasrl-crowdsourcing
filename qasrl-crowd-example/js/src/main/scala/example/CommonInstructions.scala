@@ -197,19 +197,6 @@ object CommonInstructions extends Instructions {
 
         <.blockquote(
           ^.classSet1("blockquote"),
-          "His recent appearance at the ", <.span(Styles.bolded,"Metropolitan Museum"), " felt more like a party , or a highly polished jam session with a few friends , than a classical conecrt . "),
-        <.span(
-          Styles.badRed,
-          TagMod(
-            Styles.underlined,
-            dataToggle := "tooltip",
-            dataPlacement := "top",
-            ^.title := "Notice how no other word is shedding further information about the entity referred by the target."),
-          <.span("This target has no appropriate questions to ask about.")
-        ),
-
-        <.blockquote(
-          ^.classSet1("blockquote"),
           "His recent appearance at the Metropolitan Museum felt more like a party , or a highly ", <.span(Styles.bolded,"polished"), " jam session with a few friends , than a classical concert . "),
         <.ul(
           example(
@@ -226,6 +213,19 @@ object CommonInstructions extends Instructions {
             "a highly polished jam session",
             false,
             """The answer shouldn’t usually include the target word. In this case, it is sufficient to highlight ‘jam session’ to refer the mention of the relevant answer. """)
+        ),
+
+        <.blockquote(
+          ^.classSet1("blockquote"),
+          "His recent appearance at the ", <.span(Styles.bolded,"Metropolitan Museum"), " felt more like a party , or a highly polished jam session with a few friends , than a classical conecrt . "),
+        <.span(
+          Styles.badRed,
+          TagMod(
+            Styles.underlined,
+            dataToggle := "tooltip",
+            dataPlacement := "top",
+            ^.title := "Notice how no other word is shedding further information about the entity referred by the target."),
+          <.span("There are no appropriate questions to ask about this target word.")
         ),
 
         <.blockquote(
