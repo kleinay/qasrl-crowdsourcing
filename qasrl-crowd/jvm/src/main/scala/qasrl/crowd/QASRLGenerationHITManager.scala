@@ -32,9 +32,10 @@ class QASRLGenerationHITManager[SID : Reader : Writer](
   // sentenceTrackingActor: ActorRef,
   numAssignmentsForPrompt: QASRLGenerationPrompt[SID] => Int,
   initNumHITsToKeepActive: Int,
-  _promptSource: Iterator[QASRLGenerationPrompt[SID]])(
-  implicit annotationDataService: AnnotationDataService,
-  settings: QASRLSettings
+  _promptSource: Iterator[QASRLGenerationPrompt[SID]],
+  settings: QASRLSettings = QASRLSettings.default,
+  namingSuffix: String = "")(
+  implicit annotationDataService: AnnotationDataService
 ) extends NumAssignmentsHITManager[QASRLGenerationPrompt[SID], List[VerbQA]](
   helper, numAssignmentsForPrompt, initNumHITsToKeepActive, _promptSource
 ) with StrictLogging {
@@ -47,7 +48,7 @@ class QASRLGenerationHITManager[SID : Reader : Writer](
     // sentenceTrackingActor ! GenerationFinished(prompt)
   }
 
-  val badSentenceIdsFilename = "badSentenceIds"
+  val badSentenceIdsFilename = "badSentenceIds"+ namingSuffix
 
   var badSentences = annotationDataService.loadLiveData(badSentenceIdsFilename)
     .map(_.mkString)
@@ -64,7 +65,7 @@ class QASRLGenerationHITManager[SID : Reader : Writer](
     } yield helper.expireHIT(hit)
   }
 
-  val coverageStatsFilename = "coverageStats"
+  val coverageStatsFilename = "coverageStats" + namingSuffix
 
   var coverageStats: Map[String, List[Int]] = annotationDataService.loadLiveData(coverageStatsFilename)
     .map(_.mkString)
@@ -77,7 +78,7 @@ class QASRLGenerationHITManager[SID : Reader : Writer](
     val newQuestionsPerVerb = newStats.sum.toDouble / newStats.size
   }
 
-  val feedbackFilename = "genFeedback"
+  val feedbackFilename = "genFeedback" + namingSuffix
 
   var feedbacks =
     annotationDataService.loadLiveData(feedbackFilename)
@@ -95,7 +96,7 @@ class QASRLGenerationHITManager[SID : Reader : Writer](
     annotationDataService.saveLiveData(
       badSentenceIdsFilename,
       write(badSentences))
-    logger.info("Generation data saved.")
+    logger.info("Generation"+ namingSuffix+" data saved.")
   }
 
   override def reviewAssignment(hit: HIT[QASRLGenerationPrompt[SID]], assignment: Assignment[List[VerbQA]]): Unit = {
@@ -125,7 +126,7 @@ class QASRLGenerationHITManager[SID : Reader : Writer](
 
   override lazy val receiveAux2: PartialFunction[Any, Unit] = {
     case SaveData => save
-    case Pring => println("Generation manager pringed.")
+    case Pring => println("Generation"+ namingSuffix+" manager pringed.")
     case fbs: FlagBadSentence[SID] => fbs match {
       case FlagBadSentence(id) => flagBadSentence(id)
     }

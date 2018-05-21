@@ -594,6 +594,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
         // sentenceTracker,
         if(config.isProduction) (_ => 2) else (_ => 1), // how many validators per HIT?
         if(config.isProduction) 100 else 3,
+        qasdSettings,
         "NonVerb")
       sdvalManagerPeek
     })
@@ -646,7 +647,9 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
         // sentenceTracker,
         if(config.isProduction) numGenerationAssignmentsForPrompt else (_ => 1),
         if(config.isProduction) 100 else 3,
-        allSDPrompts.iterator)  // the prompts itarator determines what genHITs are generated
+        allSDPrompts.iterator,
+        qasdSettings,
+        "nonVerb")  // the prompts itarator determines what genHITs are generated
       sdgenManagerPeek
     }
   )

@@ -30,9 +30,9 @@ class QASRLValidationHITManager[SID : Reader : Writer](
   accuracyStatsActor: ActorRef,
   numAssignmentsForPrompt: QASRLValidationPrompt[SID] => Int,
   initNumHITsToKeepActive: Int,
+  settings: QASRLSettings = QASRLSettings.default,
   namingSuffix: String = "")(
-  implicit annotationDataService: AnnotationDataService,
-  settings: QASRLSettings
+  implicit annotationDataService: AnnotationDataService
 ) extends NumAssignmentsHITManager[QASRLValidationPrompt[SID], List[QASRLValidationAnswer]](
   helper, numAssignmentsForPrompt, initNumHITsToKeepActive, List.empty[QASRLValidationPrompt[SID]].iterator) {
 
