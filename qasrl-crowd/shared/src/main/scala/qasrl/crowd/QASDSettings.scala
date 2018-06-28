@@ -7,11 +7,12 @@ trait QASDSettings extends QASRLSettings {
   val generationFirstQBonusCents = 5
 
   override def generationBonus(nValidQAs: Int) = {
-    val cents = (0 until nValidQAs).map(_ + generationFirstQBonusCents).sum
+    //val cents = (0 until nValidQAs).map(_ + generationFirstQBonusCents).sum
+    val cents = nValidQAs * generationFirstQBonusCents  // don't increase bonus
     cents * 0.01
   }
 
-  override val generationCoverageQuestionsPerVerbThreshold = 0.25
+  override val generationCoverageQuestionsPerVerbThreshold = 0.5
 
   // validation conditions
   override val validationReward = 0.05

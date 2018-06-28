@@ -55,8 +55,7 @@ object SDGenerationInstructions extends Instructions {
     ),
     <.h3("Additional Notes"),
     <.ul(
-      <.li(s"""You will be awarded a bonus for each new question,
-             starting at ${generationRewardCents}c and going up by 1c for each additional question."""),
+      <.li(s"""You will be awarded a ${generationRewardCents}c bonus for each new question."""),
       <.li("""You can highlight multiple answers for a single question."""),
       <.li("""None of the answers to your questions may overlap."""),
       <.li("""If there is more than one possible question that has the same answer, just write one of them."""),
@@ -98,10 +97,8 @@ object SDGenerationInstructions extends Instructions {
 
 
   val sdgenerationConditions = <.div(
-    <.p(s"""Each question-answer pair will earn you a bonus:
-          ${dollarsToCents(generationReward)}c for the first question, ${dollarsToCents(generationReward) + 1}c for the second,
-          then ${dollarsToCents(generationReward) + 2}c, etc.
-          Notice that some target words don't have a suitable question to ask about.
+    <.p(s"""Each question-answer pair will earn you a bonus of ${dollarsToCents(generationReward)} cents.
+          Notice that some target words don't have a suitable question to ask about in the given templates.
           In that case, you are allowed to submit the HIT without any generated questions.
           However, you will need to write more than ${generationCoverageQuestionsPerVerbThreshold} questions on average in order to stay qualified.
           On average, it should take less than 30 seconds per question-answer pair, and be much quicker with practice.
