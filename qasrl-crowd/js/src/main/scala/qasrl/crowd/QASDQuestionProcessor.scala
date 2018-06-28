@@ -14,9 +14,9 @@ class QASDQuestionProcessor(sentence : String, targetWord : String, targetType :
   import QASDQuestionProcessor._
 
   val questions : QASDQuestions = targetType match {
-    case "noun" => QASDQuestions(targetWord, QASDNounTemplates.list)
-    case "adjective" => QASDQuestions(targetWord, QASDAdjectiveTemplates.list)
-    case "adverb" => QASDQuestions(targetWord, QASDAdverbTemplates.list)
+    case "noun" => QASDQuestions(targetWord, sentence, QASDNounTemplates.list)
+    case "adjective" => QASDQuestions(targetWord, sentence, QASDAdjectiveTemplates.list)
+    case "adverb" => QASDQuestions(targetWord, sentence, QASDAdverbTemplates.list)
   }
 
   var state : String = "" // the state of current question- the text inserted so far by user

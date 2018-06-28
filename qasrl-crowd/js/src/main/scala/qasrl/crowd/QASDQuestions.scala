@@ -10,8 +10,9 @@ package qasrl.crowd
 
  */
 
-case class QASDQuestions(targetWord : String, templateList : List[String]) {
+case class QASDQuestions(targetWord : String, targetSentence : String, templateList : List[String]) {
   // load templates from file, instantiate them with target word
+  val relevantPrepositions = getRelevantPrepositions(targetSentence)
   lazy val qlist : List[String] = {
     templateList
         .map(_.replace(QASDQuestions.TRGT_SYMBOL, targetWord))  // replace TRGT_SYMBOL
@@ -23,8 +24,16 @@ case class QASDQuestions(targetWord : String, templateList : List[String]) {
   }
 
   def replacePrep(sentence : String) : List[String] = {
-    for (prep <- QASDQuestions.Prepositions)
+    for (prep <- relevantPrepositions.toList)
       yield sentence.replace(QASDQuestions.PREP_SYMBOL, prep)
+  }
+
+  def getRelevantPrepositions(targetSentence : String) : Set[String] = {
+    // get a union of CommonPrepositions and the prepositions that occur in the original sentence
+    val wordsInOrigSentence = targetSentence.split(" ").toSet
+
+    QASDQuestions.CommonPrepositions ++
+    QASDQuestions.allPreposition.intersect(wordsInOrigSentence)
   }
 
   // recursive function to expand all optional (parantheses) parts in templates
@@ -87,16 +96,87 @@ object QASDQuestions {
   val TRGT_SYMBOL = "[W]"
   val PREP_SYMBOL = "<PREP>"
 
-  val Prepositions =
-    """on
-      |under
-      |with
-      |above
-      |in
-      |over
+  val CommonPrepositions =
+    """in
+      |on
+      |to
       |for"""
       .stripMargin
       .split("\n")
-      .toList
+      .toSet
 
+  val allPreposition =
+    """aboard
+      |about
+      |above
+      |across
+      |after
+      |against
+      |along
+      |amid
+      |among
+      |anti
+      |around
+      |as
+      |at
+      |before
+      |behind
+      |below
+      |beneath
+      |beside
+      |besides
+      |between
+      |beyond
+      |but
+      |by
+      |concerning
+      |considering
+      |despite
+      |down
+      |during
+      |except
+      |excepting
+      |excluding
+      |following
+      |for
+      |from
+      |in
+      |inside
+      |into
+      |like
+      |minus
+      |near
+      |of
+      |off
+      |on
+      |onto
+      |opposite
+      |outside
+      |over
+      |past
+      |per
+      |plus
+      |regarding
+      |round
+      |save
+      |since
+      |than
+      |through
+      |to
+      |toward
+      |towards
+      |under
+      |underneath
+      |unlike
+      |until
+      |up
+      |upon
+      |versus
+      |via
+      |with
+      |within
+      |without"""
+      .stripMargin
+      .split("\n")
+      .toSet
 }
