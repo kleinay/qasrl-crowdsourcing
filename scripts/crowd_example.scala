@@ -12,8 +12,9 @@ import com.amazonaws.services.mturk.model._
 
 import nlpdata.util.Text
 import nlpdata.util.HasTokens.ops._
+import nlpdata.structure.Word
 
-val label = "trial"
+val label = "sandbox-test1-span-21.5"
 
 val isProduction = false // sandbox. change to true for production
 val domain = "u.cs.biu.ac.il/~stanovg/qasrl" // change to your domain, or keep localhost for testing
@@ -51,6 +52,35 @@ import setup.SentenceIdHasTokens
 
 val exp = setup.experiment
 exp.server
+
+// save tokenized sentences
+def saveTokenizedIds(sentences : Vector[Vector[String]] ) : Unit = {
+  import io.circe.Json
+  def sent2json(sentence : Vector[String]) : Json = Json.fromValues(sentence.map(Json.fromString))
+  val jsn=Json.fromValues(sentences.map(sent2json))
+  import java.io.{PrintWriter, File}
+  val pw = new PrintWriter(new File("tokenizedSentences.json"))
+  pw.write(jsn.toString)
+  pw.close
+}
+
+def savePOSTaggedSentences(sentences : Vector[Vector[Word]]) : Unit = {
+  import io.circe.Json
+  def word2json(word : Word) : Json = Json.fromFields(List(
+    ("index", Json.fromInt(word.index)),
+    ("pos", Json.fromString(word.pos)),
+    ("token", Json.fromString(word.token))
+  ))
+  def posSent2json(posSent : Vector[Word]) : Json = Json.fromValues(posSent.map(word2json))
+  val jsn = Json.fromValues(sentences.map(posSent2json))
+  import java.io.{PrintWriter, File}
+  val pw = new PrintWriter(new File("posTaggedSentences.json"))
+  pw.write(jsn.toString)
+  pw.close
+}
+
+saveTokenizedIds(exp.allIds.map(_.tokens))
+savePOSTaggedSentences(setup.posTaggedSentences)
 
 // use with caution... intended mainly for sandbox
 def deleteAll = {
