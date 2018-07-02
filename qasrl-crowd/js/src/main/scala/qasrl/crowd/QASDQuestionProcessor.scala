@@ -17,6 +17,7 @@ class QASDQuestionProcessor(sentence : String, targetWord : String, targetType :
     case "noun" => QASDQuestions(targetWord, sentence, QASDNounTemplates.list)
     case "adjective" => QASDQuestions(targetWord, sentence, QASDAdjectiveTemplates.list)
     case "adverb" => QASDQuestions(targetWord, sentence, QASDAdverbTemplates.list)
+    case "number" => QASDQuestions(targetWord, sentence, QASDNumberTemplates.list)
   }
 
   var state : String = "" // the state of current question- the text inserted so far by user

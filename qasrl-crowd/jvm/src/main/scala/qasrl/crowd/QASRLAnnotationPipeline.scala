@@ -91,7 +91,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     }.toSet
   }
 
-  // collect indices of nouns in the sentence to generate noun-prompt
+  // collect indices of adjectives in the sentence to generate noun-prompt
   def getAdjectiveKeyIndices(id: SID): Set[Int] = {
     val posTaggedTokens = PosTagger.posTag(id.tokens)
     posTaggedTokens.collect {
@@ -99,11 +99,19 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     }.toSet
   }
 
-  // collect indices of nouns in the sentence to generate noun-prompt
+  // collect indices of adverbs in the sentence to generate noun-prompt
   def getAdverbKeyIndices(id: SID): Set[Int] = {
     val posTaggedTokens = PosTagger.posTag(id.tokens)
     posTaggedTokens.collect {
       case Word(index, pos, token) if PosTags.adverbPosTags.contains(pos) => index
+    }.toSet
+  }
+
+  // collect indices of numbers in the sentence to generate noun-prompt
+  def getNumberKeyIndices(id: SID): Set[Int] = {
+    val posTaggedTokens = PosTagger.posTag(id.tokens)
+    posTaggedTokens.collect {
+      case Word(index, pos, token) if pos=="CD" => index
     }.toSet
   }
 
@@ -128,11 +136,16 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     targetIndex <- getAdverbKeyIndices(id).toList.sorted
   } yield QASRLGenerationPrompt(id, targetIndex, "adverb")
 
+  lazy val allNumberPrompts: Vector[QASRLGenerationPrompt[SID]] = for {
+    id <- allIds
+    targetIndex <- getNumberKeyIndices(id).toList.sorted
+  } yield QASRLGenerationPrompt(id, targetIndex, "number")
+
   lazy val allPrompts: Vector[QASRLGenerationPrompt[SID]] =
-    allNounPrompts ++ allVerbPrompts ++ allAdjPrompts
+    allNounPrompts ++ allVerbPrompts ++ allAdjPrompts ++ allAdverbPrompts ++ allNumberPrompts
 
   lazy val allSDPrompts: Vector[QASRLGenerationPrompt[SID]] =
-    allNounPrompts ++ allAdjPrompts
+    allNounPrompts ++ allAdjPrompts ++ allAdverbPrompts ++ allNumberPrompts
 
   implicit val ads = annotationDataService
 
@@ -541,8 +554,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
 
   lazy val sdsampleValPrompt = QASRLValidationPrompt[SID](
     allNounPrompts.head, "", "", "",
-    List(VerbQA(6, "Whose sales?", List(Span(0, 0), Span(4, 4))),
-      VerbQA(1, "Where are the sales?", List(Span(5, 5)))))
+    List(VerbQA(18, "What kind of basis?", List(Span(17, 17)))))
 
   lazy val sdvalTaskSpec = TaskSpecification.NoWebsockets[QASRLValidationPrompt[SID], List[QASRLValidationAnswer], QASRLValidationAjaxRequest[SID]](
     settings.sdvalidationTaskKey, sdvalHITType, sdvalAjaxService, Vector(sdsampleValPrompt),
