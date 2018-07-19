@@ -85,9 +85,10 @@ case class QASDQuestions(targetWord : String, targetSentence : String, templateL
         val suffList: List[String] = handleSlash(suffix)
         for (cur <- currentOptions;
              suff <- suffList)
-          yield Seq(prefix,cur,suff).mkString(" ")
+          yield (if (prefix.size>0) Seq(prefix,cur,suff).mkString(" ")
+          else Seq(cur,suff).mkString(" "))
       }
-    }
+    } // this returns an extra space at the begin
   }
 
 }

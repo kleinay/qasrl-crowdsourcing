@@ -25,12 +25,11 @@ class QASDAutocomplete(questionProcessor: QASDQuestionProcessor) {
       ipss.map(createSuggestion).distinct.sorted
     )
 
-  def getSuggestions(relevantQuestions : List[String]) : List[Suggestion] = {
+  def getSuggestions(relevantQuestions : List[String], commonPrefix : String) : List[Suggestion] = {
     /*
       logic of partial-suggestions - suggest only next word at a time,
       if there are more than one optional continuation
        */
-    val commonPrefix = questionProcessor.getCommonPrefix
     if (relevantQuestions.size > 1) {
 
       // create a map {postfix : full-available-Q}
@@ -51,12 +50,27 @@ class QASDAutocomplete(questionProcessor: QASDQuestionProcessor) {
       If it only have single full-question, suggest it.
       If it prefixes multiple questions, suggest an incomplete suggestion with the first word of the postfix
      */
-      val questionSuggestions = (for ((firstWord, questionList) <- first2Qs)
-        yield if (questionList.size <= 1) Suggestion(questionList(0), true)
-        else Suggestion(commonPrefix + firstWord + " ", false))
-        .toList
+      val questionSuggestions : List[Suggestion] =
+        (for ((firstWord, questionList) <- first2Qs
+              if (!firstWord.isEmpty) )
+        yield
+          if (questionList.size <= 1)
+            Suggestion(questionList(0), true)
+          else
+            Suggestion(commonPrefix + firstWord + " ", false)
+          ).toList
+      /*
+       for the case where the commonPrefix is right before a space in (some) question,
+       (that is, a "" firstWord exist in the first2Qs map), we want to add suggestions that
+       are accesible after the space.
+        */
+      val afterSpaceSuggestions : List[Suggestion] = {
+        if (first2Qs.contains(""))
+          getSuggestions(relevantQuestions, commonPrefix + " ")
+        else List[Suggestion]()
+      }
+      return (questionSuggestions ++ afterSpaceSuggestions)
         .sortBy(s => s.isComplete)
-      return questionSuggestions
     }
     else {
       return for (q <- relevantQuestions) yield Suggestion(q, false)
@@ -77,7 +91,7 @@ class QASDAutocomplete(questionProcessor: QASDQuestionProcessor) {
         // suggest Qs using longest common prefix to current question and any of the templates
         val commonPrefix = questionProcessor.getCommonPrefix
         val availableQs = questionProcessor.getAvailableQsFrom(commonPrefix)
-        val suggestions = getSuggestions(availableQs)
+        val suggestions = getSuggestions(availableQs, questionProcessor.getCommonPrefix)
         val badIndexStart = commonPrefix.size
         QASDAutocomplete.incomplete(suggestions.toList, Some(badIndexStart))  // my invalid state is incomplete with no suggestion
 
@@ -115,7 +129,7 @@ class QASDAutocomplete(questionProcessor: QASDQuestionProcessor) {
 //          }
 //        ).take(4) // number of suggested questions capped at 4 to filter out crowd of bad ones
 
-        val questionSuggestions = getSuggestions(questionProcessor.getAvailableQs)
+        val questionSuggestions = getSuggestions(questionProcessor.getAvailableQs, questionProcessor.getCommonPrefix)
 
         partitionResults(goodStates).toEither.fold(
           suggestions => QASDAutocomplete.incomplete(
