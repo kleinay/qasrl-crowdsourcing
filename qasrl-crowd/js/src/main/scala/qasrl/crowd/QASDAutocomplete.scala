@@ -25,6 +25,44 @@ class QASDAutocomplete(questionProcessor: QASDQuestionProcessor) {
       ipss.map(createSuggestion).distinct.sorted
     )
 
+  def getSuggestions(relevantQuestions : List[String]) : List[Suggestion] = {
+    /*
+      logic of partial-suggestions - suggest only next word at a time,
+      if there are more than one optional continuation
+       */
+    val commonPrefix = questionProcessor.getCommonPrefix
+    if (relevantQuestions.size > 1) {
+
+      // create a map {postfix : full-available-Q}
+      val postfix2question = relevantQuestions.map(s => (s.substring(commonPrefix.size), s)).toMap
+      // create a list of pairs (first-word-in-postfix, full-question-starting-with-it)
+      val first_fullQ = postfix2question.toList.map(p_q => (p_q._1.split(" ")(0), p_q._2))
+      // create a map {first-word-in-postfix : List of full-questions-starting-with-it}
+      val first2Qs =
+        first_fullQ
+          .map(x => x._1) // iterate firstWords
+          .map(firstWord =>
+          firstWord -> first_fullQ.collect {
+            case fw_q if fw_q._1 == firstWord => fw_q._2
+          }
+        ).toMap
+      /*
+    for each prefix in map:
+      If it only have single full-question, suggest it.
+      If it prefixes multiple questions, suggest an incomplete suggestion with the first word of the postfix
+     */
+      val questionSuggestions = (for ((firstWord, questionList) <- first2Qs)
+        yield if (questionList.size <= 1) Suggestion(questionList(0), true)
+        else Suggestion(commonPrefix + firstWord + " ", false))
+        .toList
+        .sortBy(s => s.isComplete)
+      return questionSuggestions
+    }
+    else {
+      return for (q <- relevantQuestions) yield Suggestion(q, false)
+    }
+  }
+
   def apply(
              question: LowerCaseString,
              completeQuestions: Set[QASDQuestionProcessor.CompleteState]
@@ -39,9 +77,9 @@ class QASDAutocomplete(questionProcessor: QASDQuestionProcessor) {
         // suggest Qs using longest common prefix to current question and any of the templates
         val commonPrefix = questionProcessor.getCommonPrefix
         val availableQs = questionProcessor.getAvailableQsFrom(commonPrefix)
-        val suggestions = for (q <- availableQs) yield Suggestion(q, false)
+        val suggestions = getSuggestions(availableQs)
         val badIndexStart = commonPrefix.size
-        QASDAutocomplete.incomplete(suggestions, Some(badIndexStart))  // my invalid state is incomplete with no suggestion
+        QASDAutocomplete.incomplete(suggestions.toList, Some(badIndexStart))  // my invalid state is incomplete with no suggestion
 
       case Right(goodStates) =>
 
@@ -77,14 +115,15 @@ class QASDAutocomplete(questionProcessor: QASDQuestionProcessor) {
 //          }
 //        ).take(4) // number of suggested questions capped at 4 to filter out crowd of bad ones
 
-        val questionSuggestions = questionProcessor.getAvailableQs
+        val questionSuggestions = getSuggestions(questionProcessor.getAvailableQs)
 
         partitionResults(goodStates).toEither.fold(
           suggestions => QASDAutocomplete.incomplete(
 //            NonEmptyList.fromList(questionSuggestions).fold(suggestions)(sugg =>
 //              (sugg ++ suggestions.toList).distinct.sorted
 //            ),
-            questionSuggestions.map(str => Suggestion(str, true)),
+            //questionSuggestions.map(str => Suggestion(str, true)),
+            questionSuggestions,
             None
           ),
           completeStates => QASDAutocomplete.complete(completeStates.toList.toSet)
@@ -94,7 +133,6 @@ class QASDAutocomplete(questionProcessor: QASDQuestionProcessor) {
 }
 
 object QASDAutocomplete {
-
   sealed trait Result
   case class Incomplete(
                          suggestions: List[Suggestion],
