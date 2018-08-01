@@ -41,7 +41,7 @@ import com.typesafe.scalalogging.StrictLogging
 
 class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   val allIds: Vector[SID], // IDs of sentences to annotate
-  numGenerationAssignmentsForPrompt: QASRLGenerationPrompt[SID] => Int,
+  numGenerationAssignmentsForPromptInProduction: QASRLGenerationPrompt[SID] => Int,
   annotationDataService: AnnotationDataService,
   qualTestOpt : Option[QualTest] = None,
   frozenGenerationHITTypeId: Option[String] = None,
@@ -57,6 +57,10 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
 ) extends StrictLogging {
 
   val qasdSettings = QASDSettings.default
+
+  // define numGenerationAssignmentsForPrompt for either production or sandbox
+  def numGenerationAssignmentsForPrompt : QASRLGenerationPrompt[SID] => Int =
+    if(config.isProduction) numGenerationAssignmentsForPromptInProduction else (_ => 2)
 
   // collect indices of verbs in the sentence to generate prompt
   def getVerbKeyIndices(id: SID): Set[Int] = {
@@ -513,7 +517,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   }
 
   lazy val sampleValPrompt = QASRLValidationPrompt[SID](
-    allVerbPrompts.head, "", "", "",
+    allVerbPrompts.head, "", "", List(""),
     List(VerbQA(3, "Who expects something?", List(Span(0, 0), Span(2, 2))),
          VerbQA(3, "What does someone expects?", List(Span(4, 15)))))
 
@@ -553,7 +557,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   }
 
   lazy val sdsampleValPrompt = QASRLValidationPrompt[SID](
-    allNounPrompts.head, "", "", "",
+    allNounPrompts.head, "", "", List(""),
     List(VerbQA(18, "What kind of basis?", List(Span(17, 17)))))
 
   lazy val sdvalTaskSpec = TaskSpecification.NoWebsockets[QASRLValidationPrompt[SID], List[QASRLValidationAnswer], QASRLValidationAjaxRequest[SID]](
@@ -585,12 +589,25 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
         valAgrDisqualTypeId,
         accuracyTracker,
         // sentenceTracker,
-        if(config.isProduction) (_ => 2) else (_ => 1),
+        if(config.isProduction) (_ => 2) else (_ => 1), // how many validators per HIT?
         if(config.isProduction) 100 else 3)
       valManagerPeek
     })
 
   lazy val valActor = actorSystem.actorOf(Props(new TaskManager(valHelper, valManager)))
+
+  // Actor for aggregating generation responses to a single validation prompt
+  var genAggregatorPeek: QASDGenerationAggregationManager[SID] = null
+
+  lazy val genAggregator: ActorRef = actorSystem.actorOf(
+    Props {
+      genAggregatorPeek = new QASDGenerationAggregationManager[SID](
+        valHelper,
+        valManager,
+        numGenerationAssignmentsForPrompt
+      )
+      genAggregatorPeek
+    })
 
   // copy for SDValidation - Helper, Manager, ManagerPeek, Actor (Task Manager)
   var sdvalManagerPeek: QASRLValidationHITManager[SID] = null
@@ -613,6 +630,19 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
 
   lazy val sdvalActor = actorSystem.actorOf(Props(new TaskManager(sdvalHelper, sdvalManager)))
 
+  // Actor for aggregating sdgeneration responses to a single sdvalidation prompt
+  var sdgenAggregatorPeek: QASDGenerationAggregationManager[SID] = null
+
+  lazy val sdgenAggregator: ActorRef = actorSystem.actorOf(
+    Props {
+      sdgenAggregatorPeek = new QASDGenerationAggregationManager[SID](
+        sdvalHelper,
+        sdvalManager,
+        numGenerationAssignmentsForPrompt,
+        "NonVerb"
+      )
+      sdgenAggregatorPeek
+    })
 
   val genTaskSpec = TaskSpecification.NoWebsockets[QASRLGenerationPrompt[SID], List[VerbQA], QASRLGenerationAjaxRequest[SID]](
     settings.generationTaskKey, genHITType, genAjaxService, allVerbPrompts,
@@ -629,9 +659,10 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
         genHelper,
         valHelper,
         valManager,
+        genAggregator,
         genCoverageDisqualTypeId,
         // sentenceTracker,
-        if(config.isProduction) numGenerationAssignmentsForPrompt else (_ => 1),
+        numGenerationAssignmentsForPrompt,
         if(config.isProduction) 100 else 3,
         allVerbPrompts.iterator)  // the prompts itarator determines what genHITs are generated
       genManagerPeek
@@ -655,9 +686,10 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
         sdgenHelper,
         sdvalHelper,
         sdvalManager, // here we pass the valManager to genManager, so that when reviewing assignment it add promtp to valManager
+        sdgenAggregator,
         sdgenCoverageDisqualTypeId,
         // sentenceTracker,
-        if(config.isProduction) numGenerationAssignmentsForPrompt else (_ => 1),
+        numGenerationAssignmentsForPrompt,
         if(config.isProduction) 100 else 3,
         allSDPrompts.iterator,
         qasdSettings,
@@ -684,7 +716,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   private[this] var schedule: List[Cancellable] = Nil
   def startSaves(interval: FiniteDuration = 5 minutes): Unit = {
     if(schedule.exists(_.isCancelled) || schedule.isEmpty) {
-      schedule = List(genManager, sdgenManager, valManager, sdvalManager, accuracyTracker).map(actor =>
+      schedule = List(genManager, sdgenManager, valManager, sdvalManager, accuracyTracker, genAggregator, sdgenAggregator).map(actor =>
         config.actorSystem.scheduler.schedule(
           2 seconds, interval, actor, SaveData)(
           config.actorSystem.dispatcher, actor)
@@ -748,6 +780,8 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     sdgenManager ! SaveData
     valManager ! SaveData
     sdvalManager ! SaveData
+    genAggregator ! SaveData
+    sdgenAggregator ! SaveData
   }
 
   // for use while it's running. Ideally instead of having to futz around at the console calling these functions,

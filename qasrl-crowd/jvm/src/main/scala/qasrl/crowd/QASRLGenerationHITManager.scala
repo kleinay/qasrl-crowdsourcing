@@ -28,6 +28,7 @@ class QASRLGenerationHITManager[SID : Reader : Writer](
   helper: HITManager.Helper[QASRLGenerationPrompt[SID], List[VerbQA]],
   validationHelper: HITManager.Helper[QASRLValidationPrompt[SID], List[QASRLValidationAnswer]],
   validationActor: ActorRef,
+  aggregationManager: ActorRef,
   coverageDisqualificationTypeId: String,
   // sentenceTrackingActor: ActorRef,
   numAssignmentsForPrompt: QASRLGenerationPrompt[SID] => Int,
@@ -119,9 +120,16 @@ class QASRLGenerationHITManager[SID : Reader : Writer](
           .withIntegerValue(1)
           .withSendNotification(true))
     }
-    val validationPrompt = QASRLValidationPrompt(hit.prompt, hit.hitTypeId, hit.hitId, assignment.assignmentId, assignment.response)
-    validationActor ! validationHelper.Message.AddPrompt(validationPrompt)
-    // sentenceTrackingActor ! ValidationBegun(validationPrompt)
+    /*
+     todo: change the creation of the validation prompt to a message to the QASDGenerationAggregationManager;
+     It will be it's responsability to inform the validationActor
+      */
+    aggregationManager ! ApprovedGenAssignment(hit, assignment)
+
+    // previous (non-aggregated)
+//    val validationPrompt = QASRLValidationPrompt(hit.prompt, hit.hitTypeId, hit.hitId, assignment.assignmentId, assignment.response)
+//    validationActor ! validationHelper.Message.AddPrompt(validationPrompt)
+
   }
 
   override lazy val receiveAux2: PartialFunction[Any, Unit] = {

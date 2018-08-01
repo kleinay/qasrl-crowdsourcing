@@ -40,9 +40,14 @@ class AnnotationDataExporter[SID : HasTokens](
     workerAnonymizationMapping: String => String
   ) = {
     val genInfosBySentenceId = allGenInfos.groupBy(_.hit.prompt.id).withDefaultValue(Nil)
-    val valAssignmentsByGenAssignmentId = valInfos
-      .groupBy(_.hit.prompt.sourceAssignmentId)
-      .map { case (k, v) => k -> v.flatMap(_.assignments) }
+    val valAssignmentsByGenAssignmentId =
+      (for {
+        valInfo <- valInfos
+        valAssignment <- valInfo.assignments
+        genAssignmentId <- valInfo.hit.prompt.sourceAssignmentId
+      } yield (genAssignmentId -> valAssignment)
+        // now turn [ (genAssId, valAss) ] list, to { genAssId -> [valAss1, valAss2, ...] } map
+      ).groupBy(_._1).map { case (k,v) => (k,v.map(_._2))}
       .withDefaultValue(Nil)
     QASRLDataset(
       genInfosBySentenceId.map { case (id, sentenceGenInfos) =>

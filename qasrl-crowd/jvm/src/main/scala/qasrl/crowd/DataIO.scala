@@ -92,7 +92,13 @@ object DataIO extends LazyLogging {
     implicit inflections: Inflections
   ): String = {
     val genInfosBySentenceId = genInfos.groupBy(_.hit.prompt.id).withDefaultValue(Nil)
-    val valInfosByGenAssignmentId = valInfos.groupBy(_.hit.prompt.sourceAssignmentId).withDefaultValue(Nil)
+    val valInfosByGenAssignmentId = (for {
+      valInfo <- valInfos
+      genAssignmentId <- valInfo.hit.prompt.sourceAssignmentId
+    } yield (genAssignmentId -> valInfo)
+      // now turn [ (genAssId, valInfo) ] list, to { genAssId -> [valInfo1, valInfo2, ...] } map
+      ).groupBy(_._1).map { case (k,v) => (k,v.map(_._2))}
+      .withDefaultValue(Nil)
     val sb = new StringBuilder
     for(id <- ids) {
       val idString = writeId(id)
@@ -157,7 +163,13 @@ object DataIO extends LazyLogging {
       (_: SID, _: VerbQA, _: List[QASRLValidationAnswer]) => true)
   ): String = {
     val genInfosBySentenceId = genInfos.groupBy(_.hit.prompt.id).withDefaultValue(Nil)
-    val valInfosByGenAssignmentId = valInfos.groupBy(_.hit.prompt.sourceAssignmentId).withDefaultValue(Nil)
+    val valInfosByGenAssignmentId = (for {
+      valInfo <- valInfos
+      genAssignmentId <- valInfo.hit.prompt.sourceAssignmentId
+    } yield (genAssignmentId -> valInfo)
+      // now turn [ (genAssId, valInfo) ] list, to { genAssId -> [valInfo1, valInfo2, ...] } map
+      ).groupBy(_._1).map { case (k,v) => (k,v.map(_._2))}
+      .withDefaultValue(Nil)
     val sb = new StringBuilder
     for(id <- ids) {
       val idString = writeId(id)
