@@ -94,10 +94,22 @@ class QASRLValidationClient[SID : Writer : Reader](
         )
       )
 
+    // handler for "redundant" button
+    def toggleRedundantAtIndex(highlightedAnswers: Map[Int, Answer])(questionIndex: Int) =
+      scope.modState(
+        State.answers.modify(answers =>
+          answers.updated(
+            questionIndex,
+            if(answers(questionIndex).isRedundant) highlightedAnswers(questionIndex)
+            else RedundantQuestion)
+        )
+      )
+
     def handleKey(highlightedAnswers: Map[Int, Answer])(e: ReactKeyboardEvent): Callback = {
       def nextQuestion = scope.modState(State.curQuestion.modify(i => (i + 1) % questions.size))
       def prevQuestion = scope.modState(State.curQuestion.modify(i => (i + questions.size - 1) % questions.size))
       def toggleInvalid = scope.zoomStateL(State.curQuestion).state >>= toggleInvalidAtIndex(highlightedAnswers)
+      def toggleRedundant = scope.zoomStateL(State.curQuestion).state >>= toggleRedundantAtIndex(highlightedAnswers)
 
       if(isNotAssigned) {
         Callback.empty
@@ -105,6 +117,7 @@ class QASRLValidationClient[SID : Writer : Reader](
         case KeyCode.Up | KeyCode.W => prevQuestion
         case KeyCode.Down | KeyCode.S => nextQuestion
         case KeyCode.Space => toggleInvalid
+        case KeyCode.R => toggleRedundant
       } >> e.preventDefaultCB
     }
 
@@ -125,6 +138,19 @@ class QASRLValidationClient[SID : Writer : Reader](
           (^.backgroundColor := "#E01010").when(answer.isInvalid),
           ^.onClick --> toggleInvalidAtIndex(highlightedAnswers)(index),
           "Invalid"
+        ),
+        // new button for "redundant" questions
+        <.div(
+          Styles.unselectable,
+          ^.float := "left",
+          ^.minHeight := "1px",
+          ^.border := "1px solid",
+          ^.borderRadius := "2px",
+          ^.textAlign := "center",
+          ^.width := "90px",
+          (^.backgroundColor := "#FFB100").when(answer.isRedundant),
+          ^.onClick --> toggleRedundantAtIndex(highlightedAnswers)(index),
+          "Redundant"
         ),
         <.span(
           Styles.bolded.when(isFocused),
@@ -149,6 +175,10 @@ class QASRLValidationClient[SID : Writer : Reader](
           ^.padding := "1px",
           answer match {
             case InvalidQuestion => <.span(
+              ^.color := "#CCCCCC",
+              "N/A"
+            )
+            case RedundantQuestion => <.span(
               ^.color := "#CCCCCC",
               "N/A"
             )

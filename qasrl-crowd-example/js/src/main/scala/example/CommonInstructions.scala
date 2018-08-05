@@ -99,6 +99,12 @@ object CommonInstructions extends Instructions {
             "that they would resume the investigation before year's end",
             true),
           example(
+            "Who should have promised something?",
+            "local officials / they",
+            false,
+            """The question matches the same answers as a previous question ("Who didn't promise something?"), thus toggled Redundant.""",
+            true),  // redundant
+          example(
             "When didn't someone promise to do something?",
             "before year's end",
             false,
@@ -185,6 +191,12 @@ object CommonInstructions extends Instructions {
             true,
             """ 'Which appearance?' would also have been okay. """),
           example(
+            "When is an appearance?",
+            "recent",
+            false,
+            """The question is valid, but share the same meaning with the previous question, thus marked as Redundant. """,
+            true),  // redundant
+          example(
             "Whose appearance?",
             "His",
             true),
@@ -192,7 +204,7 @@ object CommonInstructions extends Instructions {
             "What is the appearance of?",
             "jam session",
             false,
-            """This Q&A is not asserted from the sentence, as it is only claimed that the apperance felt like a jam session. """)
+            """This Q&A is not asserted from the sentence, as it is only claimed that the appearance felt like a jam session. """)
         ),
 
         <.blockquote(
@@ -277,6 +289,9 @@ object CommonInstructions extends Instructions {
       <.li(
         <.span(Styles.bolded, "Invalid Questions. "),
         "Click the button labeled \"Invalid\" or press the space bar to toggle a question as invalid."),
+      <.li(
+        <.span(Styles.bolded, "Redundant Questions. "),
+        "Click the button labeled \"Redundant\" or press R to toggle a question as redundant with respect to previous questions."),
       <.li(
         <.span(Styles.bolded, "Answers. "),
         "To highlight an answer, first click on the first word in the answer, which will turn ",

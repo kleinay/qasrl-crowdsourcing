@@ -27,7 +27,7 @@ object ValidationInstructions extends Instructions {
            We wish to deconstruct the meanings of verbs in English sentences into lists of questions and answers.
            You will be presented with a selection of English text and a list of questions prepared by other annotators."""),
     <.p("""You will highlight the words in the sentence that correctly answer each question,
-           as well as mark whether questions are invalid.""",
+           as well as mark whether questions are invalid, or redundant with respect to previous questions.""",
       <.b(""" Note: it takes exactly 2 clicks to highlight each answer; see the Controls tab for details. """),
       """For example, consider the following sentence:"""),
     <.blockquote(
@@ -38,7 +38,8 @@ object ValidationInstructions extends Instructions {
     <.ul(
       <.li("Who blamed someone? --> ", <.span(Styles.goodGreen, " Protesters ")),
       <.li("Who did someone blame something on? --> ", <.span(Styles.goodGreen, " local officials / they")),
-      <.li("What did someone blame on someone? --> ", <.span(Styles.goodGreen, " the corruption scandal"))),
+      <.li("What did someone blame on someone? --> ", <.span(Styles.goodGreen, " the corruption scandal")),
+      <.li("Who was blamed about something? --> ", <.span(Styles.redundantOrange, " Redundant"))),
     <.p(s"""You will be paid a ${dollarsToCents(validationBonusPerQuestion)}c bonus per question after the first $validationBonusThreshold questions if there are more than $validationBonusThreshold."""),
     <.h2("""Guidelines"""),
     <.ol(
@@ -68,6 +69,14 @@ object ValidationInstructions extends Instructions {
         <.span(Styles.badRed, " Invalid "),
         """ because the time mentioned, """, <.i(" tomorrow, "), " is ", <.i(" not "),
         " the time that he made the promise, but rather the time that he might come."),
+      <.li(
+        <.span(Styles.bolded, "Uniqueness. "),
+        s"""Some question may have the same meaning or even the exact same phrasing as other questions in your prompt.
+            After answering the first question, you should mark the following same-meaning questions as """,
+            <.span(Styles.redundantOrange, "Redundant"), """.
+            A question is considered redundant if the answers you would have answered it are
+            identical to the answers of a previously answered question."""
+      ),
       <.li(
         <.span(Styles.bolded, "Exhaustiveness. "),
         s"""You must provide every possible answer to each question.

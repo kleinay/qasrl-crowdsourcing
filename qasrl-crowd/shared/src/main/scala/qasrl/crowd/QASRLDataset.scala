@@ -143,6 +143,10 @@ object QASRLDataset {
             List("sourceId" -> Json.fromString(a.sourceId)),
             a.judgment match {
               case InvalidQuestion => List("isValid" -> Json.fromBoolean(false))
+              case RedundantQuestion => List(
+                "isValid" -> Json.fromBoolean(true),
+                "spans" -> Json.fromValues(List())
+              )
               case Answer(spans) => List(
                 "isValid" -> Json.fromBoolean(true),
                 "spans" -> Json.fromValues(spans.map(spanEncoder.apply))

@@ -35,10 +35,12 @@ trait Instructions {
       }
     ).build
 
-  def example(question: String, answer: String, isGood: Boolean, tooltip: String = "") =
+  def example(question: String, answer: String, isGood: Boolean, tooltip: String = "", isRedundant: Boolean=false) =
     <.li(
       <.span(
-        if(isGood) Styles.goodGreen else Styles.badRed,
+        if(isGood) Styles.goodGreen else
+        if(isRedundant) Styles.redundantOrange
+        else Styles.badRed,
         TagMod(
           Styles.underlined,
           dataToggle := "tooltip",

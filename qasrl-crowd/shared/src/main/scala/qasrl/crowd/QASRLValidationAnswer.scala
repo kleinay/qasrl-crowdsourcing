@@ -20,6 +20,11 @@ sealed trait QASRLValidationAnswer {
     case _ => false
   }
 
+  def isRedundant = this match {
+    case RedundantQuestion => true
+    case _ => false
+  }
+
   def getAnswer = this match {
     case a @ Answer(_) => Some(a)
     case _ => None
@@ -28,11 +33,15 @@ sealed trait QASRLValidationAnswer {
 
   def isComplete = this match {
     case InvalidQuestion => true
+    case RedundantQuestion => true
     case Answer(indices) => indices.nonEmpty
   }
 
   def agreesWith(that: QASRLValidationAnswer) = (this, that) match {
     case (InvalidQuestion, InvalidQuestion) => true
+    case (RedundantQuestion, RedundantQuestion) => true
+      // Currently not handling linking a RedundantQuestion to it's paraphrased Question;
+      // todo take linkage into account of agreement
     case (Answer(spans1), Answer(spans2)) =>
       spans1.exists(span1 =>
         spans2.exists(span2 =>
@@ -43,10 +52,12 @@ sealed trait QASRLValidationAnswer {
   }
 }
 case object InvalidQuestion extends QASRLValidationAnswer
+case object RedundantQuestion extends QASRLValidationAnswer
 @Lenses case class Answer(spans: List[Span]) extends QASRLValidationAnswer
 
 object QASRLValidationAnswer {
   val invalidQuestion = GenPrism[QASRLValidationAnswer, InvalidQuestion.type]
+  val redundantQuestion = GenPrism[QASRLValidationAnswer, RedundantQuestion.type]
   val answer = GenPrism[QASRLValidationAnswer, Answer]
 
   def numValidQuestions(responses: List[List[QASRLValidationAnswer]]) =
@@ -58,6 +69,7 @@ object QASRLValidationAnswer {
     va: QASRLValidationAnswer
   ): String = va match {
     case InvalidQuestion => "Invalid"
+    case RedundantQuestion => "Redundant"
     case Answer(spans) => spans.map { case Span(begin, end) => s"$begin-$end" }.mkString(" / ")
   }
 
@@ -66,6 +78,7 @@ object QASRLValidationAnswer {
     s: String
   ): QASRLValidationAnswer = s match {
     case "Invalid" => InvalidQuestion
+    case "Redundant" => RedundantQuestion
     case other => Answer(
       other.split(" / ").toList.map(is =>
         is.split("-").map(_.toInt).toList match {
@@ -82,6 +95,7 @@ object QASRLValidationAnswer {
     va: QASRLValidationAnswer
   ): String = va match {
     case InvalidQuestion => "<Invalid>"
+    case RedundantQuestion => "<Redundant>"
     case Answer(spans) => spans.map(span => Text.renderSpan(sentence, (span.begin to span.end).toSet)).mkString(" / ")
   }
 }

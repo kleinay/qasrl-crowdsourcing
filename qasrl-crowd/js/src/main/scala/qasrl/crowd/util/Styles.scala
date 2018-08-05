@@ -39,6 +39,11 @@ object Styles extends StyleSheet.Inline {
     fontWeight.bold
   )
 
+  val redundantOrange = style(
+    color(c"rgb(255, 177, 00)"),  // #ffb100 orange (as redundant color)
+    fontWeight.bold
+  )
+
   val bolded = style(fontWeight.bold)
 
   val niceBlue = style(

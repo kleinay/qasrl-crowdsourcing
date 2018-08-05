@@ -30,7 +30,7 @@ object SDValidationInstructions extends Instructions {
     <.span(Styles.niceBlue, Styles.underlined, "target word"),
     <.span(", and a list of questions prepared by other annotators regarding that word. "),
     <.span("""Your task is to highlight the words in the sentence that correctly answer each question,
-           as well as mark whether questions are invalid.""",
+           as well as mark whether questions are invalid, or redundant with respect to previous questions.""",
       """ You will highlight an answer span using """,
       <.b("""exactly 2 clicks """), <.span(
         """- one click on the first word of the answer, and one click on the last word
@@ -71,6 +71,14 @@ object SDValidationInstructions extends Instructions {
         """, but not """,
         <.span(Styles.badRed, " one or two "),
         """, because the question is only referring the highlighted occurrence of 'files'."""),
+      <.li(
+        <.span(Styles.bolded, "Uniqueness. "),
+        s"""Some question may have the same meaning or even the exact same phrasing as other questions in your prompt.
+            After answering the first question, you should mark the following same-meaning questions as """,
+            <.span(Styles.redundantOrange, "Redundant"), """.
+            A question is considered redundant if the answers you would have answered it are
+            identical to the answers of a previously answered question."""
+      ),
       <.li(
         <.span(Styles.bolded, "Exhaustiveness. "),
         s"""You must provide every possible answer to each question.
