@@ -66,7 +66,7 @@ object Tokenizer {
     val ner_triplets = get_NER_triplets(str)
 
     def represent_each_word(word: nlpWord) : Option[String] = {
-      if (!isWordInNER(word, ner_triplets)) { Some(word.word) }
+      if (!isWordInNER(word, ner_triplets)) { Some(str.slice(word.beginPosition, word.endPosition)) }
       else {
         val triple = findTripleContainingWord(word, ner_triplets).get
         if (isWordLastInTriple(word, triple))
