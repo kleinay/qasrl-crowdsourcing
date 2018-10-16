@@ -2,7 +2,8 @@ package qasrl.crowd
 
 object QASDAdverbTemplates {
   val list =
-    """What happens/happened  [W]?
+    """What is/was/will [W]?
+      |What happens/happened [W]?
       |What doesn’t/will/won’t/didn’t happen [W]?
       |What did(n’t) someone do [W]?
       |What [W] happens/happened?

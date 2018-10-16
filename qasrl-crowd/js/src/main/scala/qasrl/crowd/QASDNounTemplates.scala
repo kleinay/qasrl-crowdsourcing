@@ -14,6 +14,7 @@ object QASDNounTemplates {
       |Who/What is/was (a/an/the )[W]?
       |Where is/are/was/were (the )[W]?
       |Who/What is/was (the )[W] <PREP>?
+      |What is/are/was/were there (a/an/the )[W] <PREP>?
       |What is/was (the )[W] to do?
       |Where is/are/was/were (the )[W] <PREP>?
       |Who/What is/was <PREP> (a/an/the )[W]?"""
