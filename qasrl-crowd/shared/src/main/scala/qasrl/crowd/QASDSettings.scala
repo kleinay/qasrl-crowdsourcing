@@ -12,7 +12,7 @@ trait QASDSettings extends QASRLSettings {
     cents * 0.01
   }
 
-  override val generationCoverageQuestionsPerVerbThreshold = 0.5
+  override val generationCoverageQuestionsPerVerbThreshold = 0.8
 
   // validation conditions
   override val validationReward = 0.05

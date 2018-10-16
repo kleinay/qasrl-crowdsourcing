@@ -97,7 +97,7 @@ object SDGenerationInstructions extends Instructions {
 
 
   val sdgenerationConditions = <.div(
-    <.p(s"""Each question-answer pair will earn you a bonus of ${dollarsToCents(generationReward)} cents.
+    <.p(s"""Each question-answer pair will earn you a bonus of ${dollarsToCents(generationFirstQBonusCents)} cents.
           Notice that some target words don't have a suitable question to ask about in the given templates.
           In that case, you are allowed to submit the HIT without any generated questions.
           However, you will need to write more than ${generationCoverageQuestionsPerVerbThreshold} questions on average in order to stay qualified.
