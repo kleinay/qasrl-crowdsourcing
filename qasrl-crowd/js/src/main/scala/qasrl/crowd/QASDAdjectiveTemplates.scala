@@ -13,4 +13,6 @@ object QASDAdjectiveTemplates {
       .stripMargin
       .split("\n")
       .toList
+
+  val listWithId : List[String] = for ((e, i) <- list.zipWithIndex) yield e+"#"+i.toString
 }

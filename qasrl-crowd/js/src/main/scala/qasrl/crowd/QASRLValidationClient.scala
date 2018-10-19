@@ -55,6 +55,8 @@ class QASRLValidationClient[SID : Writer : Reader](
   import MultiContigSpanHighlightableSentenceComponent._
 
   lazy val questions = prompt.qaPairs.map(_.question)
+    .map(QASDQuestionProcessor.withoutTemplateId)
+    // todo- is it sufficient? or too drastic?- perhaps remove postfix only from preview?
 
   @Lenses case class State(
     curQuestion: Int,

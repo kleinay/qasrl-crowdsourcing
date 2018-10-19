@@ -19,8 +19,7 @@ case class QASDQuestions(targetWord : String, targetSentence : String, templateL
         .map(replacePrep).flatten // expand PREP_SYMBOL with all prepositions
         .map(handleParatheses).flatten // replace paranthese with two templates (with\out content)
         .map(handleSlash).flatten // expand every slashed option
-        .toSet.toList
-
+        .distinct
   }
 
   def replacePrep(sentence : String) : List[String] = {

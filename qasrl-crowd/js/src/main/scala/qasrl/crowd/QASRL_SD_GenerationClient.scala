@@ -287,7 +287,7 @@ class QASRL_SD_GenerationClient[SID : Reader : Writer](
                       if(isBlurEnabled) scope.modState(State.curFocus.set(None))
                       else Callback(allInputRefs(qaIndex).focus)
                       ),
-                    ^.value := question
+                    ^.value := QASDQuestionProcessor.withoutTemplateId(question)
                   ).ref(setInputRef(qaIndex)),
                   (for {
                     QASDAutocomplete.Incomplete(suggestions, badStartIndexOpt) <- autocompleteResultOpt
@@ -321,7 +321,9 @@ class QASRL_SD_GenerationClient[SID : Reader : Writer](
                       ^.onMouseMove --> setBlurEnabled(false),
                       ^.onMouseLeave --> setBlurEnabled(true),
                       suggestions.zipWithIndex.toList.toVdomArray {
-                        case (ts @ QASDAutocomplete.Suggestion(text, isCompletion), tokenIndex) =>
+                        case (ts @ QASDAutocomplete.Suggestion(f_text, isCompletion), tokenIndex) =>
+                          {
+                          val text = QASDQuestionProcessor.withoutTemplateId(f_text)
                           <.div(
                             itemBgStyle(tokenIndex, isCompletion).whenDefined,
                             ^.padding := "2px 6px",
@@ -339,7 +341,7 @@ class QASRL_SD_GenerationClient[SID : Reader : Writer](
                                   )
                                 )
                             }
-                          )
+                          )}
                       }
                     )
                   }

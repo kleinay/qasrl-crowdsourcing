@@ -14,21 +14,21 @@ class QASDQuestionProcessor(sentence : String, targetWord : String, targetType :
   import QASDQuestionProcessor._
 
   val questions : QASDQuestions = targetType match {
-    case "noun" => QASDQuestions(targetWord, sentence, QASDNounTemplates.list)
-    case "adjective" => QASDQuestions(targetWord, sentence, QASDAdjectiveTemplates.list)
-    case "adverb" => QASDQuestions(targetWord, sentence, QASDAdverbTemplates.list)
-    case "number" => QASDQuestions(targetWord, sentence, QASDNumberTemplates.list)
+    case "noun" => QASDQuestions(targetWord, sentence, QASDNounTemplates.listWithId)
+    case "adjective" => QASDQuestions(targetWord, sentence, QASDAdjectiveTemplates.listWithId)
+    case "adverb" => QASDQuestions(targetWord, sentence, QASDAdverbTemplates.listWithId)
+    case "number" => QASDQuestions(targetWord, sentence, QASDNumberTemplates.listWithId)
   }
 
   var state : String = "" // the state of current question- the text inserted so far by user
 
   def changeState(newState : String) : Unit = {
-    state = newState.toLowerCase
+    state = newState
   }
 
   // what subset of qlist is available from a prefix
   def getAvailableQsFrom(prefix : String) : List[String] = {
-    questions.qlist filter (_.toLowerCase.startsWith(prefix))
+    questions.qlist filter (_.toLowerCase.startsWith(prefix.toLowerCase))
   }
 
   // what subset of qlist is available from current state
@@ -38,12 +38,15 @@ class QASDQuestionProcessor(sentence : String, targetWord : String, targetType :
 
   // is there any possible question available for state
   def isValid : Boolean = {
-    !getAvailableQs.isEmpty
+    getAvailableQs.nonEmpty
   }
 
   // does state corresponds to an entrance of possibleQs
   def isComplete : Boolean = {
-    questions.qlist.map(_.toLowerCase).contains(state)
+    questions.qlist
+      .map(QASDQuestionProcessor.withoutTemplateId)
+      .map(_.toLowerCase)
+      .contains(QASDQuestionProcessor.withoutTemplateId(state.toLowerCase))
   }
 
   // return the longest prefix of state that is shared with at least one possible question
@@ -84,6 +87,11 @@ class QASDQuestionProcessor(sentence : String, targetWord : String, targetType :
 }
 
 object QASDQuestionProcessor {
+
+  // get the question without template ID postfix
+  def withoutTemplateId(question : String) : String = {
+    question.split("#")(0)
+  }
 
   case class InvalidState()
 
