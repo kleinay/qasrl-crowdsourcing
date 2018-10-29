@@ -4,11 +4,11 @@ trait QASDSettings extends QASRLSettings {
 
   override val generationRewardCents = 3
 
-  val generationFirstQBonusCents = 5
+//  val generationFirstQBonusCents = 5
 
   override def generationBonus(nValidQAs: Int) = {
     //val cents = (0 until nValidQAs).map(_ + generationFirstQBonusCents).sum
-    val cents = nValidQAs * generationFirstQBonusCents  // don't increase bonus
+    val cents = nValidQAs * generationRewardCents  // don't increase bonus
     cents * 0.01
   }
 
