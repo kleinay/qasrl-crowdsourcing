@@ -14,7 +14,7 @@ import nlpdata.util.Text
 import nlpdata.util.HasTokens.ops._
 import nlpdata.structure.Word
 
-val label = "dense3_2withGenAggregation_5_8"
+val label = "demo"
 
 val isProduction = false // sandbox. change to true for production
 val domain = "u.cs.biu.ac.il/~stanovg/qasrl" // change to your domain, or keep localhost for testing
@@ -175,4 +175,52 @@ def getOurActiveHITIds = {
 
 def disableAllOurHITs = {
   getOurActiveHITIds map disableHITById
+}
+
+def costOfQASD(isValAggregated : Boolean = true) : Double = {
+
+  val avgGenQAPerNonVerb = 1.3
+  val avgGenQAPerVerb = 2.3
+  val numGenerators = setup.numGenerationAssignmentsForPrompt(exp.allPrompts(0))
+  val numValidators = 1 // Why can't I retrieve exp.valManagerPeek.numAssignmentsPerPrompt ?!
+  // generation cost computation
+  val verbGenAssignments = exp.allVerbPrompts.size * numGenerators
+  val sdGenAssignments = exp.allSDPrompts.size * numGenerators
+  val verbGenQAs = verbGenAssignments * avgGenQAPerVerb
+  val sdGenQAs = sdGenAssignments * avgGenQAPerNonVerb
+  // for simplicity, we'll compute as if every generated question is granted the same
+  val verbGenCost = QASRLSettings.default.generationRewardCents * verbGenQAs
+  val sdGenCost = QASDSettings.default.generationRewardCents * sdGenQAs
+  val genTotalCost = verbGenCost + sdGenCost
+
+  // validation cost computation
+  val valTotalCost = if(isValAggregated){
+    // When aggregated validation:
+    val verbValAssignments = exp.allVerbPrompts.size * numValidators
+    val sdValAssignments = exp.allSDPrompts.size * numValidators
+    val verbAvgQsPerTarget = avgGenQAPerVerb * numGenerators
+    val sdAvgQsPerTarget = avgGenQAPerNonVerb * numGenerators
+    // how much should one validator be paid for one assignments?
+    val verbValAvgAssignmentPayment = verbAvgQsPerTarget * QASRLSettings.default.validationBonusPerQuestion
+    val sdValAvgAssignmentPayment = sdAvgQsPerTarget * QASDSettings.default.validationBonusPerQuestion
+    val verbValCost = verbValAvgAssignmentPayment * verbValAssignments
+    val sdValCost = sdValAvgAssignmentPayment * sdValAssignments
+    verbValCost + sdValCost
+  } else {
+    // When validation is not aggregated, i.e. each generators has its own validators
+    val verbValAssignments = verbGenAssignments * numValidators
+    val sdValAssignments = sdGenAssignments * numValidators
+    val verbAvgQsPerTarget = avgGenQAPerVerb
+    val sdAvgQsPerTarget = avgGenQAPerNonVerb
+    // how much should one validator be paid for one assignments?
+    val verbValAvgAssignmentPayment = QASRLSettings.default.validationReward +
+      math.max(0, (verbAvgQsPerTarget-QASRLSettings.default.validationBonusThreshold) * QASRLSettings.default.validationBonusPerQuestion)
+    val sdValAvgAssignmentPayment = QASDSettings.default.validationReward +
+      math.max(0, (verbAvgQsPerTarget-QASDSettings.default.validationBonusThreshold) * QASDSettings.default.validationBonusPerQuestion)
+    val verbValCost = verbValAvgAssignmentPayment * verbValAssignments
+    val sdValCost = sdValAvgAssignmentPayment * sdValAssignments
+    verbValCost + sdValCost
+  }
+  // final cost
+  genTotalCost + valTotalCost
 }
