@@ -60,7 +60,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
 
   // define numGenerationAssignmentsForPrompt for either production or sandbox
   def numGenerationAssignmentsForPrompt : QASRLGenerationPrompt[SID] => Int =
-    if(config.isProduction) numGenerationAssignmentsForPromptInProduction else (_ => 2)
+    if(config.isProduction) numGenerationAssignmentsForPromptInProduction else (_ => 1)
 
   // collect indices of verbs in the sentence to generate prompt
   def getVerbKeyIndices(id: SID): Set[Int] = {
@@ -589,7 +589,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
         valAgrDisqualTypeId,
         accuracyTracker,
         // sentenceTracker,
-        if(config.isProduction) (_ => 2) else (_ => 1), // how many validators per HIT?
+        if(config.isProduction) (_ => 1) else (_ => 1), // how many validators per HIT?
         if(config.isProduction) 100 else 3)
       valManagerPeek
     })
@@ -618,10 +618,10 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
       // use same class but override file naming using suffix
       sdvalManagerPeek = new QASRLValidationHITManager(
         sdvalHelper,
-        valAgrDisqualTypeId,
+        sdvalAgrDisqualTypeId,
         accuracyTracker,
         // sentenceTracker,
-        if(config.isProduction) (_ => 2) else (_ => 1), // how many validators per HIT?
+        if(config.isProduction) (_ => 1) else (_ => 1), // how many validators per HIT?
         if(config.isProduction) 100 else 3,
         qasdSettings,
         "NonVerb")
@@ -691,9 +691,9 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
         // sentenceTracker,
         numGenerationAssignmentsForPrompt,
         if(config.isProduction) 100 else 3,
-        allSDPrompts.iterator,
+        allSDPrompts.iterator, // the prompts itarator determines what genHITs are generated
         qasdSettings,
-        "nonVerb")  // the prompts itarator determines what genHITs are generated
+        "nonVerb")
       sdgenManagerPeek
     }
   )
