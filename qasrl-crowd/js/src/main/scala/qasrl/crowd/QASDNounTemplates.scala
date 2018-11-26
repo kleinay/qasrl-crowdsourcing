@@ -7,17 +7,16 @@ object QASDNounTemplates {
       |Whose [W]?
       |How much [W]?
       |How many [W]?
-      |[W] for how long?
-      |When is/are/was/were (the )[W]?
-      |What is/was the time of (the )[W]?
+      |What <BE> there [W] of?    // replacing: [W] of what?
+      |How long <BE> (the )[W]?   // replacing [W] for how long?
+      |When <BE> (the )[W]?
       |Who/What is an example of [W]?
-      |Who/What is/was (a/an/the )[W]?
-      |Where is/are/was/were (the )[W]?
-      |Who/What is/was (the )[W] <PREP>?
-      |What is/are/was/were there (a/an/the )[W] <PREP>?
-      |What is/was (the )[W] to do?
-      |Where is/are/was/were (the )[W] <PREP>?
-      |Who/What is/was <PREP> (a/an/the )[W]?"""
+      |Who/What <BE_SG> (a/an/the )[W]?
+      |What <BE> there (a/an/the )[W] <PREP>?
+      |Where <BE> (the )[W]?
+      |Who/What <BE_SG> (the )[W] <PREP>?
+      |Where <BE> (the )[W] <PREP>?
+      |Who/What <BE_SG> <PREP> (a/an/the )[W]?"""
       .stripMargin
       .split("\n")
       .toList

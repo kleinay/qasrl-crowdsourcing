@@ -2,10 +2,9 @@ package qasrl.crowd
 
 object QASDNumberTemplates {
   val list =
-    """[W] of what?
-      |Who/What is of quantity [W]?
-      |What is [W] of something?
-      |What is something [W] of?
+    """What is/are there [W] of?
+      |How many times [W]?
+      |Out of how many is/are there [W] of something?
       |In what level of accuracy is something of quantity [W]?"""
       .stripMargin
       .split("\n")

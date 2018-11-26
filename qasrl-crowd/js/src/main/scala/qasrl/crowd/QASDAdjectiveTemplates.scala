@@ -2,14 +2,11 @@ package qasrl.crowd
 
 object QASDAdjectiveTemplates {
   val list =
-    """What/Who is (not )[W]?
-      |What/Who is (not )[W] <PREP> something?
-      |What kind of [W]?
-      |What/Who is someone/something [W] <PREP>?
-      |In what sense is something [W]?
-      |How much [W]?
+    """What/Who <BE> (not )[W]?
+      |What/Who <BE> (not )[W] <PREP> something?
+      |What/Who <BE> someone/something [W] <PREP>?
       |To what extent/degree is something [W]?
-      |[W] to what extent?"""
+      |In what sense is something [W]?"""
       .stripMargin
       .split("\n")
       .toList

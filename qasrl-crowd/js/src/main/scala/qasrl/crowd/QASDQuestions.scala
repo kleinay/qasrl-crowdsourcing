@@ -7,6 +7,8 @@ package qasrl.crowd
 *   <PREP>  is replaced with each of the prepositions
 *   (word) is generating two templates, with and without the word in parantheses
 *   w1/w2/../wi is generating i templates, one with each slashed word alone
+*   <BE> is replaced with is/are/was/were
+*   <BE_SG> is replaced with is/was
 
  */
 
@@ -16,6 +18,7 @@ case class QASDQuestions(targetWord : String, targetSentence : String, templateL
   lazy val qlist : List[String] = {
     templateList
         .map(_.replace(QASDQuestions.TRGT_SYMBOL, targetWord))  // replace TRGT_SYMBOL
+        .map(replaceBE)
         .map(replacePrep).flatten // expand PREP_SYMBOL with all prepositions
         .map(handleParatheses).flatten // replace paranthese with two templates (with\out content)
         .map(handleSlash).flatten // expand every slashed option
@@ -25,6 +28,11 @@ case class QASDQuestions(targetWord : String, targetSentence : String, templateL
   def replacePrep(sentence : String) : List[String] = {
     for (prep <- relevantPrepositions.toList)
       yield sentence.replace(QASDQuestions.PREP_SYMBOL, prep)
+  }
+
+  def replaceBE(sentence : String) : String = {
+    val beReplaced = sentence.replace(QASDQuestions.BE_SYMBOL, QASDQuestions.BE_EXPR)
+    beReplaced.replace(QASDQuestions.BE_SINGULAR_SYMBOL, QASDQuestions.BE_SINGULAR_EXPR)
   }
 
   def getRelevantPrepositions(targetSentence : String) : Set[String] = {
@@ -95,6 +103,10 @@ case class QASDQuestions(targetWord : String, targetSentence : String, templateL
 object QASDQuestions {
   val TRGT_SYMBOL = "[W]"
   val PREP_SYMBOL = "<PREP>"
+  val BE_SYMBOL = "<BE>"
+  val BE_EXPR = "is/are/was/were"
+  val BE_SINGULAR_SYMBOL = "<BE_SG>"
+  val BE_SINGULAR_EXPR = "is/was"
 
   val CommonPrepositions =
     """in
