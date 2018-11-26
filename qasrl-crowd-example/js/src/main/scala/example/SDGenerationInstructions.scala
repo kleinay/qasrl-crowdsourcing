@@ -35,7 +35,7 @@ object SDGenerationInstructions extends Instructions {
       ^.classSet1("blockquote"),
       "Protesters blamed the recent corruption ", <.span(Styles.bolded, "scandal"), " on local officials, who today refused to promise that they would resume the investigation before year's end. "),
     <.ul(
-      <.li("What is the scandal of? --> corruption"),
+      <.li("What kind of scandal? --> corruption"),
       <.li("What is the time of the scandal? --> recent")
     ),
     <.h2("Guidelines"),

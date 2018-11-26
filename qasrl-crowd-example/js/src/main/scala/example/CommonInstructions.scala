@@ -201,7 +201,7 @@ object CommonInstructions extends Instructions {
             "His",
             true),
           example(
-            "What is the appearance of?",
+            "What kind of appearance?",
             "jam session",
             false,
             """This Q&A is not asserted from the sentence, as it is only claimed that the appearance felt like a jam session. """)
