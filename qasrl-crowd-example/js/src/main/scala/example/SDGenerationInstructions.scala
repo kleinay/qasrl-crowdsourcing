@@ -1,20 +1,17 @@
 package example
 
 import spacro.ui._
-
-import qasrl.crowd.QASRLDispatcher
+import qasrl.crowd._
 import qasrl.crowd.util._
-
-import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react._
+import japgolly.scalajs.react.vdom.html_<^.{<, _}
+import japgolly.scalajs.react.vdom._
+import japgolly.scalajs.react.vdom.VdomNode
 
 import scalacss.DevDefaults._
 import scalacss.ScalaCssReact._
-
 import scalajs.js.JSApp
-
 import upickle.default._
-
+import scala.compat.Platform.EOL
 
 object SDGenerationInstructions extends Instructions {
   import qasrl.crowd.QASDSettings.default._
@@ -116,6 +113,28 @@ object SDGenerationInstructions extends Instructions {
           you will be disqualified from this task. """)
   )
 
+  def renderString(c: String): VdomElement = <.p(c)
+
+  val sdgenerationQuestionTemplates = <.div(
+    <.p(s"""This section is just for reference to help you understand the format of the questions."""),
+    <.p(s"""Depending on the Part of Speech of the target word (i.e. Noun, Adjective, Adverb or Number),
+          the questions you may generate correspond to the following question templates, where: """),
+    <.ul(
+      <.li("[W] symbol corresponds to the highlighted target word."),
+      <.li("<PREP> symbol corresponds to prepositions."),
+      <.li("<BE> and <BE_SG> symbols correspond to inflections of the 'be' auxiliary verb (is/are/was/were and is/was, correspondingly)."),
+      <.li("Slash represents interchangeable words, and parenthesis () represents optional words.")
+    ),
+    <.p(s"""The question templates are:"""),
+    <.p(Styles.bolded, """Noun: """),
+    QASDNounTemplates.list.map(renderString).toTagMod,
+    <.p(Styles.bolded, """Adjective: """),
+    QASDAdjectiveTemplates.list.map(renderString).toTagMod,
+    <.p(Styles.bolded, """Adverb: """),
+    QASDAdverbTemplates.list.map(renderString).toTagMod,
+    <.p(Styles.bolded, """Number: """),
+    QASDNumberTemplates.list.map(renderString).toTagMod
+  )
 
   val instructions = <.div(
     Instructions(
@@ -125,6 +144,7 @@ object SDGenerationInstructions extends Instructions {
         tabs = List(
           "Overview" -> sdgenerationOverview,
           "Examples" -> <.div(CommonInstructions.nonverb_span_examples),
+          "Question Format" -> sdgenerationQuestionTemplates,
           "Interface & Controls" -> sdgenerationControls,
           "Conditions & Payment" -> sdgenerationConditions
         )

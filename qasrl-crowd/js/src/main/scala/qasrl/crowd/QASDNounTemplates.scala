@@ -7,8 +7,8 @@ object QASDNounTemplates {
       |Whose [W]?
       |How much [W]?
       |How many [W]?
-      |What <BE> there [W] of?    // replacing: [W] of what?
-      |How long <BE> (the )[W]?   // replacing [W] for how long?
+      |What <BE> there [W] of?
+      |How long <BE> (the )[W]?
       |When <BE> (the )[W]?
       |Who/What is an example of [W]?
       |Who/What <BE_SG> (a/an/the )[W]?
