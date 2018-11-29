@@ -43,13 +43,15 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   val allIds: Vector[SID], // IDs of sentences to annotate
   numGenerationAssignmentsForPromptInProduction: QASRLGenerationPrompt[SID] => Int,
   annotationDataService: AnnotationDataService,
-  qualTestOpt : Option[QualTest] = None,
+  sdgenQualTestOpt : Option[QualTest] = None,
+  sdvalQualTestOpt : Option[QualTest] = None,
   frozenGenerationHITTypeId: Option[String] = None,
   frozenValidationHITTypeId: Option[String] = None,
   generationAccuracyDisqualTypeLabel: Option[String] = None,
   generationCoverageDisqualTypeLabel: Option[String] = None,
   validationAgreementDisqualTypeLabel: Option[String] = None,
   sdvalidationAgreementDisqualTypeLabel: Option[String] = None,
+  sdgenerationTestQualTypeLabel: Option[String] = None,
   sdvalidationTestQualTypeLabel: Option[String] = None)(
   implicit val config: TaskConfig,
   val settings: QASRLSettings,
@@ -306,7 +308,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   val sdvalTestQualTypeName = if(config.isProduction)
                                 s"${sdvalTestQualTypeLabelString}Question answering test score (%)"
                               else "Sandbox sdvalidation test score qual"
-  val sdvalTestQualTypeOpt = qualTestOpt.flatMap(qualTest => Some({
+  val sdvalTestQualTypeOpt = sdvalQualTestOpt.flatMap(qualTest => Some({
     config.service.listQualificationTypes (
     new ListQualificationTypesRequest ()
       .withQuery (sdvalTestQualTypeName)
@@ -339,6 +341,45 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     .withRequiredToPreview(false)
   )
 
+  // Optoinal: add Qualification Test as qualification to sdgeneration
+
+  val sdgenTestQualTypeLabelString = sdgenerationTestQualTypeLabel.fold("")(x => s"[$x] ")
+  val sdgenTestQualTypeName = if(config.isProduction)
+    s"${sdgenTestQualTypeLabelString}'Writing and answering questions on a sentence' test score (%)"
+  else "Sandbox sdgeneration test score qual"
+  val sdgenTestQualTypeOpt = sdgenQualTestOpt.flatMap(qualTest => Some({
+    config.service.listQualificationTypes (
+      new ListQualificationTypesRequest ()
+        .withQuery (sdgenTestQualTypeName)
+        .withMustBeOwnedByCaller (true)
+        .withMustBeRequestable (false)
+        .withMaxResults(100)
+    ).getQualificationTypes.asScala.toList.find(_.getName == sdgenTestQualTypeName).getOrElse {
+      System.out.println ("Generating sdgeneration test qualification type...")
+      config.service.createQualificationType (
+        new CreateQualificationTypeRequest ()
+          .withName (sdgenTestQualTypeName)
+          .withKeywords ("language,english,question answering")
+          .withDescription ("""Score on the qualification test for the question answering task,
+                as a test of your understanding of the instructions.""".replaceAll ("\\s+", " ") )
+          .withQualificationTypeStatus (QualificationTypeStatus.Active)
+          .withRetryDelayInSeconds (90L)
+          .withTest (qualTest.testString)
+          .withAnswerKey (qualTest.answerKeyString)
+          .withTestDurationInSeconds (1500L)
+          .withAutoGranted (false)
+      ).getQualificationType
+    }
+  }))
+  val sdgenTestQualTypeIdOpt = sdgenTestQualTypeOpt.map(_.getQualificationTypeId)
+  val sdgenTestRequirementOpt = sdgenTestQualTypeIdOpt.map(qualTypeId =>
+    new QualificationRequirement()
+      .withQualificationTypeId(qualTypeId)
+      .withComparator("GreaterThanOrEqualTo")
+      .withIntegerValues(90)
+      .withRequiredToPreview(false)
+  )
+
 
   // NOTE may need to call multiple times to cover all workers... sigh TODO pagination
   def resetAllQualificationValues = {
@@ -361,7 +402,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
       genCoverageDisqualTypeId,
       sdgenCoverageDisqualTypeId,
       valAgrDisqualTypeId,
-      sdvalAgrDisqualTypeId) ++ sdvalTestQualTypeIdOpt
+      sdvalAgrDisqualTypeId) ++ sdvalTestQualTypeIdOpt ++ sdgenTestQualTypeIdOpt
 
     activeQualsList.foreach(revokeAllWorkerQuals)
   }
@@ -410,7 +451,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     keywords = "language,english,question answering",
     qualRequirements = Array[QualificationRequirement](
       approvalRateRequirement, localeRequirement, genAccuracyRequirement, sdgenCoverageRequirement
-    ),
+    ) ++ sdgenTestRequirementOpt,
     autoApprovalDelay = 2592000L, // 30 days
     assignmentDuration = 3600L)
 

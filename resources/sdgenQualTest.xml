@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<QuestionForm xmlns="http://mechanicalturk.amazonaws.com/AWSMechanicalTurkDataSchemas/2005-10-01/QuestionForm.xsd">
+<Overview>
+<Title>Write question-answer pairs about a word</Title>
+<Text>Please carefully read over the instructions for our task named "Write question-answer pairs about a word". This qualification test will evaluate your understanding of those instructions, focusing on some of the trickier cases. It is very important for us that you follow the guidelines, because everyone has slightly different intuitions about how to answer these questions, but we need everyone to perform consistently so that you can accurately be judged by how well you agree with each other.
+</Text>
+<Text>It's a good idea have a tab open with the task preview so you can consult the instructions during this test. Feel free to take it as many times as necessary; your score can be a good form of feedback on how well you understand the expectations.</Text>
+<Text>Suppose you get a HIT with the following sentence (target word in bold). Your task (in the HIT) would be to: (1) Generate questions about the target word, whose answers are spans of the sentence; and (2) Highlight the answers in the sentence. Questions are taken from a list of question templates.   </Text>
+<Text>In this qualification test, we will simulate your performance by presenting you with a list of questions per target word. For each question, your task is to judge whether the question is valid or invalid, and when valid, to select the correct answer spans for that question. Notice that when several answer-spans answer the question correctly, they should all be included in your selected answer.</Text>
+<FormattedContent><![CDATA[
+  <p><cite>According to the Nonexistent Centre for Imperialism Studies, exploitation  <b>colonialism</b> involves fewer colonists and focuses on access to resources for export, typically to the metropole.</cite></p>
+]]></FormattedContent>
+</Overview>
+
+<Question>
+  <QuestionIdentifier>q1</QuestionIdentifier>
+  <IsRequired>true</IsRequired>
+  <QuestionContent><Text>1. What kind of colonialism?</Text></QuestionContent>
+  <AnswerSpecification>
+    <SelectionAnswer>
+      <StyleSuggestion>radiobutton</StyleSuggestion>
+      <Selections>
+        <Selection>
+        <SelectionIdentifier>q1-invalid</SelectionIdentifier>
+        <Text>N/A: Invalid question</Text>
+        </Selection>
+        <Selection>
+        <SelectionIdentifier>q1-a1</SelectionIdentifier>
+        <Text>focuses on access to resources for export, typically to the metropole</Text>
+        </Selection>
+        <Selection>
+        <SelectionIdentifier>q1-a2</SelectionIdentifier>
+        <Text>exploitation</Text>
+        </Selection>
+      </Selections>
+    </SelectionAnswer>
+  </AnswerSpecification>
+</Question>
+<Overview>
+<FormattedContent><![CDATA[
+  <p><b>The correct answer is "exploitation".</b> The phrase "focuses on access to resources..." indeed describes the referred 'colonialism' but it is not its "kind".</p>
+]]></FormattedContent>
+</Overview>
+<Question>
+  <QuestionIdentifier>q2</QuestionIdentifier>
+  <IsRequired>true</IsRequired>
+  <QuestionContent><Text>2. How much colonialism?</Text></QuestionContent>
+  <AnswerSpecification>
+    <SelectionAnswer>
+      <StyleSuggestion>radiobutton</StyleSuggestion>
+      <Selections>
+        <Selection>
+        <SelectionIdentifier>q2-invalid</SelectionIdentifier>
+        <Text>N/A: Invalid question</Text>
+        </Selection>
+        <Selection>
+        <SelectionIdentifier>q2-a1</SelectionIdentifier>
+        <Text>Exploitation colonialism</Text>
+        </Selection>
+        <Selection>
+        <SelectionIdentifier>q2-a2</SelectionIdentifier>
+        <Text>fewer</Text>
+        </Selection>
+      </Selections>
+    </SelectionAnswer>
+  </AnswerSpecification>
+</Question>
+<Overview>
+<FormattedContent><![CDATA[
+  <p><b>The correct answer is "N/A: Invalid question".</b> The question is hardly understandable, and moreover, has no valid answer in the sentence. </p>
+]]></FormattedContent>
+</Overview>
+
+<Overview>
+<FormattedContent><![CDATA[
+  <p><cite>According to the Nonexistent Centre for Imperialism Studies, exploitation colonialism involves fewer colonists and focuses on <b>access</b> to resources for export, typically to the metropole.</cite></p>
+]]></FormattedContent>
+</Overview>
+
+<Question>
+  <QuestionIdentifier>q3</QuestionIdentifier>
+  <IsRequired>true</IsRequired>
+  <QuestionContent><Text>3. What is the access to?</Text></QuestionContent>
+  <AnswerSpecification>
+    <SelectionAnswer>
+      <StyleSuggestion>radiobutton</StyleSuggestion>
+      <Selections>
+        <Selection>
+        <SelectionIdentifier>q3-invalid</SelectionIdentifier>
+        <Text>N/A: Invalid question</Text>
+        </Selection>
+        <Selection>
+        <SelectionIdentifier>q3-a1</SelectionIdentifier>
+        <Text>resources for export, typically to the metropole.</Text>
+        </Selection>
+        <Selection>
+        <SelectionIdentifier>q3-a2</SelectionIdentifier>
+        <Text>resources for export</Text>
+        </Selection>
+        <Selection>
+        <SelectionIdentifier>q3-a3</SelectionIdentifier>
+        <Text>resources for export  /  the metropole</Text>
+        </Selection>
+        <Selection>
+        <SelectionIdentifier>q3-a4</SelectionIdentifier>
+        <Text>the metropole</Text>
+        </Selection>
+      </Selections>
+    </SelectionAnswer>
+  </AnswerSpecification>
+</Question>
+<Overview>
+<FormattedContent><![CDATA[
+  <p><b>The correct answer is "resources for export  /  the metropole".</b> Both answer-spans are correct. </p>
+]]></FormattedContent>
+</Overview>
+<Overview>
+<FormattedContent><![CDATA[
+  <p><cite>According to the Nonexistent Centre for Imperialism Studies, exploitation colonialism involves <b>fewer</b> colonists and focuses on access to resources for export, typically to the metropole.</cite></p>
+]]></FormattedContent>
+</Overview>
+
+<Question>
+  <QuestionIdentifier>q4</QuestionIdentifier>
+  <IsRequired>true</IsRequired>
+  <QuestionContent><Text>4. What are fewer?</Text></QuestionContent>
+  <AnswerSpecification>
+    <SelectionAnswer>
+      <StyleSuggestion>radiobutton</StyleSuggestion>
+      <Selections>
+        <Selection>
+        <SelectionIdentifier>q4-invalid</SelectionIdentifier>
+        <Text>N/A: Invalid question</Text>
+        </Selection>
+        <Selection>
+        <SelectionIdentifier>q4-a1</SelectionIdentifier>
+        <Text>involves</Text>
+        </Selection>
+        <Selection>
+        <SelectionIdentifier>q4-a2</SelectionIdentifier>
+        <Text>colonists</Text>
+        </Selection>
+        <Selection>
+        <SelectionIdentifier>q4-a3</SelectionIdentifier>
+        <Text>resources</Text>
+        </Selection>
+      </Selections>
+    </SelectionAnswer>
+  </AnswerSpecification>
+</Question>
+<Overview>
+<FormattedContent><![CDATA[
+  <p><b>The correct answer is "colonists".</b> The "fewer" describes the amount of "colonists" the phrase is referring to. </p>
+]]></FormattedContent>
+</Overview>
+
+<Overview>
+<FormattedContent><![CDATA[
+  <p>Now, go ahead and try some on your own: </p>
+]]></FormattedContent>
+</Overview>
+
+<Overview>
+<FormattedContent><![CDATA[
+  <p><cite>Market participants said that the mark continues to post the most <b>significant</b> gains against the dollar.</cite></p>
+]]></FormattedContent>
+</Overview>
+<Question>
+  <QuestionIdentifier>q5</QuestionIdentifier>
+  <IsRequired>true</IsRequired>
+  <QuestionContent><Text>4. What is something significant to?</Text></QuestionContent>
+  <AnswerSpecification>
+    <SelectionAnswer>
+      <StyleSuggestion>radiobutton</StyleSuggestion>
+      <Selections>
+        <Selection>
+        <SelectionIdentifier>q5-invalid</SelectionIdentifier>
+        <Text>N/A: Invalid question</Text>
+        </Selection>
+        <Selection>
+        <SelectionIdentifier>q5-a1</SelectionIdentifier>
+        <Text>the mark</Text>
+        </Selection>
+        <Selection>
+        <SelectionIdentifier>q5-a2</SelectionIdentifier>
+        <Text>the dollar</Text>
+        </Selection>
+        <Selection>
+        <SelectionIdentifier>q5-a3</SelectionIdentifier>
+        <Text>Market participants</Text>
+        </Selection>
+      </Selections>
+    </SelectionAnswer>
+  </AnswerSpecification>
+</Question>
+<Question>
+  <QuestionIdentifier>q6</QuestionIdentifier>
+  <IsRequired>true</IsRequired>
+  <QuestionContent><Text>6. What is significant?</Text></QuestionContent>
+  <AnswerSpecification>
+    <SelectionAnswer>
+      <StyleSuggestion>radiobutton</StyleSuggestion>
+      <Selections>
+        <Selection>
+        <SelectionIdentifier>q6-invalid</SelectionIdentifier>
+        <Text>N/A: Invalid question</Text>
+        </Selection>
+        <Selection>
+        <SelectionIdentifier>q6-a1</SelectionIdentifier>
+        <Text>gains</Text>
+        </Selection>
+        <Selection>
+        <SelectionIdentifier>q6-a2</SelectionIdentifier>
+        <Text>post</Text>
+        </Selection>
+        <Selection>
+        <SelectionIdentifier>q6-a3</SelectionIdentifier>
+        <Text>against the dollar</Text>
+        </Selection>
+      </Selections>
+    </SelectionAnswer>
+  </AnswerSpecification>
+</Question>
+<Question>
+  <QuestionIdentifier>q7</QuestionIdentifier>
+  <IsRequired>true</IsRequired>
+  <QuestionContent><Text>7. To what degree is something significant?</Text></QuestionContent>
+  <AnswerSpecification>
+    <SelectionAnswer>
+      <StyleSuggestion>radiobutton</StyleSuggestion>
+      <Selections>
+        <Selection>
+        <SelectionIdentifier>q7-invalid</SelectionIdentifier>
+        <Text>N/A: Invalid question</Text>
+        </Selection>
+        <Selection>
+        <SelectionIdentifier>q7-a1</SelectionIdentifier>
+        <Text>gains</Text>
+        </Selection>
+        <Selection>
+        <SelectionIdentifier>q7-a2</SelectionIdentifier>
+        <Text>continues</Text>
+        </Selection>
+        <Selection>
+        <SelectionIdentifier>q7-a3</SelectionIdentifier>
+        <Text>most</Text>
+        </Selection>
+		<Selection>
+        <SelectionIdentifier>q7-a4</SelectionIdentifier>
+        <Text>the mark</Text>
+        </Selection>
+      </Selections>
+    </SelectionAnswer>
+  </AnswerSpecification>
+</Question>
+</QuestionForm>
+<!-- 
+Answers:
+
+  val answerKey : Map[String, String] = Map(
+    "q1" -> "q1-a2",
+    "q2" -> "q2-invalid",
+    "q3" -> "q3-a3",
+	"q4" -> "q4-a2",
+    "q5" -> "q5-invalid",
+	"q6" -> "q6-a1",
+	"q7" -> "q7-a3"
+  )
+
+-->
