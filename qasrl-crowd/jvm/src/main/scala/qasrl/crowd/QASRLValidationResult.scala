@@ -1,5 +1,7 @@
 package qasrl.crowd
 
+import spacro.Assignment
+
 case class QASRLValidationResult[SID](
   prompt: QASRLValidationPrompt[SID],
   validatorId: String,
@@ -11,3 +13,8 @@ case class QASRLValidationFinished[SID](
   valPrompt: QASRLValidationPrompt[SID],
   numValid: Int)
 
+case class QASRLGenHITFinished(
+  assignment: Assignment[List[VerbQA]],
+  response: List[VerbQA],   // the generator's QAs
+  otherResponses: List[List[VerbQA]] // the other generators' QAs
+)

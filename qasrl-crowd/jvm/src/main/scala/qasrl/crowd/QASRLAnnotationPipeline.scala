@@ -62,7 +62,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
 
   // define numGenerationAssignmentsForPrompt for either production or sandbox
   def numGenerationAssignmentsForPrompt : QASRLGenerationPrompt[SID] => Int =
-    if(config.isProduction) numGenerationAssignmentsForPromptInProduction else (_ => 1)
+    if(config.isProduction) numGenerationAssignmentsForPromptInProduction else (_ => 2)
 
   // collect indices of verbs in the sentence to generate prompt
   def getVerbKeyIndices(id: SID): Set[Int] = {
@@ -170,6 +170,31 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     .withComparator("NotEqualTo")
     .withLocaleValues(new Locale().withCountry("IN"))
     .withRequiredToPreview(false)
+
+  // Generators Agreement Disqualification
+  val genAgreementDisqualTypeName = s"Question-answer writing inter-worker agreement disqualification"
+  val genAgreementDisqualType = config.service.listQualificationTypes(
+    new ListQualificationTypesRequest()
+      .withQuery(genAgreementDisqualTypeName)
+      .withMustBeOwnedByCaller(true)
+      .withMustBeRequestable(false)
+      .withMaxResults(100)
+  ).getQualificationTypes.asScala.toList.find(_.getName == genAgreementDisqualTypeName).getOrElse {
+    System.out.println("Generating generation agreement disqualification type...")
+    config.service.createQualificationType(
+      new CreateQualificationTypeRequest()
+        .withName(genAgreementDisqualTypeName)
+        .withKeywords("language,english,question answering")
+        .withDescription("""Inter-worker agreement on the question-answer writing task is too low.""".replaceAll("\\s+", " "))
+        .withQualificationTypeStatus(QualificationTypeStatus.Active)
+    ).getQualificationType
+  }
+  val genAgreementDisqualTypeId = genAgreementDisqualType.getQualificationTypeId
+  val genAgreementRequirement = new QualificationRequirement()
+    .withQualificationTypeId(genAgreementDisqualTypeId)
+    .withComparator("DoesNotExist")
+    .withRequiredToPreview(false)
+
 
   val genAccDisqualTypeLabelString = generationAccuracyDisqualTypeLabel.fold("")(x => s"[$x] ")
   val genAccDisqualTypeName = s"${genAccDisqualTypeLabelString}Question-answer writing accuracy disqualification"
@@ -399,6 +424,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     }
     val activeQualsList = List(
       genAccDisqualTypeId,
+      genAgreementDisqualTypeId,
       genCoverageDisqualTypeId,
       sdgenCoverageDisqualTypeId,
       valAgrDisqualTypeId,
@@ -450,7 +476,8 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     reward = qasdSettings.generationReward,
     keywords = "language,english,question answering",
     qualRequirements = Array[QualificationRequirement](
-      approvalRateRequirement, localeRequirement, genAccuracyRequirement, sdgenCoverageRequirement
+      approvalRateRequirement, localeRequirement, genAccuracyRequirement,
+      genAgreementRequirement, sdgenCoverageRequirement
     ) ++ sdgenTestRequirementOpt,
     autoApprovalDelay = 2592000L, // 30 days
     assignmentDuration = 3600L)
@@ -494,7 +521,8 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     reward = settings.generationReward,
     keywords = "language,english,question answering",
     qualRequirements = Array[QualificationRequirement](
-      approvalRateRequirement, localeRequirement, genAccuracyRequirement, genCoverageRequirement
+      approvalRateRequirement, localeRequirement, genAccuracyRequirement,
+      genAgreementRequirement, genCoverageRequirement
     ),
     autoApprovalDelay = 2592000L, // 30 days
     assignmentDuration = 3600L)
@@ -620,6 +648,17 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     }
   )
 
+  // Actor for tracking generators agreement
+  var genAgreementTrackerPeek: QASRLGenerationAgreementManager[SID] = null
+
+  lazy val genAgreementTracker: ActorRef = actorSystem.actorOf(
+    Props {
+      genAgreementTrackerPeek = new QASRLGenerationAgreementManager[SID](genAgreementDisqualTypeId)
+      genAgreementTrackerPeek
+    }
+  )
+
+
   var valManagerPeek: QASRLValidationHITManager[SID] = null
 
   lazy val valHelper = new HITManager.Helper(valTaskSpec)
@@ -643,6 +682,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   lazy val genAggregator: ActorRef = actorSystem.actorOf(
     Props {
       genAggregatorPeek = new QASDGenerationAggregationManager[SID](
+        genAgreementTracker,
         valHelper,
         valManager,
         numGenerationAssignmentsForPrompt
@@ -677,6 +717,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   lazy val sdgenAggregator: ActorRef = actorSystem.actorOf(
     Props {
       sdgenAggregatorPeek = new QASDGenerationAggregationManager[SID](
+        genAgreementTracker,
         sdvalHelper,
         sdvalManager,
         numGenerationAssignmentsForPrompt,
@@ -757,7 +798,8 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   private[this] var schedule: List[Cancellable] = Nil
   def startSaves(interval: FiniteDuration = 5 minutes): Unit = {
     if(schedule.exists(_.isCancelled) || schedule.isEmpty) {
-      schedule = List(genManager, sdgenManager, valManager, sdvalManager, accuracyTracker, genAggregator, sdgenAggregator).map(actor =>
+      schedule = List(genManager, sdgenManager, valManager, sdvalManager,
+        accuracyTracker, genAgreementTracker, genAggregator, sdgenAggregator).map(actor =>
         config.actorSystem.scheduler.schedule(
           2 seconds, interval, actor, SaveData)(
           config.actorSystem.dispatcher, actor)
@@ -817,6 +859,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   def save() = {
     // sentenceTracker ! SaveData
     accuracyTracker ! SaveData
+    genAgreementTracker ! SaveData
     genManager ! SaveData
     sdgenManager ! SaveData
     valManager ! SaveData

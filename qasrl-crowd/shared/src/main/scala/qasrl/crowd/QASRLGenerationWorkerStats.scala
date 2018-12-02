@@ -9,11 +9,18 @@ case class AccuracyJudgment(
   isValid: Boolean
 )
 
+// judgment (per target) of agreement with other generators on (at least one) answer span
+case class GenAgreementJudgment(
+  hitId: String,
+  isValid: Boolean
+)
+
 case class QASRLGenerationWorkerStats(
   workerId: String,
   numValidatorJudgments: Int,
   numAssignmentsCompleted: Int,
   accuracyJudgments: Vector[AccuracyJudgment],
+  genAgreementJudgments: Vector[GenAgreementJudgment],
   numBonusValids: Int,
   earnings: Double) {
 
@@ -21,6 +28,8 @@ case class QASRLGenerationWorkerStats(
   def numQAPairsValid: Int = accuracyJudgments.filter(_.isValid).size
 
   def accuracy = (Vector.fill(numBonusValids)(true) ++ accuracyJudgments.map(_.isValid)).proportion(identity)
+
+  def genAgreementAccuracy = genAgreementJudgments.count(_==true)/genAgreementJudgments.size.toFloat
 
   def addBonusValids(n: Int) = this.copy(
     numBonusValids = this.numBonusValids + n
@@ -37,6 +46,12 @@ case class QASRLGenerationWorkerStats(
     accuracyJudgments = judgments ++ this.accuracyJudgments
   )
 
+  def addGenAgreementJudgments(
+    judgments: Vector[GenAgreementJudgment]
+  ) = this.copy(
+    genAgreementJudgments = judgments ++ this.genAgreementJudgments
+  )
+
   def registerValidationFinished(
     totalReward: Double
   ) = this.copy(
@@ -45,5 +60,5 @@ case class QASRLGenerationWorkerStats(
   )
 }
 object QASRLGenerationWorkerStats {
-  def empty(workerId: String) = QASRLGenerationWorkerStats(workerId, 0, 0, Vector.empty[AccuracyJudgment], 0, 0.0)
+  def empty(workerId: String) = QASRLGenerationWorkerStats(workerId, 0, 0, Vector.empty[AccuracyJudgment], Vector.empty[GenAgreementJudgment], 0, 0.0)
 }

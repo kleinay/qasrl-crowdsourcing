@@ -18,6 +18,7 @@ import scala.util.{Try, Success, Failure}
 import upickle.default.{Reader, Writer, read}
 
 class QASDGenerationAggregationManager[SID : Reader : Writer](
+  genAgreementActor: ActorRef,
   validationHelper: HITManager.Helper[QASRLValidationPrompt[SID], List[QASRLValidationAnswer]],
   validationActor: ActorRef,
   numAssignmentsForPrompt: QASRLGenerationPrompt[SID] => Int,
@@ -61,7 +62,9 @@ class QASDGenerationAggregationManager[SID : Reader : Writer](
 
     /*
        now check if genApprovedAssingments[genHITId] contain all required assignments for the HIT,
-       and if so, message the validationActor
+       and if so:
+        1) message the validationActor
+        2) message QASRLGenerationAgreementManager
         */
     val allAssignments = genApprovedAssingments.get (genHITId).get
     val nAssignmentForThisGenHIT = allAssignments.size
@@ -74,6 +77,19 @@ class QASDGenerationAggregationManager[SID : Reader : Writer](
       // generate validation prompt corresponding to generation HIT
       val validationPrompt = QASRLValidationPrompt (hit.prompt, hit.hitTypeId, hit.hitId, genAssignmentIds, allQAResponses)
       validationActor ! validationHelper.Message.AddPrompt (validationPrompt)
+
+      // when only single Gen worker, don't inform genAgreementActor
+      if (allAssignments.size > 1) {
+        // For each generator of the HIT, update QASRLGenerationAgreementManager
+        // with all other genAssignments to compute agreement
+        for (assignment <- allAssignments) {
+          val otherWorkersAssignments = allAssignments.filter(_ != assignment)
+
+          genAgreementActor ! QASRLGenHITFinished(assignment,
+            assignment.response,
+            otherWorkersAssignments.map(_.response))
+        }
+      }
     }
   }
 

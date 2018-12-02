@@ -405,6 +405,14 @@ class QASRL_SD_GenerationClient[SID : Reader : Writer](
                 if remaining > 0
               } yield remaining
 
+              // agreement-wise accuracy
+              val agreementAccuracyOpt = workerStatsOpt.map(_.genAgreementAccuracy)
+              val remainingInAgreementGracePeriodOpt = for {
+                workerStats <- workerStatsOpt
+                remaining = settings.generationAgreementGracePeriod - workerStats.genAgreementJudgments.size
+                if remaining > 0
+              } yield remaining
+
               SpanHighlighting(
                 SpanHighlightingProps(
                   isEnabled = !isNotAssigned,
@@ -462,6 +470,25 @@ class QASRL_SD_GenerationClient[SID : Reader : Writer](
                               s" questions per target. This must remain above ${settings.generationCoverageQuestionsPerVerbThreshold}",
                               remainingInCoverageGracePeriodOpt.fold(".")(remaining =>
                                 s" after the end of the grace period ($remaining targets remaining)."
+                              )
+                            ),
+                            agreementAccuracyOpt.whenDefined(accuracy =>
+                              <.p(
+                                """Of your tasks that have been answered by other workers, """,
+                                <.span(
+                                  if(accuracy <= settings.generationAgreementBlockingThreshold) {
+                                    Styles.badRed
+                                  } else if(accuracy <= settings.generationAgreementBlockingThreshold + 0.05) {
+                                    TagMod(Styles.uncomfortableOrange, Styles.bolded)
+                                  } else {
+                                    Styles.goodGreen
+                                  },
+                                  f"${accuracy * 100.0}%.1f%%"
+                                ),
+                                f""" were found agreeing with other annotators. This must remain above ${settings.generationAgreementBlockingThreshold * 100.0}%.1f%%""",
+                                remainingInAgreementGracePeriodOpt.fold(".")(remaining =>
+                                  s" after the end of the grace period ($remaining verbs remaining)."
+                                )
                               )
                             ),
                             accuracyOpt.whenDefined(accuracy =>

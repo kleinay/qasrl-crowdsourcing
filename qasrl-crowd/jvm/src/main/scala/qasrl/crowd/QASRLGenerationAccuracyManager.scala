@@ -32,7 +32,7 @@ class QASRLGenerationAccuracyManager[SID : Reader : Writer](
 
   import config._
 
-  val workerStatsFilename = "generationWorkerStats"
+  val workerStatsFilename = "generationWorkerAccuracyStats" // keep two files, this one is for accuracy (i.e. validation)
 
   var allWorkerStats =
     annotationDataService.loadLiveData(workerStatsFilename)
