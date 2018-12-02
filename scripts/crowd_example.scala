@@ -14,7 +14,7 @@ import nlpdata.util.Text
 import nlpdata.util.HasTokens.ops._
 import nlpdata.structure.Word
 
-val label = "demo"
+val label = "tmp28_11_18"
 
 val isProduction = false // sandbox. change to true for production
 val domain = "u.cs.biu.ac.il/~stanovg/qasrl" // change to your domain, or keep localhost for testing
@@ -177,27 +177,26 @@ def disableAllOurHITs = {
   getOurActiveHITIds map disableHITById
 }
 
-def costOfQASD(isValAggregated : Boolean = true) : Double = {
-
+def costOfQASD(verbsPrompts : Int, sdPrompts : Int, isValAggregated : Boolean = true) : Double = {
   val avgGenQAPerNonVerb = 1.3
   val avgGenQAPerVerb = 2.3
   val numGenerators = setup.numGenerationAssignmentsForPrompt(exp.allPrompts(0))
   val numValidators = 1 // Why can't I retrieve exp.valManagerPeek.numAssignmentsPerPrompt ?!
   // generation cost computation
-  val verbGenAssignments = exp.allVerbPrompts.size * numGenerators
-  val sdGenAssignments = exp.allSDPrompts.size * numGenerators
+  val verbGenAssignments = verbsPrompts * numGenerators
+  val sdGenAssignments = sdPrompts * numGenerators
   val verbGenQAs = verbGenAssignments * avgGenQAPerVerb
   val sdGenQAs = sdGenAssignments * avgGenQAPerNonVerb
   // for simplicity, we'll compute as if every generated question is granted the same
-  val verbGenCost = QASRLSettings.default.generationRewardCents * verbGenQAs
-  val sdGenCost = QASDSettings.default.generationRewardCents * sdGenQAs
+  val verbGenCost = QASRLSettings.default.generationReward * verbGenQAs
+  val sdGenCost = QASDSettings.default.generationReward * sdGenQAs
   val genTotalCost = verbGenCost + sdGenCost
 
   // validation cost computation
   val valTotalCost = if(isValAggregated){
     // When aggregated validation:
-    val verbValAssignments = exp.allVerbPrompts.size * numValidators
-    val sdValAssignments = exp.allSDPrompts.size * numValidators
+    val verbValAssignments = verbsPrompts * numValidators
+    val sdValAssignments = sdPrompts * numValidators
     val verbAvgQsPerTarget = avgGenQAPerVerb * numGenerators
     val sdAvgQsPerTarget = avgGenQAPerNonVerb * numGenerators
     // how much should one validator be paid for one assignments?
@@ -223,4 +222,8 @@ def costOfQASD(isValAggregated : Boolean = true) : Double = {
   }
   // final cost
   genTotalCost + valTotalCost
+}
+
+def currentPipelineCost(isValAggregated : Boolean = true) : Double = {
+  costOfQASD(exp.allVerbPrompts.size, exp.allSDPrompts.size, isValAggregated)
 }
