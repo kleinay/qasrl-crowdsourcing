@@ -12,6 +12,7 @@ case class AccuracyJudgment(
 // judgment (per target) of agreement with other generators on (at least one) answer span
 case class GenAgreementJudgment(
   hitId: String,
+  Question: String,
   isValid: Boolean
 )
 

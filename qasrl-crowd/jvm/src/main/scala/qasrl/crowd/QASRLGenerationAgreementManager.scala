@@ -91,16 +91,16 @@ class QASRLGenerationAgreementManager[SID : Reader : Writer](
     }
   }
 
-  def hasAgreement(response: List[VerbQA], otherResponses: List[List[VerbQA]]) : Boolean = {
-    // check whether any of the Answers given by response have any overlapping answer in otherResponses
+  def hasAgreement(qa: VerbQA, otherResponses: List[List[VerbQA]]) : Boolean = {
+    // check whether any of the Answers given by worker to Q have any overlapping answer in otherResponses
     val otherAnswerSpans : List[Span] = otherResponses.flatten.flatMap(_.answers)
     def spanOverlap(span1: Span, span2: Span) : Boolean = {
       span1.contains(span2.begin) || span1.contains(span2.end)
     }
     // return:
-    response.exists(_.answers.exists(
+    qa.answers.exists(
       ownAns => otherAnswerSpans.exists(otherAns => spanOverlap(ownAns, otherAns))
-    ))
+    )
   }
 
   override def receive = {
@@ -109,15 +109,20 @@ class QASRLGenerationAgreementManager[SID : Reader : Writer](
 
     case QASRLGenHITFinished(assignment, response, otherResponses) => {
       // for a specific generators vs. the other generators
-      val isAgreed : Boolean = hasAgreement(response, otherResponses)
-      val agreementJudgment = GenAgreementJudgment(assignment.hitId, isAgreed)
+      val agreementJudgments : Vector[GenAgreementJudgment] = {
+      // Judgment for each question
+        for (qa <- response)
+          yield GenAgreementJudgment(assignment.hitId, qa.question, hasAgreement(qa, otherResponses))
+      }.toVector
+
+
 
       allWorkerStats = allWorkerStats.updated(
         assignment.workerId,
         allWorkerStats
           .get(assignment.workerId)
           .getOrElse(QASRLGenerationWorkerStats.empty(assignment.workerId))
-          .addGenAgreementJudgments(Vector(agreementJudgment))
+          .addGenAgreementJudgments(agreementJudgments)
       )
 
       assessQualification(assignment.workerId)

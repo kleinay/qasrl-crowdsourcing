@@ -468,7 +468,7 @@ class QASRLGenerationClient[SID : Reader : Writer](
                             ),
                             agreementAccuracyOpt.whenDefined(accuracy =>
                               <.p(
-                                """Of your tasks that have been answered by other workers, """,
+                                """Of your questions that have been annotated by other workers, """,
                                 <.span(
                                   if(accuracy <= settings.generationAgreementBlockingThreshold) {
                                     Styles.badRed
