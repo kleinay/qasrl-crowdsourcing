@@ -121,8 +121,9 @@ class QASRLGenerationHITManager[SID : Reader : Writer](
           .withSendNotification(true))
     }
     /*
-     todo: change the creation of the validation prompt to a message to the QASDGenerationAggregationManager;
-     It will be it's responsability to inform the validationActor
+     Aggregated Validation:
+     Changed the creation of the validation prompt into a message to the QASDGenerationAggregationManager;
+     It is it's responsibility to inform the validationActor
       */
     aggregationManager ! ApprovedGenAssignment(hit, assignment)
 

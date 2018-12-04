@@ -43,7 +43,7 @@ class QASRLEvaluationHITManager[SID : Reader : Writer](
 
   override def promptFinished(prompt: QASRLEvaluationPrompt[SID]): Unit = {
     val assignments = helper.allCurrentHITInfos(prompt).flatMap(_.assignments)
-    val numValid = QASRLValidationAnswer.numValidQuestions(assignments.map(_.response))
+    val numValid = QASRLValidationAnswer.validQuestions(prompt.sourcedQuestions.map(_.question), assignments.map(_.response))
     evaluationStats = assignments.map(a => a.response.map(ans => a.workerId -> ans)).transpose :: evaluationStats
   }
 

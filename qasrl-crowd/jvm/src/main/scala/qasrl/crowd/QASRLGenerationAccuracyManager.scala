@@ -57,12 +57,12 @@ class QASRLGenerationAccuracyManager[SID : Reader : Writer](
     ).toOptionLogging(logger).foreach(_ => logger.info("Worker stats data saved."))
   }
 
-  private def getAssignmentFromValPrompt(valPrompt: QASRLValidationPrompt[SID]): Option[Assignment[List[VerbQA]]] = {
+  private def getGenAssignmentsFromValPrompt(valPrompt: QASRLValidationPrompt[SID]): List[Assignment[List[VerbQA]]] = {
     val assignmentsForHIT = for {
       hit <- hitDataService.getHIT[QASRLGenerationPrompt[SID]](valPrompt.sourceHITTypeId, valPrompt.sourceHITId).toOptionLogging(logger).toList
       assignment <- hitDataService.getAssignmentsForHIT[List[VerbQA]](valPrompt.sourceHITTypeId, valPrompt.sourceHITId).get
     } yield assignment
-    assignmentsForHIT.find(_.assignmentId == valPrompt.sourceAssignmentId)
+    assignmentsForHIT.filter(asmnt => valPrompt.sourceAssignmentId.contains(asmnt.assignmentId))
   }
 
   def assessQualification(workerId: String): Unit = {
@@ -94,6 +94,35 @@ class QASRLGenerationAccuracyManager[SID : Reader : Writer](
     }
   }
 
+  def grantBonusForGenerator(genAssignment: Assignment[List[VerbQA]], validQuestions : List[String]) : Unit = {
+    // award bonus for the worker of the generation assignment, for its valid questions
+    val numQAsProvided = genAssignment.response.size
+    // count how many of generated questions are valid (according to validators)
+    val genQuestions = genAssignment.response.map(_.question)
+    val numQAsValid = genQuestions.count(validQuestions.contains(_))
+    val bonusAwarded = settings.generationBonus(numQAsValid)
+    val bonusCents = dollarsToCents(bonusAwarded)
+    if(bonusAwarded > 0.0) {
+      Try(
+        service.sendBonus(
+          new SendBonusRequest()
+            .withWorkerId(genAssignment.workerId)
+            .withBonusAmount(f"$bonusAwarded%.2f")
+            .withAssignmentId(genAssignment.assignmentId)
+            .withReason(
+              s"""$numQAsValid out of $numQAsProvided question-answer pairs were judged to be valid, for a bonus of ${bonusCents}c."""))
+      ).toOptionLogging(logger).ifEmpty(logger.error(s"Failed to grant bonus of $bonusCents to worker ${genAssignment.workerId}"))
+    }
+
+    allWorkerStats = allWorkerStats.updated(
+      genAssignment.workerId,
+      allWorkerStats
+        .get(genAssignment.workerId)
+        .getOrElse(QASRLGenerationWorkerStats.empty(genAssignment.workerId))
+        .registerValidationFinished(settings.generationReward + bonusAwarded)
+    )
+  }
+
   override def receive = {
     case SaveData => save
     case ChristenWorker(workerId, numAgreementsToAdd) => christenWorker(workerId, numAgreementsToAdd)
@@ -104,7 +133,7 @@ class QASRLGenerationAccuracyManager[SID : Reader : Writer](
       allWorkerStats.keys.foreach(assessQualification)
     case vr: QASRLValidationResult[SID] => vr match {
       case QASRLValidationResult(valPrompt, valWorker, valResponse) =>
-        getAssignmentFromValPrompt(valPrompt).foreach { assignment =>
+        getGenAssignmentsFromValPrompt(valPrompt).foreach { assignment =>
           val accuracyJudgments = valResponse.map(r => AccuracyJudgment(valWorker, r.isAnswer)).toVector
 
           allWorkerStats = allWorkerStats.updated(
@@ -119,32 +148,9 @@ class QASRLGenerationAccuracyManager[SID : Reader : Writer](
         }
     }
     case vr: QASRLValidationFinished[SID] => vr match {
-      case QASRLValidationFinished(valPrompt, numQAsValid) =>
-        getAssignmentFromValPrompt(valPrompt).foreach { assignment =>
-          // award bonuses
-          val numQAsProvided = assignment.response.size
-          val bonusAwarded = settings.generationBonus(numQAsValid)
-          val bonusCents = dollarsToCents(bonusAwarded)
-          if(bonusAwarded > 0.0) {
-            Try(
-              service.sendBonus(
-                new SendBonusRequest()
-                  .withWorkerId(assignment.workerId)
-                  .withBonusAmount(f"$bonusAwarded%.2f")
-                  .withAssignmentId(assignment.assignmentId)
-                  .withReason(
-                  s"""$numQAsValid out of $numQAsProvided question-answer pairs were judged to be valid, for a bonus of ${bonusCents}c."""))
-            ).toOptionLogging(logger).ifEmpty(logger.error(s"Failed to grant bonus of $bonusCents to worker ${assignment.workerId}"))
-          }
-
-          allWorkerStats = allWorkerStats.updated(
-            assignment.workerId,
-            allWorkerStats
-              .get(assignment.workerId)
-              .getOrElse(QASRLGenerationWorkerStats.empty(assignment.workerId))
-              .registerValidationFinished(settings.generationReward + bonusAwarded)
-          )
-        }
+      case QASRLValidationFinished(valPrompt, validQuestions) =>
+        // award bonuses to all generators
+        getGenAssignmentsFromValPrompt(valPrompt).foreach(grantBonusForGenerator(_, validQuestions))
     }
   }
 }

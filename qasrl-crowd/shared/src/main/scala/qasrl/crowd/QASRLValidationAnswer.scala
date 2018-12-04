@@ -30,6 +30,7 @@ sealed trait QASRLValidationAnswer {
     case _ => None
   }
   def isAnswer = getAnswer.nonEmpty
+  def isValid = !isInvalid
 
   def isComplete = this match {
     case InvalidQuestion => true
@@ -48,6 +49,9 @@ sealed trait QASRLValidationAnswer {
           (span1.begin to span1.end).toSet.intersect((span2.begin to span2.end).toSet).nonEmpty
         )
       )
+    // Redundant is also agreeing with Answer (since it is considering the question valid)
+    case (RedundantQuestion, Answer(spans)) => true
+    case (Answer(spans), RedundantQuestion) => true
     case _ => false
   }
 }
@@ -60,9 +64,22 @@ object QASRLValidationAnswer {
   val redundantQuestion = GenPrism[QASRLValidationAnswer, RedundantQuestion.type]
   val answer = GenPrism[QASRLValidationAnswer, Answer]
 
-  def numValidQuestions(responses: List[List[QASRLValidationAnswer]]) =
-    math.round(responses.map(_.filter(_.isAnswer).size).meanOpt.get - 0.01).toInt
+  def validQuestions(allQuestions : List[String], responses: List[List[QASRLValidationAnswer]]) : List[String] = {
+    // return the set of valid questions from valPrompt.
+    // allQuestion is the the list of questions, and each response is same-order list of QASRLValidationAnswer
+    // that corresponds to the questions.
+    val numOfValidators = responses.size.toFloat
+    def proportionValidated(index : Int) = responses.count(valAnswers => {
+      valAnswers(index).isValid
+    }) / numOfValidators
+    val validPropostionThreshold = 0.5
 
+    // return: valid question (check using index)
+    allQuestions.zipWithIndex.filter(question_and_index =>
+      proportionValidated(question_and_index._2) >= validPropostionThreshold
+    ).map(_._1)
+  }
+  
   // render a validation answer for the purpose of writing to a file
   // (just writes the highlighted indices of the answer; not readable)
   def renderIndices(

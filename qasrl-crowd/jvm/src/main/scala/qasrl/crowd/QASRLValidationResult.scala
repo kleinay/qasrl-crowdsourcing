@@ -11,7 +11,7 @@ case class ValidatorBlocked(badValidatorId: String)
 
 case class QASRLValidationFinished[SID](
   valPrompt: QASRLValidationPrompt[SID],
-  numValid: Int)
+  validQuestions: List[String])
 
 case class QASRLGenHITFinished(
   assignment: Assignment[List[VerbQA]],

@@ -8,4 +8,5 @@ case class QASRLValidationPrompt[SID](
   qaPairs: List[VerbQA]
 ) {
   def id = genPrompt.id
+  def questions = qaPairs.map(_.question)
 }
