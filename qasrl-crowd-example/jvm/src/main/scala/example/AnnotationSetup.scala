@@ -116,10 +116,11 @@ class AnnotationSetup(
     Wiktionary.getInflectionsForTokens(tokens)
   }
 
-  def numGenerationAssignmentsForPrompt(p: QASRLGenerationPrompt[SentenceId]) = 8   // how many generators?
+  val numGenerationAssignmentsInProduction = 8   // how many generators?
 
   lazy val experiment = new QASRLAnnotationPipeline(
-    allIds, numGenerationAssignmentsForPrompt,
+    allIds,
+    numGenerationAssignmentsInProduction,
     liveAnnotationDataService,
     sdgenQualTestOpt = Some(SDGenQualTestExample),
     //sdgenQualTestOpt = None,

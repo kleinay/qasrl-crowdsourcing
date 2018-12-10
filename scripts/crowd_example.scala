@@ -180,7 +180,7 @@ def disableAllOurHITs = {
 def costOfQASD(verbsPrompts : Int, sdPrompts : Int, isValAggregated : Boolean = true) : Double = {
   val avgGenQAPerNonVerb = 1.3
   val avgGenQAPerVerb = 2.3
-  val numGenerators = setup.numGenerationAssignmentsForPrompt(exp.allPrompts(0))
+  val numGenerators = setup.numGenerationAssignmentsInProduction
   val numValidators = 1 // Why can't I retrieve exp.valManagerPeek.numAssignmentsPerPrompt ?!
   // generation cost computation
   val verbGenAssignments = verbsPrompts * numGenerators

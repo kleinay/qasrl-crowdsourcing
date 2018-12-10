@@ -41,6 +41,7 @@ import com.typesafe.scalalogging.StrictLogging
 
 class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   val allIds: Vector[SID], // IDs of sentences to annotate
+  numGenerationAssignmentsInProduction: Int,
   annotationDataService: AnnotationDataService,
   sdgenQualTestOpt : Option[QualTest] = None,
   sdvalQualTestOpt : Option[QualTest] = None,
@@ -61,7 +62,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
 
   // define numGenerationAssignmentsForPrompt for either production or sandbox
   def numGenerationAssignmentsForPrompt : QASRLGenerationPrompt[SID] => Int =
-    if(config.isProduction) (_ => 8) else (_ => 2) // how many generators?
+    if(config.isProduction) (_ => numGenerationAssignmentsInProduction) else (_ => 2) // how many generators?
 
   // define numValidatorsAssignmentsForPrompt for verbs, for either production or sandbox
   def numValidatorsAssignmentsForPrompt : QASRLValidationPrompt[SID] => Int =
