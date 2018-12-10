@@ -11,6 +11,8 @@ trait QASDSettings extends QASRLSettings {
     val cents = nValidQAs * generationRewardCents  // don't increase bonus
     cents * 0.01
   }
+  // Maximum number of generated questions allowed
+  override val generationMaxQuestions = 3
 
   override val generationCoverageQuestionsPerVerbThreshold = 0.8
 

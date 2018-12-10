@@ -64,7 +64,8 @@ object GenerationInstructions extends Instructions {
         " the time that he made the promise, but rather the time that he might come."),
       <.li(
         <.span(Styles.bolded, "Exhaustiveness. "),
-        s"""You must write as many questions, and as many answers to each question, as possible.
+        s"""You must write as many questions, and as many answers to each question, as possible
+            s(up to ${settings.generationMaxQuestions} questions).
            Each HIT will require you to write at least one question, and you must write more than 2 questions per verb
            on average in order to remain qualified for the HIT. You will be awarded a bonus for each new question,
            starting at ${generationRewardCents}c and going up by 1c for each additional question.
@@ -123,7 +124,7 @@ object GenerationInstructions extends Instructions {
 
   val generationConditions = <.div(
     <.p(s"""Each question-answer pair after the first will earn you a bonus:
-          ${dollarsToCents(generationReward)}c for the second question, ${dollarsToCents(generationReward) + 1}c for the third
+          ${dollarsToCents(generationReward)}c for the second question, ${dollarsToCents(generationReward) + 1}c for the third,
           then ${dollarsToCents(generationReward) + 2}c, etc.
           While at least one is required to submit the HIT,
           you will need to write more than ${generationCoverageQuestionsPerVerbThreshold} questions on average in order to stay qualified.

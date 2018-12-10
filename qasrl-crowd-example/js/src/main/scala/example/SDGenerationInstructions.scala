@@ -45,7 +45,7 @@ object SDGenerationInstructions extends Instructions {
              ${(100.0 * generationAccuracyBlockingThreshold).toInt}% in order to remain qualified. """),
       <.li(
         <.span(Styles.bolded, "Exhaustiveness. "),
-        s"""You must write as many questions as possible.
+        s"""You must write as many questions as possible, up to ${settings.generationMaxQuestions} questions.
             Notice however that some prompts have no appropriate question to ask about. If this is the case, you can just submit an empty form.
              You must retain an average of ${generationCoverageQuestionsPerVerbThreshold}
              question per target in order to remain qualified for the HIT.""")

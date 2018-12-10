@@ -174,7 +174,8 @@ class QASRL_SD_GenerationClient[SID : Reader : Writer](
     }
 
     def addQAFields: (State => State) = State.qas.modify(qas =>
-      if(qas.forall(isQuestionComplete)) qas ++ List(QAPair.empty)
+      if(qas.forall(isQuestionComplete) && qas.size < settings.generationMaxQuestions )
+        qas ++ List(QAPair.empty)
       else qas
     )
 
