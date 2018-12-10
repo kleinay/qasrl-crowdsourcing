@@ -41,7 +41,6 @@ import com.typesafe.scalalogging.StrictLogging
 
 class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   val allIds: Vector[SID], // IDs of sentences to annotate
-  numGenerationAssignmentsForPromptInProduction: QASRLGenerationPrompt[SID] => Int,
   annotationDataService: AnnotationDataService,
   sdgenQualTestOpt : Option[QualTest] = None,
   sdvalQualTestOpt : Option[QualTest] = None,
@@ -62,7 +61,15 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
 
   // define numGenerationAssignmentsForPrompt for either production or sandbox
   def numGenerationAssignmentsForPrompt : QASRLGenerationPrompt[SID] => Int =
-    if(config.isProduction) numGenerationAssignmentsForPromptInProduction else (_ => 2)
+    if(config.isProduction) (_ => 8) else (_ => 2) // how many generators?
+
+  // define numValidatorsAssignmentsForPrompt for verbs, for either production or sandbox
+  def numValidatorsAssignmentsForPrompt : QASRLValidationPrompt[SID] => Int =
+    if(config.isProduction) (_ => 1) else (_ => 1)  // how many validators?
+
+  // define numValidatorsAssignmentsForPrompt for non-verbs, for either production or sandbox
+  def numSDValidatorsAssignmentsForPrompt : QASRLValidationPrompt[SID] => Int =
+    if(config.isProduction) (_ => 1) else (_ => 1)  // how many sd-validators?
 
   // collect indices of verbs in the sentence to generate prompt
   def getVerbKeyIndices(id: SID): Set[Int] = {
@@ -669,7 +676,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
         valAgrDisqualTypeId,
         accuracyTracker,
         // sentenceTracker,
-        if(config.isProduction) (_ => 1) else (_ => 1), // how many validators per HIT?
+        numValidatorsAssignmentsForPrompt, // how many validators per HIT?
         if(config.isProduction) 100 else 3)
       valManagerPeek
     })
@@ -702,7 +709,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
         sdvalAgrDisqualTypeId,
         accuracyTracker,
         // sentenceTracker,
-        if(config.isProduction) (_ => 1) else (_ => 1), // how many validators per HIT?
+        numSDValidatorsAssignmentsForPrompt, // how many validators per HIT?
         if(config.isProduction) 100 else 3,
         qasdSettings,
         "NonVerb")
@@ -742,9 +749,11 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
         valHelper,
         valManager,
         genAggregator,
+        accuracyTracker,
         genCoverageDisqualTypeId,
         // sentenceTracker,
         numGenerationAssignmentsForPrompt,
+        numValidatorsAssignmentsForPrompt,
         if(config.isProduction) 100 else 3,
         allVerbPrompts.iterator)  // the prompts itarator determines what genHITs are generated
       genManagerPeek
@@ -769,9 +778,11 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
         sdvalHelper,
         sdvalManager, // here we pass the valManager to genManager, so that when reviewing assignment it add promtp to valManager
         sdgenAggregator,
+        accuracyTracker,
         sdgenCoverageDisqualTypeId,
         // sentenceTracker,
         numGenerationAssignmentsForPrompt,
+        numSDValidatorsAssignmentsForPrompt,
         if(config.isProduction) 100 else 3,
         allSDPrompts.iterator, // the prompts itarator determines what genHITs are generated
         qasdSettings,

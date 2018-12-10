@@ -29,9 +29,11 @@ class QASRLGenerationHITManager[SID : Reader : Writer](
   validationHelper: HITManager.Helper[QASRLValidationPrompt[SID], List[QASRLValidationAnswer]],
   validationActor: ActorRef,
   aggregationManager: ActorRef,
+  accuracyManager: ActorRef, // of class QASRLGenerationAccuracyManager[SID],
   coverageDisqualificationTypeId: String,
   // sentenceTrackingActor: ActorRef,
   numAssignmentsForPrompt: QASRLGenerationPrompt[SID] => Int,
+  numValidationAssignmentForPrompt: QASRLValidationPrompt[SID] => Int,
   initNumHITsToKeepActive: Int,
   _promptSource: Iterator[QASRLGenerationPrompt[SID]],
   settings: QASRLSettings = QASRLSettings.default,
@@ -131,6 +133,16 @@ class QASRLGenerationHITManager[SID : Reader : Writer](
 //    val validationPrompt = QASRLValidationPrompt(hit.prompt, hit.hitTypeId, hit.hitId, assignment.assignmentId, assignment.response)
 //    validationActor ! validationHelper.Message.AddPrompt(validationPrompt)
 
+    // Grant Bonus (automatically) if no validators in pipeline
+    val validationPrompt = QASRLValidationPrompt(hit.prompt, hit.hitTypeId, hit.hitId, List(assignment.assignmentId), assignment.response)
+    // validationPrompt is not really going to be sent to validators. it is only for the message to accuracyManager
+    val numValidators = numValidationAssignmentForPrompt(validationPrompt)
+    if (numValidators == 0) {
+      // grant bonus by sending genAccruacyManager a message that tells him as if a validation
+      // HIT approved all his questions (it only grant bonus)
+      val allQuestionsInGenAssignment = assignment.response.map(_.question)
+      accuracyManager ! QASRLValidationFinished(validationPrompt, allQuestionsInGenAssignment)
+    }
   }
 
   override lazy val receiveAux2: PartialFunction[Any, Unit] = {
