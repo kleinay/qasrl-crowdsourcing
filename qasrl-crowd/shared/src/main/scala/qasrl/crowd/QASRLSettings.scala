@@ -16,9 +16,11 @@ trait QASRLSettings {
   val generationRewardCents = 5
   def generationReward = generationRewardCents * 0.01
 
+  def generationFirstQBonusCents = generationRewardCents
+
   def generationBonus(nValidQAs: Int) = {
     // no bonus for the first question, hence -1
-    val cents = (0 until (nValidQAs - 1)).map(_ + generationRewardCents).sum
+    val cents = (0 until (nValidQAs - 1)).map(_ + generationFirstQBonusCents).sum
     cents * 0.01
   }
 
