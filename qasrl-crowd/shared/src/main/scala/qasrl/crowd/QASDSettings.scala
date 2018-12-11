@@ -2,9 +2,9 @@ package qasrl.crowd
 
 trait QASDSettings extends QASRLSettings {
 
-  override val generationRewardCents = 3
+  override val generationRewardCents = 4
 
-  override def generationFirstQBonusCents = generationRewardCents
+  override def generationFirstQBonusCents = 2
 
   override def generationBonus(nValidQAs: Int) = {
     //val cents = (0 until nValidQAs).map(_ + generationFirstQBonusCents).sum
