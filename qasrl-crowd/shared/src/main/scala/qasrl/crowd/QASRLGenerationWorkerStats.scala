@@ -26,11 +26,11 @@ case class QASRLGenerationWorkerStats(
   earnings: Double) {
 
   def numQAPairsWritten: Int = accuracyJudgments.size
-  def numQAPairsValid: Int = accuracyJudgments.filter(_.isValid).size
+  def numQAPairsValid: Int = accuracyJudgments.count(_.isValid)
 
   def accuracy = (Vector.fill(numBonusValids)(true) ++ accuracyJudgments.map(_.isValid)).proportion(identity)
 
-  def genAgreementAccuracy = genAgreementJudgments.count(_==true)/genAgreementJudgments.size.toFloat
+  def genAgreementAccuracy = genAgreementJudgments.count(_.isValid)/genAgreementJudgments.size.toDouble
 
   def addBonusValids(n: Int) = this.copy(
     numBonusValids = this.numBonusValids + n

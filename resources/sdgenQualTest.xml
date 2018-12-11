@@ -7,6 +7,7 @@
 <Text>It's a good idea have a tab open with the task preview so you can consult the instructions during this test. Feel free to take it as many times as necessary; your score can be a good form of feedback on how well you understand the expectations.</Text>
 <Text>Suppose you get a HIT with the following sentence (target word in bold). Your task (in the HIT) would be to: (1) Generate questions about the target word, whose answers are spans of the sentence; and (2) Highlight the answers in the sentence. Questions are taken from a list of question templates.   </Text>
 <Text>In this qualification test, we will simulate your performance by presenting you with a list of questions per target word. For each question, your task is to judge whether the question is valid or invalid, and when valid, to select the correct answer spans for that question. Notice that when several answer-spans answer the question correctly, they should all be included in your selected answer.</Text>
+<Text>The first four questions are provided with the correct answers, to help you train and understand the requirements.</Text>
 <FormattedContent><![CDATA[
   <p><cite>According to the Nonexistent Centre for Imperialism Studies, exploitation  <b>colonialism</b> involves fewer colonists and focuses on access to resources for export, typically to the metropole.</cite></p>
 ]]></FormattedContent>
