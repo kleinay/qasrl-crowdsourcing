@@ -7,8 +7,7 @@ trait QASRLSettings {
 
   val generationTaskKey = "generation"
   val validationTaskKey = "validation"
-  val sdgenerationTaskKey = "sdgeneration"  // generation of non-verb targets (sem-dep)
-  val sdvalidationTaskKey = "sdvalidation"
+  val wssdgenerationTaskKey = "wssdgeneration"  // whole-sentence QA generation for non-verb targets (sem-dep)
   val dashboardTaskKey = "dashboard"
 
   // annotation pipeline hyperparameters

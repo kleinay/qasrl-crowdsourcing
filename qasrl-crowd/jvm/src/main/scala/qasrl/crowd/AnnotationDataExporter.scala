@@ -13,7 +13,7 @@ import scala.util.Random
 import com.typesafe.scalalogging.StrictLogging
 
 class AnnotationDataExporter[SID : HasTokens](
-  experiment: QASRLAnnotationPipeline[SID]
+  experiment: QAWSSDAnnotationPipeline[SID]
 ) extends StrictLogging {
   import experiment.inflections
   val genInfos = experiment.allGenInfos

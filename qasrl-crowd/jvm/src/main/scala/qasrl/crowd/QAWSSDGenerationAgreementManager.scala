@@ -23,24 +23,24 @@ import upickle.default._
 
 import com.typesafe.scalalogging.StrictLogging
 
-// todo: currently copy-paste from GenerationAccuracy; change to fit goal
-class QASRLGenerationAgreementManager[SID : Reader : Writer](
+// todo not complete conversion
+class QAWSSDGenerationAgreementManager[SID : Reader : Writer](
  genDisqualificationTypeId: String)(
  implicit annotationDataService: AnnotationDataService,
- config: TaskConfig,
- settings: QASRLSettings
+ config: TaskConfig
 ) extends Actor with StrictLogging {
 
   import config._
+  val settings = QASDSettings.default
 
-  val workerStatsFilename = "generationWorkerAgreementStats"
+  val workerStatsFilename = "WSSDgenerationWorkerAgreementStats"
 
   var allWorkerStats =
     annotationDataService.loadLiveData(workerStatsFilename)
       .map(_.mkString)
-      .map(read[Map[String, QASRLGenerationWorkerStats]])
+      .map(read[Map[String, QAWSSDGenerationWorkerStats]])
       .toOption.getOrElse {
-      Map.empty[String, QASRLGenerationWorkerStats]
+      Map.empty[String, QAWSSDGenerationWorkerStats]
     }
 
 
@@ -48,8 +48,8 @@ class QASRLGenerationAgreementManager[SID : Reader : Writer](
     Try(
       annotationDataService.saveLiveData(
         workerStatsFilename,
-        write[Map[String, QASRLGenerationWorkerStats]](allWorkerStats))
-    ).toOptionLogging(logger).foreach(_ => logger.info("Generators agreement stats data saved."))
+        write[Map[String, QAWSSDGenerationWorkerStats]](allWorkerStats))
+    ).toOptionLogging(logger).foreach(_ => logger.info("WSSD-Generators agreement stats data saved."))
   }
 
 //  private def getAssignmentFromValPrompt(valPrompt: QASRLValidationPrompt[SID]): Option[Assignment[List[VerbQA]]] = {
@@ -77,7 +77,7 @@ class QASRLGenerationAgreementManager[SID : Reader : Writer](
             new DisassociateQualificationFromWorkerRequest()
               .withQualificationTypeId(genDisqualificationTypeId)
               .withWorkerId(stats.workerId)
-              .withReason("Agreement dropped too low on the question writing task."))
+              .withReason("Agreement dropped too low on the question writing on sentence task."))
           // Should change to Disqualified
         } else if(!workerIsDisqualified && workerShouldBeDisqualified) {
           config.service.associateQualificationWithWorker(
@@ -91,6 +91,7 @@ class QASRLGenerationAgreementManager[SID : Reader : Writer](
     }
   }
 
+  // todo verify
   def hasAgreement(qa: VerbQA, otherResponses: List[List[VerbQA]]) : Boolean = {
     // check whether any of the Answers given by worker to Q have any overlapping answer in otherResponses
     val otherAnswerSpans : List[Span] = otherResponses.flatten.flatMap(_.answers)

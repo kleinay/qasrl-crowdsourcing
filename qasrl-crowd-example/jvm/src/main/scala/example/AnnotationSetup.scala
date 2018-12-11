@@ -118,7 +118,7 @@ class AnnotationSetup(
 
   val numGenerationAssignmentsInProduction = 8   // how many generators?
 
-  lazy val experiment = new QASRLAnnotationPipeline(
+  lazy val experiment = new QAWSSDAnnotationPipeline(
     allIds,
     numGenerationAssignmentsInProduction,
     liveAnnotationDataService,

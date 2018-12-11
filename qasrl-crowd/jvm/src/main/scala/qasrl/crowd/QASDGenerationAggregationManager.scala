@@ -57,18 +57,19 @@ class QASDGenerationAggregationManager[SID : Reader : Writer](
     val validationPrompt = QASRLValidationPrompt (hit.prompt, hit.hitTypeId, hit.hitId, genAssignmentIds, allQAResponses)
     validationActor ! validationHelper.Message.AddPrompt (validationPrompt)
 
+    // todo: agreement computation should change place. not supporting genAgreement for verbs anymore.
     // when only single Gen worker, don't inform genAgreementActor
-    if (allAssignments.size > 1) {
-      // For each generator of the HIT, update QASRLGenerationAgreementManager
-      // with all other genAssignments to compute agreement
-      for (assignment <- allAssignments) {
-        val otherWorkersAssignments = allAssignments.filter(_ != assignment)
-
-        genAgreementActor ! QASRLGenHITFinished(assignment,
-          assignment.response,
-          otherWorkersAssignments.map(_.response))
-      }
-    }
+//    if (allAssignments.size > 1) {
+//      // For each generator of the HIT, update QASRLGenerationAgreementManager
+//      // with all other genAssignments to compute agreement
+//      for (assignment <- allAssignments) {
+//        val otherWorkersAssignments = allAssignments.filter(_ != assignment)
+//
+//        genAgreementActor ! QASRLGenHITFinished(assignment,
+//          assignment.response,
+//          otherWorkersAssignments.map(_.response))
+//      }
+//    }
   }
 
   // handle new approved generation assignment
@@ -89,7 +90,6 @@ class QASDGenerationAggregationManager[SID : Reader : Writer](
        now check if genApprovedAssignments[genHITId] contain all required assignments for the HIT,
        and if so, call handleCompletedGenHIT, so it will:
         1) message the validationActor
-        2) message QASRLGenerationAgreementManager
         */
     val allAssignments = genApprovedAssingments.get (genHITId).get
     val nAssignmentForThisGenHIT = allAssignments.size

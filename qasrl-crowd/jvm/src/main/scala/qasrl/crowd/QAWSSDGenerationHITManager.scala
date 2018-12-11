@@ -5,13 +5,6 @@ import cats.implicits._
 import spacro._
 import spacro.tasks._
 
-// import qamr.Pring
-// import qamr.SaveData
-// import qamr.AnnotationDataService
-
-import scala.collection.mutable
-import scala.util.{Try, Success, Failure}
-
 import upickle.default.Reader
 
 import akka.actor.ActorRef
@@ -22,13 +15,8 @@ import upickle.default._
 
 import com.typesafe.scalalogging.StrictLogging
 
-case class FlagBadSentence[SID](id: SID)
-
-class QASRLGenerationHITManager[SID : Reader : Writer](
-  helper: HITManager.Helper[QASRLGenerationPrompt[SID], List[VerbQA]],
-  validationHelper: HITManager.Helper[QASRLValidationPrompt[SID], List[QASRLValidationAnswer]],
-  validationActor: ActorRef,
-  aggregationManager: ActorRef,
+class QAWSSDGenerationHITManager[SID : Reader : Writer](
+  helper: HITManager.Helper[QAWSSDGenerationPrompt[SID], List[VerbQA]],
   accuracyManager: ActorRef, // of class QASRLGenerationAccuracyManager[SID],
   coverageDisqualificationTypeId: String,
   // sentenceTrackingActor: ActorRef,
@@ -114,7 +102,7 @@ class QASRLGenerationHITManager[SID : Reader : Writer](
     val verbsCompleted = newQuestionRecord.size
     val questionsPerVerb = newQuestionRecord.sum.toDouble / verbsCompleted
     if(questionsPerVerb < settings.generationCoverageQuestionsPerVerbThreshold &&
-      verbsCompleted > settings.generationCoverageGracePeriod) {
+         verbsCompleted > settings.generationCoverageGracePeriod) {
       config.service.associateQualificationWithWorker(
         new AssociateQualificationWithWorkerRequest()
           .withQualificationTypeId(coverageDisqualificationTypeId)
@@ -130,8 +118,8 @@ class QASRLGenerationHITManager[SID : Reader : Writer](
     aggregationManager ! ApprovedGenAssignment(hit, assignment)
 
     // previous (non-aggregated)
-    //    val validationPrompt = QASRLValidationPrompt(hit.prompt, hit.hitTypeId, hit.hitId, assignment.assignmentId, assignment.response)
-    //    validationActor ! validationHelper.Message.AddPrompt(validationPrompt)
+//    val validationPrompt = QASRLValidationPrompt(hit.prompt, hit.hitTypeId, hit.hitId, assignment.assignmentId, assignment.response)
+//    validationActor ! validationHelper.Message.AddPrompt(validationPrompt)
 
     // Grant Bonus (automatically) if no validators in pipeline
     val validationPrompt = QASRLValidationPrompt(hit.prompt, hit.hitTypeId, hit.hitId, List(assignment.assignmentId), assignment.response)
@@ -148,9 +136,7 @@ class QASRLGenerationHITManager[SID : Reader : Writer](
   override lazy val receiveAux2: PartialFunction[Any, Unit] = {
     case SaveData => save
     case Pring => println("Generation"+ namingSuffix+" manager pringed.")
-    case fbs: FlagBadSentence[SID] => fbs match {
-      case FlagBadSentence(id) => flagBadSentence(id)
-    }
+
     case ChristenWorker(workerId, numQuestions) =>
       christenWorker(workerId, numQuestions)
   }
