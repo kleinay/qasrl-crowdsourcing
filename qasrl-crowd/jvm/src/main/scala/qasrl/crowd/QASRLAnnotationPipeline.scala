@@ -62,15 +62,16 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
 
   // define numGenerationAssignmentsForPrompt for either production or sandbox
   def numGenerationAssignmentsForPrompt : QASRLGenerationPrompt[SID] => Int =
-    if(config.isProduction) (_ => numGenerationAssignmentsInProduction) else (_ => 2) // how many generators?
+//    if(config.isProduction) (_ => numGenerationAssignmentsInProduction) else (_ => 2) // how many generators?
+    if(config.isProduction) (_ => 8) else (_ => 2) // how many generators?
 
   // define numValidatorsAssignmentsForPrompt for verbs, for either production or sandbox
   def numValidatorsAssignmentsForPrompt : QASRLValidationPrompt[SID] => Int =
-    if(config.isProduction) (_ => 1) else (_ => 1)  // how many validators?
+    if(config.isProduction) (_ => 0) else (_ => 0)  // how many validators?
 
   // define numValidatorsAssignmentsForPrompt for non-verbs, for either production or sandbox
   def numSDValidatorsAssignmentsForPrompt : QASRLValidationPrompt[SID] => Int =
-    if(config.isProduction) (_ => 1) else (_ => 1)  // how many sd-validators?
+    if(config.isProduction) (_ => 0) else (_ => 0)  // how many sd-validators?
 
   // collect indices of verbs in the sentence to generate prompt
   def getVerbKeyIndices(id: SID): Set[Int] = {
@@ -500,8 +501,16 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
         } yield qCounts
         val questionLists = questionListsOpt.getOrElse(Nil)
 
+        // this is for taking worker stat from accuracyTrackerPeek which contains accuracy by validation
+//        val workerStatsOpt = for {
+//          accTrackP <- Option(accuracyTrackerPeek)
+//          workerId <- workerIdOpt
+//          stats <- accTrackP.allWorkerStats.get(workerId)
+//        } yield stats
+
+        // this is for taking worker stat from genAgreementTrackerPeek which contains accuracy by agreement
         val workerStatsOpt = for {
-          accTrackP <- Option(accuracyTrackerPeek)
+          accTrackP <- Option(genAgreementTrackerPeek)
           workerId <- workerIdOpt
           stats <- accTrackP.allWorkerStats.get(workerId)
         } yield stats
@@ -987,6 +996,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     numVerbs: Option[Int],
     numQs: Option[Int],
     accuracy: Option[Double],
+    genAgreement: Option[Double],
     numAs: Option[Int],
     numInvalidAnswers: Option[Int],
     pctBad: Option[Double],
@@ -1014,6 +1024,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   object StatSummary {
     def makeFromStatsAndInfo(
       stats: Option[QASRLGenerationWorkerStats],
+      genAgrStats: Option[QASRLGenerationWorkerStats],
       info: Option[QASRLValidationWorkerInfo]
     ) = stats.map(_.workerId).orElse(info.map(_.workerId)).map { wid =>
       StatSummary(
@@ -1021,6 +1032,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
         numVerbs = stats.map(_.numAssignmentsCompleted),
         numQs = stats.map(_.numQAPairsWritten),
         accuracy = stats.map(_.accuracy),
+        genAgreement = genAgrStats.map(_.genAgreementAccuracy),
         numAs = info.map(i => i.numAnswerSpans + i.numInvalids),
         numInvalidAnswers = info.map(_.numInvalids),
         pctBad = info.map(_.proportionInvalid * 100.0),
@@ -1032,9 +1044,10 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
 
   def allStatSummaries = {
     val allStats = accuracyTrackerPeek.allWorkerStats
+    val genAgrStats = genAgreementTrackerPeek.allWorkerStats
     val allInfos = valManagerPeek.allWorkerInfo
-    (allStats.keys ++ allInfos.keys).toSet.toList.flatMap((wid: String) =>
-      StatSummary.makeFromStatsAndInfo(allStats.get(wid), allInfos.get(wid))
+    (allStats.keys ++ genAgrStats.keys ++ allInfos.keys).toSet.toList.flatMap((wid: String) =>
+      StatSummary.makeFromStatsAndInfo(allStats.get(wid), genAgrStats.get(wid), allInfos.get(wid))
     )
   }
 
@@ -1042,14 +1055,15 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     println(f"${"Worker ID"}%14s  ${"Verbs"}%5s  ${"Qs"}%5s  ${"Acc"}%4s  ${"As"}%5s  ${"%Bad"}%5s  ${"Agr"}%4s  $$")
 
   def printSingleStatSummary(ss: StatSummary): Unit = ss match {
-    case StatSummary(wid, numVerbsOpt, numQsOpt, accOpt, numAsOpt, numInvalidsOpt, pctBadOpt, agrOpt, earnings)=>
+    case StatSummary(wid, numVerbsOpt, numQsOpt, accOpt, genAgreeOpt, numAsOpt, numInvalidsOpt, pctBadOpt, agrOpt, earnings)=>
       val numVerbs = numVerbsOpt.getOrElse("")
       val numQs = numQsOpt.getOrElse("")
       val acc = accOpt.foldMap(pct => f"$pct%.2f")
+      val genAgr = genAgreeOpt.foldMap(pct => f"$pct%.2f")
       val numAs = numAsOpt.getOrElse("")
       val pctBad = pctBadOpt.foldMap(pct => f"$pct%4.2f")
       val agr = agrOpt.foldMap(pct => f"$pct%.2f")
-      println(f"$wid%14s  $numVerbs%5s  $numQs%5s  $acc%4s  $numAs%5s  $pctBad%5s  $agr%4s  $earnings%.2f")
+      println(f"$wid%14s  $numVerbs%5s  $numQs%5s  $acc%4s  $genAgr%4s  $numAs%5s  $pctBad%5s  $agr%4s  $earnings%.2f")
   }
 
   def statsForWorker(workerId: String): Option[StatSummary] = allStatSummaries.find(_.workerId == workerId)
