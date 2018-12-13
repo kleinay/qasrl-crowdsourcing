@@ -14,9 +14,9 @@ import nlpdata.util.Text
 import nlpdata.util.HasTokens.ops._
 import nlpdata.structure.Word
 
-val label = "tmp28_11_18"
+val label = "sdgen_6s_8gen0val_13_12_18"
 
-val isProduction = false // sandbox. change to true for production
+val isProduction = true // sandbox. change to true for production
 val domain = "u.cs.biu.ac.il/~stanovg/qasrl" // change to your domain, or keep localhost for testing
 val projectName = "qasrl-crowd-example" // make sure it matches the SBT project;
 // this is how the .js file is found to send to the server
@@ -181,7 +181,7 @@ def costOfQASD(verbsPrompts : Int, sdPrompts : Int, isValAggregated : Boolean = 
   val avgGenQAPerNonVerb = 1.3
   val avgGenQAPerVerb = 2.3
   val numGenerators = setup.numGenerationAssignmentsInProduction
-  val numValidators = 1 // Why can't I retrieve exp.valManagerPeek.numAssignmentsPerPrompt ?!
+  val numValidators = 0 // todo change manually
   // generation cost computation
   val verbGenAssignments = verbsPrompts * numGenerators
   val sdGenAssignments = sdPrompts * numGenerators

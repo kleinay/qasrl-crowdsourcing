@@ -394,7 +394,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
         new CreateQualificationTypeRequest ()
           .withName (sdgenTestQualTypeName)
           .withKeywords ("language,english,question answering")
-          .withDescription ("""Score on the qualification test for the question answering task,
+          .withDescription ("""Score on the qualification test for the question writing task,
                 as a test of your understanding of the instructions.""".replaceAll ("\\s+", " ") )
           .withQualificationTypeStatus (QualificationTypeStatus.Active)
           .withRetryDelayInSeconds (90L)
@@ -410,7 +410,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     new QualificationRequirement()
       .withQualificationTypeId(qualTypeId)
       .withComparator("GreaterThanOrEqualTo")
-      .withIntegerValues(90)
+      .withIntegerValues(70)
       .withRequiredToPreview(false)
   )
 
@@ -762,7 +762,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
         accuracyTracker,
         genCoverageDisqualTypeId,
         // sentenceTracker,
-        numGenerationAssignmentsForPrompt,
+        _=>0, //numGenerationAssignmentsForPrompt,
         numValidatorsAssignmentsForPrompt,
         if(config.isProduction) 100 else 3,
         allVerbPrompts.iterator)  // the prompts itarator determines what genHITs are generated
