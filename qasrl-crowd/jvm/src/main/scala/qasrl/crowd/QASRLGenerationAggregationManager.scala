@@ -17,7 +17,7 @@ import com.typesafe.scalalogging.StrictLogging
 import scala.util.{Try, Success, Failure}
 import upickle.default.{Reader, Writer, read}
 
-class QASDGenerationAggregationManager[SID : Reader : Writer](
+class QASRLGenerationAggregationManager[SID : Reader : Writer](
   genAgreementActor: ActorRef,
   validationHelper: HITManager.Helper[QASRLValidationPrompt[SID], List[QASRLValidationAnswer]],
   validationActor: ActorRef,
@@ -59,17 +59,17 @@ class QASDGenerationAggregationManager[SID : Reader : Writer](
 
     // todo: agreement computation should change place. not supporting genAgreement for verbs anymore.
     // when only single Gen worker, don't inform genAgreementActor
-//    if (allAssignments.size > 1) {
-//      // For each generator of the HIT, update QASRLGenerationAgreementManager
-//      // with all other genAssignments to compute agreement
-//      for (assignment <- allAssignments) {
-//        val otherWorkersAssignments = allAssignments.filter(_ != assignment)
-//
-//        genAgreementActor ! QASRLGenHITFinished(assignment,
-//          assignment.response,
-//          otherWorkersAssignments.map(_.response))
-//      }
-//    }
+    if (allAssignments.size > 1) {
+      // For each generator of the HIT, update QASRLGenerationAgreementManager
+      // with all other genAssignments to compute agreement
+      for (assignment <- allAssignments) {
+        val otherWorkersAssignments = allAssignments.filter(_ != assignment)
+
+        genAgreementActor ! QAWSSDGenHITFinished(assignment,
+          assignment.response,
+          otherWorkersAssignments.map(_.response))
+      }
+    }
   }
 
   // handle new approved generation assignment
@@ -102,8 +102,8 @@ class QASDGenerationAggregationManager[SID : Reader : Writer](
 
   override def receive = {
     case SaveData => save
-    case aga: ApprovedGenAssignment[SID] => aga match {
-      case ApprovedGenAssignment(genHIT, genAssignment) =>
+    case aga: ApprovedVerbGenAssignment[SID] => aga match {
+      case ApprovedVerbGenAssignment(genHIT, genAssignment) =>
         handleApprovedGenAssignment (genHIT, genAssignment)
     }
   }

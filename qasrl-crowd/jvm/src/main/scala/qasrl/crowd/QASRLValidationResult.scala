@@ -13,7 +13,7 @@ case class QASRLValidationFinished[SID](
   valPrompt: QASRLValidationPrompt[SID],
   validQuestions: List[String])
 
-case class QASRLGenHITFinished(
+case class QAWSSDGenHITFinished(
   assignment: Assignment[List[VerbQA]],
   response: List[VerbQA],   // the generator's QAs
   otherResponses: List[List[VerbQA]] // the other generators' QAs

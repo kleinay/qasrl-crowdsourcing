@@ -124,14 +124,9 @@ class AnnotationSetup(
     liveAnnotationDataService,
     sdgenQualTestOpt = Some(SDGenQualTestExample),
     //sdgenQualTestOpt = None,
-    //sdvalQualTestOpt = Some(SDValQualTestExample),
-    sdvalQualTestOpt = None,
-    frozenGenerationHITTypeId = frozenGenerationHITTypeId,
-    frozenValidationHITTypeId = frozenValidationHITTypeId,
     generationAccuracyDisqualTypeLabel = None,
     generationCoverageDisqualTypeLabel = None,
-    validationAgreementDisqualTypeLabel = None,
-    sdvalidationAgreementDisqualTypeLabel = Some("Non-verb"))
+    validationAgreementDisqualTypeLabel = None)
 
   def saveAnnotationData[A](
     filename: String,

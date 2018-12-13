@@ -91,29 +91,44 @@ class QAWSSDGenerationAgreementManager[SID : Reader : Writer](
     }
   }
 
-  // todo verify
+  // changed to fit WSSD pipeline - otherResponses are not necessarily of the same target!
   def hasAgreement(qa: VerbQA, otherResponses: List[List[VerbQA]]) : Boolean = {
-    // check whether any of the Answers given by worker to Q have any overlapping answer in otherResponses
-    val otherAnswerSpans : List[Span] = otherResponses.flatten.flatMap(_.answers)
+    /*
+    Algorithm: return true if:
+     1. any of the Answers given by worker to Q
+    have any overlapping answer in otherResponses to the same target;
+    Or:
+    2. any of the Answers given by worker to Q contains a target word,
+    which has a QA whose answers include the original qa.verbIndex
+
+     */
+    def otherResponsesForIndex(i: Int) = otherResponses.flatten.filter(_.verbIndex == i)
+    val otherResponsesToSameTarget = otherResponsesForIndex(qa.verbIndex)
+    val otherAnswerSpans : List[Span] = otherResponsesToSameTarget.flatMap(_.answers)
     def spanOverlap(span1: Span, span2: Span) : Boolean = {
       span1.contains(span2.begin) || span1.contains(span2.end)
     }
+    def spanIndices(span : Span) : Set[Int] = (span.begin until span.end+1).toSet
+    // for 2., compute inverseQAs = all VerbQAs in otherResponses that are targeting words from qa.answers
+    val qaAnswersIndices = qa.answers.flatMap(spanIndices).toSet - qa.verbIndex
+    val inverseQAs = qaAnswersIndices.flatMap(otherResponsesForIndex)
     // return:
-    qa.answers.exists(
+    qa.answers.exists(  // 1.
       ownAns => otherAnswerSpans.exists(otherAns => spanOverlap(ownAns, otherAns))
-    )
+    ) || // 2.
+    inverseQAs.flatMap(_.answers.flatMap(spanIndices)).contains(qa.verbIndex)
   }
 
   override def receive = {
     case SaveData => save
 
 
-    case QASRLGenHITFinished(assignment, response, otherResponses) => {
+    case QAWSSDGenHITFinished(assignment, response, otherResponses) => {
       // for a specific generators vs. the other generators
-      val agreementJudgments : Vector[GenAgreementJudgment] = {
+      val agreementJudgments : Vector[WSSDGenAgreementJudgment] = {
       // Judgment for each question
         for (qa <- response)
-          yield GenAgreementJudgment(assignment.hitId, qa.question, hasAgreement(qa, otherResponses))
+          yield WSSDGenAgreementJudgment(assignment.hitId, qa.verbIndex, qa.question, hasAgreement(qa, otherResponses))
       }.toVector
 
 

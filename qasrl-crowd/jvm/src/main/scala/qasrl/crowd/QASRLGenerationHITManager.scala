@@ -127,7 +127,7 @@ class QASRLGenerationHITManager[SID : Reader : Writer](
      Changed the creation of the validation prompt into a message to the QASDGenerationAggregationManager;
      It is it's responsibility to inform the validationActor
       */
-    aggregationManager ! ApprovedGenAssignment(hit, assignment)
+    aggregationManager ! ApprovedVerbGenAssignment(hit, assignment)
 
     // previous (non-aggregated)
     //    val validationPrompt = QASRLValidationPrompt(hit.prompt, hit.hitTypeId, hit.hitId, assignment.assignmentId, assignment.response)

@@ -44,13 +44,10 @@ class QAWSSDAnnotationPipeline[SID : Reader : Writer : HasTokens](
   numGenerationAssignmentsInProduction: Int,
   annotationDataService: AnnotationDataService,
   sdgenQualTestOpt : Option[QualTest] = None,
-  sdvalQualTestOpt : Option[QualTest] = None,
   generationAccuracyDisqualTypeLabel: Option[String] = None,
   generationCoverageDisqualTypeLabel: Option[String] = None,
   validationAgreementDisqualTypeLabel: Option[String] = None,
-  sdvalidationAgreementDisqualTypeLabel: Option[String] = None,
-  sdgenerationTestQualTypeLabel: Option[String] = None,
-  sdvalidationTestQualTypeLabel: Option[String] = None)(
+  sdgenerationTestQualTypeLabel: Option[String] = None)(
   implicit val config: TaskConfig,
   val settings: QASRLSettings,
   val inflections: Inflections
@@ -322,45 +319,6 @@ class QAWSSDAnnotationPipeline[SID : Reader : Writer : HasTokens](
     .withRequiredToPreview(false)
 
 
-  // Optoinal: add Qualification Test as qualification to sdvalidation
-
-  val sdvalTestQualTypeLabelString = sdvalidationTestQualTypeLabel.fold("")(x => s"[$x] ")
-  val sdvalTestQualTypeName = if(config.isProduction)
-                                s"${sdvalTestQualTypeLabelString}Question answering test score (%)"
-                              else "Sandbox sdvalidation test score qual"
-  val sdvalTestQualTypeOpt = sdvalQualTestOpt.flatMap(qualTest => Some({
-    config.service.listQualificationTypes (
-    new ListQualificationTypesRequest ()
-      .withQuery (sdvalTestQualTypeName)
-      .withMustBeOwnedByCaller (true)
-      .withMustBeRequestable (false)
-      .withMaxResults(100)
-    ).getQualificationTypes.asScala.toList.find(_.getName == sdvalTestQualTypeName).getOrElse {
-      System.out.println ("Generating sdvalidation test qualification type...")
-      config.service.createQualificationType (
-      new CreateQualificationTypeRequest ()
-        .withName (sdvalTestQualTypeName)
-        .withKeywords ("language,english,question answering")
-        .withDescription ("""Score on the qualification test for the question answering task,
-                as a test of your understanding of the instructions.""".replaceAll ("\\s+", " ") )
-        .withQualificationTypeStatus (QualificationTypeStatus.Active)
-        .withRetryDelayInSeconds (300L)
-        .withTest (qualTest.testString)
-        .withAnswerKey (qualTest.answerKeyString)
-        .withTestDurationInSeconds (1200L)
-        .withAutoGranted (false)
-      ).getQualificationType
-    }
-  }))
-  val sdvalTestQualTypeIdOpt = sdvalTestQualTypeOpt.map(_.getQualificationTypeId)
-  val sdvalTestRequirementOpt = sdvalTestQualTypeIdOpt.map(qualTypeId =>
-    new QualificationRequirement()
-    .withQualificationTypeId(qualTypeId)
-    .withComparator("GreaterThanOrEqualTo")
-    .withIntegerValues(75)
-    .withRequiredToPreview(false)
-  )
-
   // Optoinal: add Qualification Test as qualification to sdgeneration
 
   val sdgenTestQualTypeLabelString = sdgenerationTestQualTypeLabel.fold("")(x => s"[$x] ")
@@ -422,7 +380,7 @@ class QAWSSDAnnotationPipeline[SID : Reader : Writer : HasTokens](
       wsgenAgreementDisqualTypeId,
       genCoverageDisqualTypeId,
       wssdgenCoverageDisqualTypeId,
-      valAgrDisqualTypeId) ++ sdvalTestQualTypeIdOpt ++ sdgenTestQualTypeIdOpt
+      valAgrDisqualTypeId) ++ sdgenTestQualTypeIdOpt
 
     activeQualsList.foreach(revokeAllWorkerQuals)
   }
@@ -665,12 +623,12 @@ class QAWSSDAnnotationPipeline[SID : Reader : Writer : HasTokens](
 
   lazy val valActor = actorSystem.actorOf(Props(new TaskManager(valHelper, valManager)))
 
-  // Actor for aggregating generation responses to a single validation prompt (keep for verbs)
-  var genAggregatorPeek: QASDGenerationAggregationManager[SID] = null
+  // Actor for aggregating generation responses to a single validation prompt (keep only for verbs)
+  var genAggregatorPeek: QASRLGenerationAggregationManager[SID] = null
 
   lazy val genAggregator: ActorRef = actorSystem.actorOf(
     Props {
-      genAggregatorPeek = new QASDGenerationAggregationManager[SID](
+      genAggregatorPeek = new QASRLGenerationAggregationManager[SID](
         valHelper,
         valManager,
         numQASRLGenerationAssignmentsForPrompt
@@ -729,21 +687,20 @@ class QAWSSDAnnotationPipeline[SID : Reader : Writer : HasTokens](
   val wssdgenHelper = new HITManager.Helper(wssdgenTaskSpec)
   val wssdgenManager: ActorRef = actorSystem.actorOf(
     Props {
-      // todo (in progress): refactoring- continue from here on
       wssdgenManagerPeek = new QAWSSDGenerationHITManager(
         wssdgenHelper,
         wssdgenAgreementTracker,
         wssdgenCoverageDisqualTypeId,
-        numQASRLGenerationAssignmentsForPrompt,
+        numQAWSSDGenerationAssignmentsForPrompt,
         if(config.isProduction) 100 else 3,
         allWSSDPrompts.iterator, // the prompts itarator determines what genHITs are generated
         qasdSettings,
-        "nonVerb")
+        "WS-nonVerb")
       wssdgenManagerPeek
     }
   )
 
-  val sdgenActor = actorSystem.actorOf(Props(new TaskManager(wssdgenHelper, wssdgenManager)))
+  val wssdgenActor = actorSystem.actorOf(Props(new TaskManager(wssdgenHelper, wssdgenManager)))
 
     /** until here is the "copy"- gen to sdgen.  new objects:
       *   genHITType
@@ -755,21 +712,20 @@ class QAWSSDAnnotationPipeline[SID : Reader : Writer : HasTokens](
       *   genAjaxService
       */
 
-  lazy val server = new Server(List(genTaskSpec, wssdgenTaskSpec, valTaskSpec, sdvalTaskSpec))
+  lazy val server = new Server(List(genTaskSpec, wssdgenTaskSpec, valTaskSpec))
 
   // used to schedule data-saves
   private[this] var schedule: List[Cancellable] = Nil
   def startSaves(interval: FiniteDuration = 5 minutes): Unit = {
     if(schedule.exists(_.isCancelled) || schedule.isEmpty) {
-      schedule = List(genManager, wssdgenManager, valManager, sdvalManager,
-        accuracyTracker, wssdgenAgreementTracker, genAggregator, sdgenAggregator).map(actor =>
+      schedule = List(genManager, valManager, genAggregator, accuracyTracker,
+        wssdgenAgreementTracker, wssdgenManager).map(actor =>
         config.actorSystem.scheduler.schedule(
           2 seconds, interval, actor, SaveData)(
           config.actorSystem.dispatcher, actor)
       )
     }
   }
-  def stopSaves = schedule.foreach(_.cancel())
 
   def setGenHITsActiveEach(n: Int) = {
     genManager ! SetNumHITsActive(n)
@@ -780,44 +736,37 @@ class QAWSSDAnnotationPipeline[SID : Reader : Writer : HasTokens](
   def setValHITsActive(n: Int) = {
     valManager ! SetNumHITsActive(n)
   }
-  def setSDValHITsActive(n: Int) = {
-    sdvalManager ! SetNumHITsActive(n)
-  }
 
+  def stopSaves = schedule.foreach(_.cancel())
   import TaskManager.Message._
   def start(interval: FiniteDuration = 30 seconds) = {
     server
     startSaves()
     genActor ! Start(interval, delay = 0 seconds)
-    sdgenActor ! Start(interval, delay = 3 seconds)
+    wssdgenActor ! Start(interval, delay = 3 seconds)
     valActor ! Start(interval, delay = 3 seconds)
-    sdvalActor ! Start(interval, delay = 3 seconds)
   }
   def stop() = {
     genActor ! Stop
-    sdgenActor ! Stop
+    wssdgenActor ! Stop
     valActor ! Stop
-    sdvalActor ! Stop
     stopSaves
   }
   def delete() = {
     genActor ! Delete
-    sdgenActor ! Delete
+    wssdgenActor ! Delete
     valActor ! Delete
-    sdvalActor ! Delete
   }
   def expire() = {
     genActor ! Expire
-    sdgenActor ! Expire
+    wssdgenActor ! Expire
     valActor ! Expire
-    sdvalActor ! Expire
   }
   def update() = {
     server
     genActor ! Update
-    sdgenActor ! Update
+    wssdgenActor ! Update
     valActor ! Update
-    sdvalActor ! Update
   }
   def save() = {
     // sentenceTracker ! SaveData
@@ -826,10 +775,9 @@ class QAWSSDAnnotationPipeline[SID : Reader : Writer : HasTokens](
     genManager ! SaveData
     wssdgenManager ! SaveData
     valManager ! SaveData
-    sdvalManager ! SaveData
     genAggregator ! SaveData
-    sdgenAggregator ! SaveData
   }
+  // todo (in progress): refactoring- continue from here on
 
   // for use while it's running. Ideally instead of having to futz around at the console calling these functions,
   // in the future you could have a nice dashboard UI that will help you examine common sources of issues
@@ -839,8 +787,6 @@ class QAWSSDAnnotationPipeline[SID : Reader : Writer : HasTokens](
   def allSDGenInfos = hitDataService.getAllHITInfo[QASRLGenerationPrompt[SID], List[VerbQA]](wssdgenTaskSpec.hitTypeId).get
 
   def allValInfos = hitDataService.getAllHITInfo[QASRLValidationPrompt[SID], List[QASRLValidationAnswer]](valTaskSpec.hitTypeId).get
-
-  def allSDValInfos = hitDataService.getAllHITInfo[QASRLValidationPrompt[SID], List[QASRLValidationAnswer]](sdvalTaskSpec.hitTypeId).get
 
   def currentGenSentences: List[(SID, String)] = {
     genHelper.activeHITInfosByPromptIterator.map(_._1.id).map(id =>
