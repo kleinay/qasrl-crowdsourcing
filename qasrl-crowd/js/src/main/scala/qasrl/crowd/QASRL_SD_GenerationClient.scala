@@ -451,68 +451,69 @@ class QASRL_SD_GenerationClient[SID : Reader : Writer](
                           ^.margin := "5px",
                           instructions
                         ),
-                        questionsPerVerbOpt.whenDefined(questionsPerVerb =>
-                          <.div(
-                            ^.classSet1("card"),
-                            ^.margin := "5px",
-                            ^.padding := "5px",
-                            <.p(
-                              """So far, you have written """,
-                              <.span(
-                                if(questionsPerVerb <= settings.generationCoverageQuestionsPerVerbThreshold) {
-                                  Styles.badRed
-                                } else if(questionsPerVerb <= (settings.generationCoverageQuestionsPerVerbThreshold * 1.1)) {
-                                  TagMod(Styles.uncomfortableOrange, Styles.bolded)
-                                } else {
-                                  Styles.goodGreen
-                                },
-                                f"$questionsPerVerb%.1f"
-                              ),
-                              s" questions per target. This must remain above ${settings.generationCoverageQuestionsPerVerbThreshold}",
-                              remainingInCoverageGracePeriodOpt.fold(".")(remaining =>
-                                s" after the end of the grace period ($remaining targets remaining)."
-                              )
-                            ),
-                            agreementAccuracyOpt.whenDefined(accuracy =>
-                              <.p(
-                                """Of your tasks that have been answered by other workers, """,
-                                <.span(
-                                  if(accuracy <= settings.generationAgreementBlockingThreshold) {
-                                    Styles.badRed
-                                  } else if(accuracy <= settings.generationAgreementBlockingThreshold + 0.05) {
-                                    TagMod(Styles.uncomfortableOrange, Styles.bolded)
-                                  } else {
-                                    Styles.goodGreen
-                                  },
-                                  f"${accuracy * 100.0}%.1f%%"
-                                ),
-                                f""" were found agreeing with other annotators. This must remain above ${settings.generationAgreementBlockingThreshold * 100.0}%.1f%%""",
-                                remainingInAgreementGracePeriodOpt.fold(".")(remaining =>
-                                  s" after the end of the grace period ($remaining verbs remaining)."
-                                )
-                              )
-                            ),
-                            accuracyOpt.whenDefined(accuracy =>
-                              <.p(
-                                """Of your questions that have been validated, """,
-                                <.span(
-                                  if(accuracy <= settings.generationAccuracyBlockingThreshold) {
-                                    Styles.badRed
-                                  } else if(accuracy <= settings.generationAccuracyBlockingThreshold + 0.05) {
-                                    TagMod(Styles.uncomfortableOrange, Styles.bolded)
-                                  } else {
-                                    Styles.goodGreen
-                                  },
-                                  f"${accuracy * 100.0}%.1f%%"
-                                ),
-                                f""" were judged valid by other annotators. This must remain above ${settings.generationAccuracyBlockingThreshold * 100.0}%.1f%%""",
-                                remainingInAccuracyGracePeriodOpt.fold(".")(remaining =>
-                                  s" after the end of the grace period ($remaining targets remaining)."
-                                )
-                              )
-                            )
-                          )
-                        ),
+//                        questionsPerVerbOpt.whenDefined(questionsPerVerb =>
+//                          <.div(
+//                            ^.classSet1("card"),
+//                            ^.margin := "5px",
+//                            ^.padding := "5px",
+//                            <.p(
+//                              """So far, you have written """,
+//                              <.span(
+//                                if(questionsPerVerb <= settings.generationCoverageQuestionsPerVerbThreshold) {
+//                                  Styles.badRed
+//                                } else if(questionsPerVerb <= (settings.generationCoverageQuestionsPerVerbThreshold * 1.1)) {
+//                                  TagMod(Styles.uncomfortableOrange, Styles.bolded)
+//                                } else {
+//                                  Styles.goodGreen
+//                                },
+//                                f"$questionsPerVerb%.1f"
+//                              ),
+//                              s" questions per target. This must remain above ${settings.generationCoverageQuestionsPerVerbThreshold}",
+//                              remainingInCoverageGracePeriodOpt.fold(".")(remaining =>
+//                                s" after the end of the grace period ($remaining targets remaining)."
+//                              )
+//                            ),
+//                            agreementAccuracyOpt.whenDefined(accuracy =>
+//                              <.p(
+//                                """Of your tasks that have been answered by other workers, """,
+//                                <.span(
+//                                  if(accuracy <= settings.generationAgreementBlockingThreshold) {
+//                                    Styles.badRed
+//                                  } else if(accuracy <= settings.generationAgreementBlockingThreshold + 0.05) {
+//                                    TagMod(Styles.uncomfortableOrange, Styles.bolded)
+//                                  } else {
+//                                    Styles.goodGreen
+//                                  },
+//                                  f"${accuracy * 100.0}%.1f%%"
+//                                ),
+//                                f""" were found agreeing with other annotators. This must remain above ${settings.generationAgreementBlockingThreshold * 100.0}%.1f%%""",
+//                                remainingInAgreementGracePeriodOpt.fold(".")(remaining =>
+//                                  s" after the end of the grace period ($remaining verbs remaining)."
+//                                )
+//                              )
+//                            ),
+//                            accuracyOpt.whenDefined(accuracy =>
+//                              <.p(
+//                                """Of your questions that have been validated, """,
+//                                <.span(
+//                                  if(accuracy <= settings.generationAccuracyBlockingThreshold) {
+//                                    Styles.badRed
+//                                  } else if(accuracy <= settings.generationAccuracyBlockingThreshold + 0.05) {
+//                                    TagMod(Styles.uncomfortableOrange, Styles.bolded)
+//                                  } else {
+//                                    Styles.goodGreen
+//                                  },
+//                                  f"${accuracy * 100.0}%.1f%%"
+//                                ),
+//                                f""" were judged valid by other annotators. This must remain above ${settings.generationAccuracyBlockingThreshold * 100.0}%.1f%%""",
+//                                remainingInAccuracyGracePeriodOpt.fold(".")(remaining =>
+//                                  s" after the end of the grace period ($remaining targets remaining)."
+//                                )
+//                              )
+//                            )
+//                          )
+//                        ),
+                        // here starts the sentence UI
                         <.div(
                           ^.classSet1("card"),
                           ^.margin := "5px",

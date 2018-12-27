@@ -44,11 +44,27 @@ object SDGenerationInstructions extends Instructions {
              Your questions will be judged by other annotators, and you must retain an accuracy of
              ${(100.0 * generationAccuracyBlockingThreshold).toInt}% in order to remain qualified. """),
       <.li(
+        <.span(Styles.bolded, "Target-word Relevance. "),
+        s"""The answer to a question must pertain to properties of the concept denoted by""",
+        <.span(Styles.bolded, " the target word"),
+        """, or to concepts described directly by it. For example, if the sentence is """,
+        <.span(Styles.bolded,
+          " My ",
+          <.span(Styles.niceBlue, Styles.underlined, "brother"),
+          " traveled to New York last year, "),
+        """ you should """, <.span(Styles.bolded, " not "), " write ",
+        <.span(Styles.badRed, " Where was the brother? --> New York, "),
+        """ neither """,
+        <.span(Styles.badRed, " When was the brother? --> last year, "),
+        """because "New York" and "last year" are """, <.i(" not "),
+        """ describing the place/time of the entity "brother", but rather the place/time of his action "traveled"."""),
+      <.li(
         <.span(Styles.bolded, "Exhaustiveness. "),
-        s"""You must write as many questions as possible, up to ${generationMaxQuestions} questions.
-            Notice however that some prompts have no appropriate question to ask about. If this is the case, you can just submit an empty form.
-             You must retain an average of ${generationCoverageQuestionsPerVerbThreshold}
-             question per target in order to remain qualified for the HIT.""")
+        s"""You must write as many questions as possible, up to ${generationMaxQuestions} questions.""")
+//            Notice however that some prompts have no appropriate question to ask about. If this is the case, you can just submit an empty form.
+//             You must retain an average of ${generationCoverageQuestionsPerVerbThreshold}
+//             question per target in order to remain qualified for the HIT.
+//          """)
     ),
     <.h3("Additional Notes"),
     <.ul(

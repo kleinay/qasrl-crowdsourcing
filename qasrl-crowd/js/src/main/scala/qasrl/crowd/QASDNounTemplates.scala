@@ -1,8 +1,11 @@
 package qasrl.crowd
 
 object QASDNounTemplates {
+  // include subject to verb templates (first 2)
   val list =
-    """What kind of [W]?
+    """What <BE> [W] doing?
+      |What did/does/do [W] do?
+      |What kind of [W]?
       |Which [W]?
       |Whose [W]?
       |How much [W]?
