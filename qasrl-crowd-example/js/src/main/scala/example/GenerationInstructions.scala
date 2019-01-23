@@ -21,21 +21,26 @@ object GenerationInstructions extends Instructions {
 
 
   val generationOverview = <.div(
-    <.p(Styles.badRed, """Read through all of the instructions and make sure you understand the interface controls before beginning. A full understanding of the requirements will help make sure validators approve your work and you can retain your qualification."""),
+    <.p(Styles.badRed,
+      """Read through all of the instructions and make sure you understand the interface controls before beginning.
+        |A full understanding of the requirements will help make sure
+        |validators approve your work and you can retain your qualification.""".stripMargin),
     <.p("""This task is for an academic research project of natural language processing.
-        We wish to deconstruct the meanings of verbs in English sentences into lists of questions and answers.
-        You will be presented with a selection of English text with a verb written in bold."""),
-    <.p("""You will write questions about the verb and highlight their answers in the original sentence. """,
-      <.b(""" Note: it takes exactly 2 clicks to highlight each answer; see the Interface & Controls tab for details. """),
+        We wish to deconstruct the meanings of nouns in English sentences into lists of questions and answers.
+        You will be presented with a selection of English text with a target noun written in bold.
+        The target noun should correspond to some event or action, and it is commonly derived from a verb."""),
+    <.p("""You will write questions about the noun and highlight their answers in the original sentence. """),
+    <.p(<.b(""" Note: it takes exactly 2 clicks to highlight each answer; see the Interface & Controls tab for details. """)),
+    <.p("""The questions are generated using a verb form related to the target noun. """,
       """ Questions are required to follow a strict format, which is enforced by autocomplete functionality in the interface. """,
       """ For example, the prompt below should elicit the following questions and answers: """),
     <.blockquote(
       ^.classSet1("blockquote"),
-      "Protesters ", <.span(Styles.bolded, " blamed "), " the corruption scandal on local officials, who today refused to promise that they would resume the investigation before year's end. "),
+      "The embassy suffered less ", <.span(Styles.bolded, " damage "), " from the blast last week than one could expect. "),
     <.ul(
-      <.li("Who blamed someone? --> Protesters"),
-      <.li("Who did someone blame something on? --> local officials"),
-      <.li("What did someone blame on someone? --> the corruption scandal")
+      <.li("What damaged something? --> the blast"),
+      <.li("What was damaged? --> The embassy"),
+      <.li("When did something damage something? --> last week")
     ),
     <.h2("Guidelines"),
     <.ol(
@@ -43,20 +48,20 @@ object GenerationInstructions extends Instructions {
         <.span(Styles.bolded, "Correctness. "),
         """Each question-answer pair must satisfy the litmus test that if you substitute the answer back into the question,
            the result is a grammatical statement, and it is true according to the sentence given. For example, """,
-        <.span(Styles.bolded, "Who blamed someone? --> Protesters"), """ becomes """,
-        <.span(Styles.goodGreen, "Protesters blamed someone, "), """ which is valid, while """,
-        <.span(Styles.bolded, "Who blamed? --> Protesters"), """ would become """,
-        <.span(Styles.badRed, "Protesters blamed, "), s""" which is ungrammatical, so it is invalid.
+        <.span(Styles.bolded, "What damaged something? --> the blast"), """ becomes """,
+        <.span(Styles.goodGreen, "the blast damaged something, "), """ which is valid, while """,
+        <.span(Styles.bolded, "What damaged? --> the blast"), """ would become """,
+        <.span(Styles.badRed, "the blast damaged, "), s""" which is ungrammatical, so it is invalid.
            Your questions will be judged by other annotators, and you must retain an accuracy of
            ${(100.0 * generationAccuracyBlockingThreshold).toInt}% in order to remain qualified. """),
       <.li(
-        <.span(Styles.bolded, "Verb-relevance. "),
+        <.span(Styles.bolded, "Event-relevance. "),
         s"""The answer to a question must pertain to the participants, time, place, reason, etc., of """,
-        <.span(Styles.bolded, " the target verb in the sentence. "),
+        <.span(Styles.bolded, " the target event in the sentence. "),
         """ For example, if the sentence is """,
         <.span(Styles.bolded,
-          " He ",
-          <.span(Styles.niceBlue, Styles.underlined, "promised"),
+          " He made a ",
+          <.span(Styles.niceBlue, Styles.underlined, "promise"),
           " to come tomorrow, "),
         """ you may """, <.span(Styles.bolded, " not "), " write ",
         <.span(Styles.badRed, " When did someone promise to do something? --> tomorrow, "),
@@ -65,20 +70,19 @@ object GenerationInstructions extends Instructions {
       <.li(
         <.span(Styles.bolded, "Exhaustiveness. "),
         s"""You must write as many questions, and as many answers to each question, as possible
-            s(up to ${settings.generationMaxQuestions} questions).
-           Each HIT will require you to write at least one question, and you must write more than 2 questions per verb
+            (up to ${settings.generationMaxQuestions} questions).
+           Each HIT will require you to write at least one question, and you must write more than
+           ${settings.generationCoverageQuestionsPerVerbThreshold} questions per target
            on average in order to remain qualified for the HIT. You will be awarded a bonus for each new question,
            starting at ${generationRewardCents}c and going up by 1c for each additional question.
            However, note that none of the answers to your questions may overlap.
            If there is more than one possible question that has the same answer, just write one of them."""
       )
     ),
-    <.p("Occasionally, you may get a bolded word that isn't a verb, or is hard or impossible to write questions about. ",
+    <.p("Occasionally, you may get a bolded word that isn't corresponding to an event," +
+      " or is hard or impossible to write questions about using the provided verb. ",
       " In this case, please do your best to come up with one question, even if it is nonsensical. ",
-      " While it will count against your accuracy, this case is rare enough that it shouldn't matter. ",
-      " If the sentence has grammatical errors or is not a complete sentence, please write questions and answers ",
-      " that are appropriate to the sentence's meaning to the best of your ability. "),
-    <.p("If you are not sure about certain cases, please check the examples.")
+      " While it will count against your accuracy, this case is rare enough that it shouldn't matter. ")
   )
 
 
@@ -132,7 +136,7 @@ object GenerationInstructions extends Instructions {
           """),
     <.p("""Your questions will be evaluated by other annotators, and """,
       <.b(""" you will only be awarded bonuses for your valid question-answer pairs. """),
-      s""" (However, your questions-per-verb average will include invalid questions.)
+      s""" (However, your questions-per-target average will include invalid questions.)
           The bonus will be awarded as soon as validators have checked all of your question-answer pairs,
           which will happen shortly after you submit (but will vary depending on worker availability).
           Your accuracy will be updated as your questions are validated
@@ -175,8 +179,8 @@ object GenerationInstructions extends Instructions {
           "Overview" -> generationOverview,
           "Interface & Controls" -> generationControls,
           "Question Format" -> generationQuestionFormat,
-          "Conditions & Bonuses" -> generationConditions,
-          "Examples" -> <.div(CommonInstructions.verb_span_examples)
+          "Conditions & Bonuses" -> generationConditions
+          //"Examples" -> <.div(CommonInstructions.verb_span_examples)
         )
       )
     )

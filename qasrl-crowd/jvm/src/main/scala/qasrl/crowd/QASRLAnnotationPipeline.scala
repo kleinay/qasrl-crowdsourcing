@@ -40,7 +40,8 @@ import scala.collection.JavaConverters._
 import com.typesafe.scalalogging.StrictLogging
 
 class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
-  val allIds: Vector[SID], // IDs of sentences to annotate
+  val allNominalPrompts: Vector[QASRLGenerationPrompt[SID]],
+//  val allIds: Vector[SID], // IDs of sentences to annotate
   numGenerationAssignmentsInProduction: Int,
   annotationDataService: AnnotationDataService,
   sdgenQualTestOpt : Option[QualTest] = None,
@@ -63,11 +64,11 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   // define numGenerationAssignmentsForPrompt for either production or sandbox
   def numGenerationAssignmentsForPrompt : QASRLGenerationPrompt[SID] => Int =
 //    if(config.isProduction) (_ => numGenerationAssignmentsInProduction) else (_ => 2) // how many generators?
-    if(config.isProduction) (_ => 8) else (_ => 2) // how many generators?
+    if(config.isProduction) (_ => 2) else (_ => 1) // how many generators?
 
   // define numValidatorsAssignmentsForPrompt for verbs, for either production or sandbox
   def numValidatorsAssignmentsForPrompt : QASRLValidationPrompt[SID] => Int =
-    if(config.isProduction) (_ => 0) else (_ => 0)  // how many validators?
+    if(config.isProduction) (_ => 2) else (_ => 1)  // how many validators?
 
   // define numValidatorsAssignmentsForPrompt for non-verbs, for either production or sandbox
   def numSDValidatorsAssignmentsForPrompt : QASRLValidationPrompt[SID] => Int =
@@ -130,37 +131,42 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     }.toSet
   }
 
-  // Yield all promts from verbs.
-  lazy val allVerbPrompts: Vector[QASRLGenerationPrompt[SID]] = for {
-    id <- allIds
-    verbIndex <- getVerbKeyIndices(id).toList.sorted
-  } yield QASRLGenerationPrompt(id, verbIndex, "verb")
+//  // Yield all promts from verbs.
+//  lazy val allVerbPrompts: Vector[QASRLGenerationPrompt[SID]] = for {
+//    id <- allIds
+//    verbIndex <- getVerbKeyIndices(id).toList.sorted
+//  } yield QASRLGenerationPrompt(id, verbIndex, "verb")
+//
+//  lazy val allNounPrompts: Vector[QASRLGenerationPrompt[SID]] = for {
+//    id <- allIds
+//    targetIndex <- getNounKeyIndices(id).toList.sorted
+//  } yield QASRLGenerationPrompt(id, targetIndex, "noun")
+//
+//  lazy val allAdjPrompts: Vector[QASRLGenerationPrompt[SID]] = for {
+//    id <- allIds
+//    targetIndex <- getAdjectiveKeyIndices(id).toList.sorted
+//  } yield QASRLGenerationPrompt(id, targetIndex, "adjective")
+//
+//  lazy val allAdverbPrompts: Vector[QASRLGenerationPrompt[SID]] = for {
+//    id <- allIds
+//    targetIndex <- getAdverbKeyIndices(id).toList.sorted
+//  } yield QASRLGenerationPrompt(id, targetIndex, "adverb")
+//
+//  lazy val allNumberPrompts: Vector[QASRLGenerationPrompt[SID]] = for {
+//    id <- allIds
+//    targetIndex <- getNumberKeyIndices(id).toList.sorted
+//  } yield QASRLGenerationPrompt(id, targetIndex, "number")
 
-  lazy val allNounPrompts: Vector[QASRLGenerationPrompt[SID]] = for {
-    id <- allIds
-    targetIndex <- getNounKeyIndices(id).toList.sorted
-  } yield QASRLGenerationPrompt(id, targetIndex, "noun")
+//  lazy val allPrompts: Vector[QASRLGenerationPrompt[SID]] =
+//    allNounPrompts ++ allVerbPrompts ++ allAdjPrompts ++ allAdverbPrompts ++ allNumberPrompts
 
-  lazy val allAdjPrompts: Vector[QASRLGenerationPrompt[SID]] = for {
-    id <- allIds
-    targetIndex <- getAdjectiveKeyIndices(id).toList.sorted
-  } yield QASRLGenerationPrompt(id, targetIndex, "adjective")
+//  lazy val allSDPrompts: Vector[QASRLGenerationPrompt[SID]] =
+//    allNounPrompts ++ allAdjPrompts ++ allAdverbPrompts ++ allNumberPrompts
 
-  lazy val allAdverbPrompts: Vector[QASRLGenerationPrompt[SID]] = for {
-    id <- allIds
-    targetIndex <- getAdverbKeyIndices(id).toList.sorted
-  } yield QASRLGenerationPrompt(id, targetIndex, "adverb")
 
-  lazy val allNumberPrompts: Vector[QASRLGenerationPrompt[SID]] = for {
-    id <- allIds
-    targetIndex <- getNumberKeyIndices(id).toList.sorted
-  } yield QASRLGenerationPrompt(id, targetIndex, "number")
-
-  lazy val allPrompts: Vector[QASRLGenerationPrompt[SID]] =
-    allNounPrompts ++ allVerbPrompts ++ allAdjPrompts ++ allAdverbPrompts ++ allNumberPrompts
-
-  lazy val allSDPrompts: Vector[QASRLGenerationPrompt[SID]] =
-    allNounPrompts ++ allAdjPrompts ++ allAdverbPrompts ++ allNumberPrompts
+  // Current Fast Experiment: use only verb-generation pipeline, for nominalizations
+  lazy val allVerbPrompts = allNominalPrompts
+  lazy val allSDPrompts: Vector[QASRLGenerationPrompt[SID]] = Vector.empty
 
   implicit val ads = annotationDataService
 
@@ -527,10 +533,10 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   }
 
   val genHITType = HITType(
-    title = s"Write question-answer pairs about a verb",
+    title = s"Write question-answer pairs about a noun",
     description = s"""
-      Given a sentence and a verb from that sentence,
-      write questions and answers about that verb.
+      Given a sentence and a noun from that sentence,
+      write questions and answers about that noun.
       Questions must adhere to a certain template,
       provided by autocomplete functionality.
       Maintain high accuracy to stay qualified.
@@ -546,7 +552,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
 
   lazy val genAjaxService = new Service[QASRLGenerationAjaxRequest[SID]] {
     override def processRequest(request: QASRLGenerationAjaxRequest[SID]) = request match {
-      case QASRLGenerationAjaxRequest(workerIdOpt, QASRLGenerationPrompt(id, verbIndex, targetType)) =>
+      case QASRLGenerationAjaxRequest(workerIdOpt, QASRLGenerationPrompt(id, verbIndex, verbForm)) =>
         val questionListsOpt = for {
           genManagerP <- Option(genManagerPeek)
           workerId <- workerIdOpt
@@ -566,7 +572,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
           workerStatsOpt = workerStatsOpt)
 
         val tokens = id.tokens
-        val inflectedForms = inflections.getInflectedForms(tokens(verbIndex).lowerCase)
+        val inflectedForms = inflections.getInflectedForms(verbForm.lowerCase)
         QASRLGenerationAjaxResponse(stats, tokens, inflectedForms)
     }
   }
@@ -643,7 +649,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   }
 
   lazy val sdsampleValPrompt = QASRLValidationPrompt[SID](
-    allNounPrompts.head, "", "", List(""),
+    allNominalPrompts.head, "", "", List(""),
     List(VerbQA(18, "What kind of basis?", List(Span(17, 17)))))
 
   lazy val sdvalTaskSpec = TaskSpecification.NoWebsockets[QASRLValidationPrompt[SID], List[QASRLValidationAnswer], QASRLValidationAjaxRequest[SID]](
@@ -762,7 +768,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
         accuracyTracker,
         genCoverageDisqualTypeId,
         // sentenceTracker,
-        _=>0, //numGenerationAssignmentsForPrompt,
+        numGenerationAssignmentsForPrompt,
         numValidatorsAssignmentsForPrompt,
         if(config.isProduction) 100 else 3,
         allVerbPrompts.iterator)  // the prompts itarator determines what genHITs are generated

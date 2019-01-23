@@ -110,7 +110,7 @@ class QASRL_SD_GenerationClient[SID : Reader : Writer](
     def initFromResponse(response: QASRLGenerationAjaxResponse): State = response match {
       case QASRLGenerationAjaxResponse(_, sentence, _) =>
         val targetWord : String = sentence(prompt.verbIndex)
-        val template = new QASDQuestionProcessor(sentence.mkString(" "), targetWord, prompt.targetType)
+        val template = new QASDQuestionProcessor(sentence.mkString(" "), targetWord, prompt.verbForm)
         State(template, List(QAPair.empty), None)
     }
   }

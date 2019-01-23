@@ -14,9 +14,9 @@ import nlpdata.util.Text
 import nlpdata.util.HasTokens.ops._
 import nlpdata.structure.Word
 
-val label = "sdgen_6s_8gen0val_13_12_18"
+val label = "nominals_exp1_30_12"
 
-val isProduction = true // sandbox. change to true for production
+val isProduction = false // sandbox. change to true for production
 val domain = "u.cs.biu.ac.il/~stanovg/qasrl" // change to your domain, or keep localhost for testing
 val projectName = "qasrl-crowd-example" // make sure it matches the SBT project;
 // this is how the .js file is found to send to the server
@@ -99,7 +99,7 @@ def savePOSTaggedSentences(sentences : Vector[Vector[Word]]) : Unit = {
 }
 
 saveSourceSentences(setup.sentences)
-saveTokenizedIds(exp.allIds.map(_.tokens))
+saveTokenizedIds(setup.tokenizedSentences)
 savePOSTaggedSentences(setup.posTaggedSentences)
 
 // use with caution... intended mainly for sandbox

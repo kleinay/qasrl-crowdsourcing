@@ -2,46 +2,41 @@ package example
 
 import cats._
 import cats.implicits._
-
 import qasrl.crowd.util.Tokenizer
 import qasrl.crowd.util.PosTagger
-import qasrl.crowd._
+import qasrl.crowd.{QASRLGenerationPrompt, _}
 import qasrl.labeling._
-
 import spacro._
 import spacro.tasks._
-
 import nlpdata.structure.AlignedToken
-
 import nlpdata.datasets.wiki1k.Wiki1kFileSystemService
 import nlpdata.datasets.wiki1k.Wiki1kPath
 import nlpdata.datasets.wiktionary
 import nlpdata.datasets.wiktionary.Inflections
 import nlpdata.datasets.tqa.TQAFileSystemService
-
 import nlpdata.util.LowerCaseStrings._
 import nlpdata.util.Text
 import nlpdata.util.HasTokens
 import nlpdata.util.HasTokens.ops._
-
 import akka.actor._
 import akka.stream.scaladsl.Flow
 import akka.stream.scaladsl.Source
 
 import scala.concurrent.duration._
 import scala.language.postfixOps
-
 import scala.util.Try
-
 import upickle.default._
-
 import java.io.StringReader
 import java.nio.file.{Files, Path, Paths}
 
 import scala.util.Try
 import scala.util.Random
-
 import upickle.default._
+import io.circe
+
+case class PromptData(tokenized_sentence : Vector[String],
+                      nominal_index : Int,
+                      verb_form : String)
 
 class AnnotationSetup(
   val label: String = "trial",
@@ -79,15 +74,33 @@ class AnnotationSetup(
     Files.lines(path).iterator.asScala.toList
   }
 
-  val data_fn = "source.txt"
-  val sentences = loadInputFile(data_fn).get.toVector
-//  val sentences = Vector(
-//    "In the second half of the 1980s, Clarence Thomas is being groomed for a position on the Supreme Court, or senses he's being groomed.",
-//    "He's the head of the EEOC in the Reagan Administration and decides to beef up on his reading in political theory, constitutional law, and American history.",
-//    "He hires two Straussians, Ken Masugi and John Marini, to his staff on the EEOC.",
-//    "Their assignment is to give him a reading list, which they do and which he reads, and to serve as tutors and conversation partners in all things intellectual, which also they do."
-//  )
-  val tokenizedSentences = sentences.map(Tokenizer.tokenize_with_ner)
+//  val data_fn = "source.txt"
+//  val sentences = loadInputFile(data_fn).get.toVector
+
+/* Take prompt data from json file including the nom-derivation info */
+  val data_fn = "nom_prompts.json"
+  val input_file_data : String = loadInputFile(data_fn).get.mkString("\n")
+  val prompts_json_data = circe.parser.parse(input_file_data).getOrElse(circe.Json.Null)
+
+
+  def decode_prompt(prompt_json : circe.Json) : PromptData = {
+    val prompt_arr = prompt_json.asArray.get
+    val tok_sent : Vector[String] = prompt_arr(0).asArray.get.flatMap(_.asString)
+    val nominal_index : Int = prompt_arr(1).asNumber.get.toInt.get
+    val verb_form : String = prompt_arr(2).asString.get
+    PromptData(tok_sent, nominal_index, verb_form)
+  }
+
+  val prompts_data : Vector[PromptData] = prompts_json_data.asArray.get.map(decode_prompt)
+  val tokenizedSentences = prompts_data.map(_.tokenized_sentence)
+  val sentences = tokenizedSentences.map(s_vec => s_vec.mkString(" "))
+  // Instead of:
+  //val tokenizedSentences = sentences.map(Tokenizer.tokenize_with_ner)
+
+  val allNominalPrompts : Vector[QASRLGenerationPrompt[SentenceId]] =
+    prompts_data.zipWithIndex.map(item => item match { case (promptData, idx) =>
+      QASRLGenerationPrompt(SentenceId(idx), promptData.nominal_index, promptData.verb_form)})
+
   val posTaggedSentences = tokenizedSentences.map(PosTagger.posTag[Vector](_))
 
   val numOfSentences = tokenizedSentences.size
@@ -119,7 +132,7 @@ class AnnotationSetup(
   val numGenerationAssignmentsInProduction = 8   // how many generators?
 
   lazy val experiment = new QASRLAnnotationPipeline(
-    allIds,
+    allNominalPrompts,
     numGenerationAssignmentsInProduction,
     liveAnnotationDataService,
     //sdgenQualTestOpt = Some(SDGenQualTestExample),

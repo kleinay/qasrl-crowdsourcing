@@ -7,9 +7,9 @@ import nlpdata.datasets.wiktionary.InflectedForms
 package object crowd {
 
   case class QASRLGenerationPrompt[SID](
-    id: SID,
-    verbIndex: Int,
-    targetType: String)
+                                         id: SID,
+                                         verbIndex: Int,
+                                         verbForm: String)
 
   case class GenerationStatSummary(
     numVerbsCompleted: Int, // before validation: used to calculate coverage

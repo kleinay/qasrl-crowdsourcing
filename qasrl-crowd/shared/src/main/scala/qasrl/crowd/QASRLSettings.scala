@@ -37,7 +37,7 @@ trait QASRLSettings {
   val generationCoverageQuestionsPerVerbThreshold = 2.0
   val generationCoverageGracePeriod = 15
 
-  val generationAccuracyBlockingThreshold = 0.85
+  val generationAccuracyBlockingThreshold = 0.75
   val generationAccuracyGracePeriod = 15
 
   val generationAgreementBlockingThreshold = 0.5

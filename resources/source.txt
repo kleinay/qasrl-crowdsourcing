@@ -1,1 +1,0 @@
-/home/ir/kleinay/PycharmProjects/QASemDep/data/randSamp6of49_SDPSec20.sentences
