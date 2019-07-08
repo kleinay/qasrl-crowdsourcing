@@ -139,8 +139,11 @@ class QASRLGenerationClient[SID : Reader : Writer](
     // mutable backend stuff
     val allInputRefs = mutable.Map.empty[Int, html.Element]
     var isBlurEnabled: Boolean = true
+    var isNA: Boolean = false
 
     def setBlurEnabled(b: Boolean) = Callback(isBlurEnabled = b)
+
+    def flipIsNA() = Callback(isNA = !isNA)
 
     def setInputRef(qaIndex: Int): html.Element => Unit =
       (element: html.Element) => allInputRefs.put(qaIndex, element)
@@ -513,6 +516,7 @@ class QASRLGenerationClient[SID : Reader : Writer](
                           ^.padding := "5px",
                           <.div(
                             ^.marginBottom := "20px",
+                            // Sentence
                             MultiContigSpanHighlightableSentence(
                               MultiContigSpanHighlightableSentenceProps(
                                 sentence = sentence,
@@ -536,6 +540,14 @@ class QASRLGenerationClient[SID : Reader : Writer](
                                   )
                                 ))
                             ),
+                            // Show user the verb it is generating questions with
+                            <.div(
+                              <.p("Ask about the noun '" + Text.normalizeToken(sentence(prompt.verbIndex)) + "' using the the verb ",
+                                <.span(Styles.bolded, prompt.verbForm),
+                                <.span(":"))
+                            ),
+
+                            // QA fields
                             <.ul(
                               Styles.listlessList,
                               (0 until s.qas.size).toVdomArray(qaIndex =>
@@ -557,6 +569,22 @@ class QASRLGenerationClient[SID : Reader : Writer](
                             )
                           )
                         ),
+                        // new button for "N/A" option (Not Applicable - no questions for this noun
+                        <.p(
+                          <.div(
+                            Styles.unselectable,
+                            ^.float := "left",
+                            ^.minHeight := "30px",
+                            ^.border := "2px solid",
+                            ^.borderRadius := "2px",
+                            ^.textAlign := "center",
+                            ^.width := "480px",
+                            (^.backgroundColor := "#FFB100").when(isNA),
+                            ^.onClick --> flipIsNA(),
+                            "No Question-Answer is applicable"
+                          )
+                         
+                        ),
                         <.div(
                           ^.classSet1("form-group"),
                           ^.margin := "5px",
@@ -571,11 +599,11 @@ class QASRLGenerationClient[SID : Reader : Writer](
                           ^.classSet1("btn btn-primary btn-lg btn-block"),
                           ^.margin := "5px",
                           ^.`type` := "submit",
-                          ^.disabled := isNotAssigned || getAllCompleteQAPairs(s).size == 0),
+                          ^.disabled := isNotAssigned || (getAllCompleteQAPairs(s).size == 0 && !isNA)),
                           ^.id := FieldLabels.submitButtonLabel,
                           ^.value := (
                             if(isNotAssigned) "You must accept the HIT to submit results"
-                            else if(getAllCompleteQAPairs(s).size == 0) "You must write and answer at least one question to submit results"
+                            else if(getAllCompleteQAPairs(s).size == 0 && !isNA) "You must write and answer at least one question to submit results, or toggle Not Applicable"
                             else "Submit"
                           )
                         )
