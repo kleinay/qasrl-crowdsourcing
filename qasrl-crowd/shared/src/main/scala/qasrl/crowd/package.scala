@@ -9,7 +9,7 @@ package object crowd {
   case class QASRLGenerationPrompt[SID](
                                          id: SID,
                                          verbIndex: Int,
-                                         verbForm: String)
+                                         verbForms: Vector[String])
 
   case class GenerationStatSummary(
     numVerbsCompleted: Int, // before validation: used to calculate coverage
@@ -34,7 +34,7 @@ package object crowd {
   case class QASRLGenerationAjaxResponse(
     stats: GenerationStatSummary,
     tokens: Vector[String],
-    inflectedForms: Option[InflectedForms])
+    inflectedForms: Vector[Option[InflectedForms]])
 
   case class QASRLValidationAjaxRequest[SID](
     workerIdOpt: Option[String],

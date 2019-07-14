@@ -23,20 +23,20 @@ import akka.stream.scaladsl.Flow
 import akka.stream.scaladsl.Source
 
 import scala.concurrent.duration._
-import scala.language.postfixOps
-import scala.util.Try
-import upickle.default._
-import java.io.StringReader
+
 import java.nio.file.{Files, Path, Paths}
 
+import scala.sys.process._
+import scala.language.postfixOps
 import scala.util.Try
 import scala.util.Random
 import upickle.default._
 import io.circe
 
-case class PromptData(tokenized_sentence : Vector[String],
+case class PromptData(sentence_id : String,
+                      tokenized_sentence : Vector[String],
                       nominal_index : Int,
-                      verb_form : String)
+                      verb_forms : Vector[String])
 
 class AnnotationSetup(
   val label: String = "trial",
@@ -46,6 +46,7 @@ class AnnotationSetup(
 
   val datasetsPath = java.nio.file.Paths.get("datasets")
   val resourcePath = java.nio.file.Paths.get("resources")
+  val scriptsPath = java.nio.file.Paths.get("scripts")
 
   import java.nio.file.{Paths, Path, Files}
   private[this] val liveDataPath = Paths.get(s"data/example/$label/live")
@@ -74,21 +75,39 @@ class AnnotationSetup(
     Files.lines(path).iterator.asScala.toList
   }
 
-//  val data_fn = "source.txt"
-//  val sentences = loadInputFile(data_fn).get.toVector
+  /*
+  Data Route:
+  1. raw input - csv file with sentences + sentence-Ids
+  2. pre-process with generate_nom_candidates.py script - get candidate noms in a json format
+        output of script is in resources/nom_prompts.json
+  3. read resources/nom_prompts.json for list of prompts
+   */
+
+  // take raw sentences from this file. Use Python script
+  val input_sentences_fn = "source.txt"
+  val raw_data_path : Path = resourcePath.resolve(input_sentences_fn)
+
+  val preprocess_script_fn = scriptsPath.resolve("generate_nom_candidates.py")
+  val prompts_data_fn = "nom_prompts.json"  // output of preprocess script, input for server
+  val prompts_data_path = resourcePath.resolve(prompts_data_fn)
+
+  // exec command for running the python script
+  val preprocess_cmd = s"python ${preprocess_script_fn} ${raw_data_path} ${prompts_data_path}"
+  val exec_result : Int = Process(preprocess_cmd).!
+  assert(exec_result == 0, "pre-processing script failed")
 
 /* Take prompt data from json file including the nom-derivation info */
-  val data_fn = "nom_prompts.json"
-  val input_file_data : String = loadInputFile(data_fn).get.mkString("\n")
-  val prompts_json_data = circe.parser.parse(input_file_data).getOrElse(circe.Json.Null)
+  val prompts_json_raw : String = loadInputFile(prompts_data_fn).get.mkString("\n")
+  val prompts_json_data : circe.Json = circe.parser.parse(prompts_json_raw).getOrElse(circe.Json.Null)
 
 
   def decode_prompt(prompt_json : circe.Json) : PromptData = {
-    val prompt_arr = prompt_json.asArray.get
-    val tok_sent : Vector[String] = prompt_arr(0).asArray.get.flatMap(_.asString)
-    val nominal_index : Int = prompt_arr(1).asNumber.get.toInt.get
-    val verb_form : String = prompt_arr(2).asString.get
-    PromptData(tok_sent, nominal_index, verb_form)
+    val prompt_map : Map[String, circe.Json]= prompt_json.asObject.get.toMap
+    val sent_id : String = prompt_map("sentenceId").asString.get
+    val tok_sent : Vector[String] = prompt_map("tokSent").asArray.get.flatMap(_.asString)
+    val nominal_index : Int = prompt_map("targetIdx").asNumber.get.toInt.get
+    val verb_forms : Vector[String] = prompt_map("verbForms").asArray.get.flatMap(_.asString)
+    PromptData(sent_id, tok_sent, nominal_index, verb_forms)
   }
 
   val prompts_data : Vector[PromptData] = prompts_json_data.asArray.get.map(decode_prompt)
@@ -97,14 +116,21 @@ class AnnotationSetup(
   // Instead of:
   //val tokenizedSentences = sentences.map(Tokenizer.tokenize_with_ner)
 
-  val allNominalPrompts : Vector[QASRLGenerationPrompt[SentenceId]] =
-    prompts_data.zipWithIndex.map(item => item match { case (promptData, idx) =>
-      QASRLGenerationPrompt(SentenceId(idx), promptData.nominal_index, promptData.verb_form)})
+  // save mapping between sentence_IDs to sentences (tokenized)
+  val sentenceIdToTokens : Map[String, Vector[String]] = prompts_data.map(
+    p => p.sentence_id -> p.tokenized_sentence).toMap
 
-  val posTaggedSentences = tokenizedSentences.map(PosTagger.posTag[Vector](_))
+  def promptDataToPrompt(pd : PromptData) : QASRLGenerationPrompt[SentenceId] = {
+    QASRLGenerationPrompt(SentenceId(pd.sentence_id), pd.nominal_index, pd.verb_forms)
+  }
+  val allNominalPrompts : Vector[QASRLGenerationPrompt[SentenceId]] = {
+    prompts_data.map(promptDataToPrompt)
+  }
+
+//  val posTaggedSentences = tokenizedSentences.map(PosTagger.posTag[Vector](_))
 
   val numOfSentences = tokenizedSentences.size
-  val allIds = (0 until numOfSentences).map(SentenceId(_)).toVector
+  val allIds = sentenceIdToTokens.keys.map(SentenceId(_)).toVector
   val trainIds = allIds.slice(0, numOfSentences / 2)
   val devIds = allIds.slice(numOfSentences / 2, numOfSentences / 4 * 3)
   val testIds = allIds.slice(numOfSentences / 4 * 3, numOfSentences)
@@ -118,7 +144,7 @@ class AnnotationSetup(
   )
 
   implicit object SentenceIdHasTokens extends HasTokens[SentenceId] {
-    override def getTokens(id: SentenceId): Vector[String] = tokenizedSentences(id.index)
+    override def getTokens(id: SentenceId): Vector[String] = sentenceIdToTokens(id.id)
   }
 
   implicit lazy val inflections = {

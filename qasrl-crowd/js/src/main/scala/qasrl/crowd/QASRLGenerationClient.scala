@@ -6,23 +6,19 @@ import qasrl.crowd.util.Styles
 import qasrl.crowd.util.implicits._
 
 import scala.collection.mutable
-
 import cats.Order
 import cats.Monoid
 import cats.Applicative
 import cats.data.NonEmptyList
 import cats.implicits._
-
 import spacro.tasks._
 import spacro.ui._
 import spacro.util.Span
-
 import qasrl.Autocomplete
 import qasrl.ArgumentSlot
 import qasrl.Frame
 import qasrl.QuestionProcessor
 import qasrl.TemplateStateMachine
-
 import nlpdata.util.Text
 import nlpdata.util.LowerCaseStrings._
 
@@ -34,15 +30,11 @@ import org.scalajs.dom.raw._
 import org.scalajs.jquery.jQuery
 
 import scala.concurrent.ExecutionContext.Implicits.global
-
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react._
-
 import scalacss.DevDefaults._
 import scalacss.ScalaCssReact._
-
 import upickle.default._
-
 import monocle._
 import monocle.function.{all => Optics}
 import monocle.std.{list => ListOptics}
@@ -51,6 +43,7 @@ import monocle.syntax._
 import monocle.macros._
 import japgolly.scalajs.react.MonocleReact._
 import japgolly.scalajs.react.CatsReact._
+import nlpdata.datasets.wiktionary.InflectedForms
 
 class QASRLGenerationClient[SID : Reader : Writer](
   instructions: VdomTag)(
@@ -99,16 +92,21 @@ class QASRLGenerationClient[SID : Reader : Writer](
   }
 
   @Lenses case class State(
+    isNA: Boolean,
+    verbForm: String,
     template: QuestionProcessor,
     qas: List[QAPair],
     curFocus: Option[Int])
   object State {
-    val empty: State = State(null, Nil, None)
+    val empty: State = State(false, prompt.verbForms(0), null, Nil, None)
     def initFromResponse(response: QASRLGenerationAjaxResponse): State = response match {
-      case QASRLGenerationAjaxResponse(_, sentence, Some(forms)) =>
-        val slots = new TemplateStateMachine(sentence, forms)
+      case QASRLGenerationAjaxResponse(_, sentence, formsList) =>
+        // initialize StateMachine with the first verbForm
+        prompt
+        val firstVerbInfForm : InflectedForms = formsList(0).get
+        val slots = new TemplateStateMachine(sentence, firstVerbInfForm)
         val template = new QuestionProcessor(slots)
-        State(template, List(QAPair.empty), None)
+        State(false, prompt.verbForms(0), template, List(QAPair.empty), None)
     }
   }
 
@@ -203,7 +201,7 @@ class QASRLGenerationClient[SID : Reader : Writer](
       qaIndex: Int,
       nextPotentialBonus: Double
     ) = s match {
-      case State(template, qas, curFocus) =>
+      case State(isNA, verbForm, template, qas, curFocus) =>
         val isFocused = curFocus.nonEmptyAnd(_ == qaIndex)
         val numQAs = qas.size
         val QAPair(question, answers, qaState) = qas(qaIndex)
@@ -543,7 +541,7 @@ class QASRLGenerationClient[SID : Reader : Writer](
                             // Show user the verb it is generating questions with
                             <.div(
                               <.p("Ask about the noun '" + Text.normalizeToken(sentence(prompt.verbIndex)) + "' using the the verb ",
-                                <.span(Styles.bolded, prompt.verbForm),
+                                <.span(Styles.bolded, s.verbForm),
                                 <.span(":"))
                             ),
 
