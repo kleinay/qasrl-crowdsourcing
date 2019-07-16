@@ -40,6 +40,7 @@ case class PromptData(sentence_id : String,
 
 class AnnotationSetup(
   val label: String = "trial",
+  val executePreprocessing : Boolean = true,
   frozenGenerationHITTypeId: Option[String] = None,
   frozenValidationHITTypeId: Option[String] = None)(
   implicit config: TaskConfig) {
@@ -91,10 +92,12 @@ class AnnotationSetup(
   val prompts_data_fn = "nom_prompts.json"  // output of preprocess script, input for server
   val prompts_data_path = resourcePath.resolve(prompts_data_fn)
 
-  // exec command for running the python script
-  val preprocess_cmd = s"python ${preprocess_script_fn} ${raw_data_path} ${prompts_data_path}"
-  val exec_result : Int = Process(preprocess_cmd).!
-  assert(exec_result == 0, "pre-processing script failed")
+  // exec command for running the python script (Otherwise, assume the JSON is already ready)
+  if (executePreprocessing) {
+    val preprocess_cmd = s"python ${preprocess_script_fn} ${raw_data_path} ${prompts_data_path}"
+    val exec_result: Int = Process(preprocess_cmd).!
+    assert(exec_result == 0, "pre-processing script failed")
+  }
 
 /* Take prompt data from json file including the nom-derivation info */
   val prompts_json_raw : String = loadInputFile(prompts_data_fn).get.mkString("\n")

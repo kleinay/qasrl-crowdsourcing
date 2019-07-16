@@ -94,6 +94,7 @@ class TemplateStateMachine(
 
   import TemplateStateMachine._
 
+  val sentence : Vector[String] = tokens
   val initialFrameState = FrameState.initial(verbInflectedForms)
 
   // process prepositions

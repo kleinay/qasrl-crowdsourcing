@@ -43,6 +43,7 @@ import monocle.syntax._
 import monocle.macros._
 import japgolly.scalajs.react.MonocleReact._
 import japgolly.scalajs.react.CatsReact._
+import japgolly.scalajs.react.raw.SyntheticEvent
 import nlpdata.datasets.wiktionary.InflectedForms
 
 class QASRLGenerationClient[SID : Reader : Writer](
@@ -93,21 +94,40 @@ class QASRLGenerationClient[SID : Reader : Writer](
 
   @Lenses case class State(
     isNA: Boolean,
-    verbForm: String,
+    selectedVerbForm: String,
+    inflectedFormsMap: Map[String, InflectedForms],
     template: QuestionProcessor,
     qas: List[QAPair],
     curFocus: Option[Int])
   object State {
-    val empty: State = State(false, prompt.verbForms(0), null, Nil, None)
+    val empty: State = State(false, "", Map.empty, null, Nil, None)
     def initFromResponse(response: QASRLGenerationAjaxResponse): State = response match {
       case QASRLGenerationAjaxResponse(_, sentence, formsList) =>
-        // initialize StateMachine with the first verbForm
-        prompt
-        val firstVerbInfForm : InflectedForms = formsList(0).get
-        val slots = new TemplateStateMachine(sentence, firstVerbInfForm)
+        // initialize verb2InfForms Map - the keys are those verbs that has inflectedForms
+        val verb2InfForms : Map[String, InflectedForms] = prompt.verbForms.zipWithIndex.flatMap {
+          case (verb, index) => formsList(index) match {
+            case Some(inflectedForms) => Some(verb -> inflectedForms)
+            case None => None
+          }}
+          .toMap
+        // initialize StateMachine with the first verbForm or "do"
+        // ("do" is always manually appended to verbForms in AnnotationPipeline)
+        val firstVerb : String = verb2InfForms.keys.head
+        val defaultInfForm : InflectedForms = verb2InfForms(firstVerb)
+        val slots = new TemplateStateMachine(sentence, defaultInfForm)
         val template = new QuestionProcessor(slots)
-        State(false, prompt.verbForms(0), template, List(QAPair.empty), None)
+
+        State(false, firstVerb, verb2InfForms.withDefaultValue(defaultInfForm), template, List(QAPair.empty), None)
     }
+
+  }
+
+  def changeSelectedVerb(state: State, newSelectedVerb : String) : State = {
+    val infForms : InflectedForms = state.inflectedFormsMap(newSelectedVerb)
+    val slots = new TemplateStateMachine(state.template.origStateMachine.sentence, infForms)
+    val template = new QuestionProcessor(slots)
+    // re-initialize QAPairs to empty list
+    State(state.isNA, newSelectedVerb, state.inflectedFormsMap, template, List(QAPair.empty), None)
   }
 
   def qaLens(qaIndex: Int) = State.qas
@@ -137,11 +157,13 @@ class QASRLGenerationClient[SID : Reader : Writer](
     // mutable backend stuff
     val allInputRefs = mutable.Map.empty[Int, html.Element]
     var isBlurEnabled: Boolean = true
-    var isNA: Boolean = false
+
 
     def setBlurEnabled(b: Boolean) = Callback(isBlurEnabled = b)
 
-    def flipIsNA() = Callback(isNA = !isNA)
+//    def flipIsNA() = Callback(isNA = !isNA)
+    // let's try an Immutable version of isNA as part of State
+    def flipIsNA : Callback = scope.modState(s => s.copy(isNA = !s.isNA))
 
     def setInputRef(qaIndex: Int): html.Element => Unit =
       (element: html.Element) => allInputRefs.put(qaIndex, element)
@@ -201,7 +223,7 @@ class QASRLGenerationClient[SID : Reader : Writer](
       qaIndex: Int,
       nextPotentialBonus: Double
     ) = s match {
-      case State(isNA, verbForm, template, qas, curFocus) =>
+      case State(isNA, verbForm, infForms, template, qas, curFocus) =>
         val isFocused = curFocus.nonEmptyAnd(_ == qaIndex)
         val numQAs = qas.size
         val QAPair(question, answers, qaState) = qas(qaIndex)
@@ -385,7 +407,7 @@ class QASRLGenerationClient[SID : Reader : Writer](
               QASRLGenerationAjaxResponse(
                 GenerationStatSummary(numVerbsCompleted, numQuestionsWritten, workerStatsOpt),
                 sentence,
-                _)
+                inflectedFormsVec)
             ) =>
               val questionsPerVerbOpt = if(numVerbsCompleted == 0) None else Some(
                 numQuestionsWritten.toDouble / numVerbsCompleted
@@ -408,6 +430,19 @@ class QASRLGenerationClient[SID : Reader : Writer](
                 remaining = settings.generationAgreementGracePeriod - workerStats.genAgreementJudgments.size
                 if remaining > 0
               } yield remaining
+
+              // functions for select-verb element
+              def toOption(op : String) : VdomElement =
+                <.option(
+                  ^.value := op,
+                  ^.key := op,
+                  op)
+
+              def onVerbChange(e : ReactEventFrom[HTMLSelectElement]) : Callback = {
+                val newVerb : String = e.target.value
+                scope.modState(st => changeSelectedVerb(st, newVerb))
+              }
+
 
               SpanHighlighting(
                 SpanHighlightingProps(
@@ -446,6 +481,8 @@ class QASRLGenerationClient[SID : Reader : Writer](
                           ^.margin := "5px",
                           instructions
                         ),
+
+                        // Messages for User about coverage and accuracy
                         questionsPerVerbOpt.whenDefined(questionsPerVerb =>
                           <.div(
                             ^.classSet1("card"),
@@ -514,6 +551,7 @@ class QASRLGenerationClient[SID : Reader : Writer](
                           ^.padding := "5px",
                           <.div(
                             ^.marginBottom := "20px",
+
                             // Sentence
                             MultiContigSpanHighlightableSentence(
                               MultiContigSpanHighlightableSentenceProps(
@@ -538,10 +576,25 @@ class QASRLGenerationClient[SID : Reader : Writer](
                                   )
                                 ))
                             ),
+
+
+                            // Select the verb best corresponding to the nominalization
+                            <.div(
+                              <.p("Please select the best corresponding verb with which you can ask about the target noun: "),
+                              <.select(
+                                ^.value := s.selectedVerbForm,
+                                ^.disabled := false,
+                                ^.onChange ==> onVerbChange,
+                                s.inflectedFormsMap.keys.map(toOption).toTagMod
+
+                              )
+                            ),
+
+
                             // Show user the verb it is generating questions with
                             <.div(
                               <.p("Ask about the noun '" + Text.normalizeToken(sentence(prompt.verbIndex)) + "' using the the verb ",
-                                <.span(Styles.bolded, s.verbForm),
+                                <.span(Styles.bolded, s.selectedVerbForm),
                                 <.span(":"))
                             ),
 
@@ -567,6 +620,7 @@ class QASRLGenerationClient[SID : Reader : Writer](
                             )
                           )
                         ),
+
                         // new button for "N/A" option (Not Applicable - no questions for this noun
                         <.p(
                           <.div(
@@ -577,8 +631,8 @@ class QASRLGenerationClient[SID : Reader : Writer](
                             ^.borderRadius := "2px",
                             ^.textAlign := "center",
                             ^.width := "480px",
-                            (^.backgroundColor := "#FFB100").when(isNA),
-                            ^.onClick --> flipIsNA(),
+                            (^.backgroundColor := "#FFB100").when(s.isNA),
+                            ^.onClick --> flipIsNA,
                             "No Question-Answer is applicable"
                           )
                          
@@ -597,11 +651,11 @@ class QASRLGenerationClient[SID : Reader : Writer](
                           ^.classSet1("btn btn-primary btn-lg btn-block"),
                           ^.margin := "5px",
                           ^.`type` := "submit",
-                          ^.disabled := isNotAssigned || (getAllCompleteQAPairs(s).size == 0 && !isNA)),
+                          ^.disabled := isNotAssigned || (getAllCompleteQAPairs(s).isEmpty && !s.isNA)),
                           ^.id := FieldLabels.submitButtonLabel,
                           ^.value := (
                             if(isNotAssigned) "You must accept the HIT to submit results"
-                            else if(getAllCompleteQAPairs(s).size == 0 && !isNA) "You must write and answer at least one question to submit results, or toggle Not Applicable"
+                            else if(getAllCompleteQAPairs(s).isEmpty && !s.isNA) "You must write and answer at least one question to submit results, or toggle Not Applicable"
                             else "Submit"
                           )
                         )

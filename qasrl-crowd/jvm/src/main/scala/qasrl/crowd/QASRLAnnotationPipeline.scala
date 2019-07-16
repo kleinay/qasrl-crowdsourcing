@@ -527,7 +527,8 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
           workerStatsOpt = workerStatsOpt)
 
         val tokens = id.tokens
-        val inflectedFormsVec = verbForms.map(vf => inflections.getInflectedForms(vf.lowerCase))
+        val inflectedFormsVec = (verbForms++Vector("do")).map(vf =>
+          inflections.getInflectedForms(vf.lowerCase))
         QASRLGenerationAjaxResponse(stats, tokens, inflectedFormsVec)
     }
   }

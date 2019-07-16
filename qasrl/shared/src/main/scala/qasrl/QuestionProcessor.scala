@@ -14,6 +14,7 @@ import monocle.Iso
 
 class QuestionProcessor(stateMachine: TemplateStateMachine) {
 
+  val origStateMachine : TemplateStateMachine = stateMachine
   import QuestionProcessor._
 
   def getStatesFromTransition(
