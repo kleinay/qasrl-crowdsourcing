@@ -577,11 +577,17 @@ class QASRLGenerationClient[SID : Reader : Writer](
                                 ))
                             ),
 
+                            // Is this target a verbal-event noun?
+                            <.div(
+                                
+                            ),
 
                             // Select the verb best corresponding to the nominalization
                             <.div(
-                              <.p("Please select the best corresponding verb with which you can ask about the target noun: "),
+                              <.span("Please select the best corresponding verb with which you can ask about the target noun: "),
                               <.select(
+                                ^.marginLeft := "15px",
+                                ^.textAlign := "center",
                                 ^.value := s.selectedVerbForm,
                                 ^.disabled := false,
                                 ^.onChange ==> onVerbChange,
@@ -590,9 +596,9 @@ class QASRLGenerationClient[SID : Reader : Writer](
                               )
                             ),
 
-
                             // Show user the verb it is generating questions with
                             <.div(
+                              <.p(),
                               <.p("Ask about the noun '" + Text.normalizeToken(sentence(prompt.verbIndex)) + "' using the the verb ",
                                 <.span(Styles.bolded, s.selectedVerbForm),
                                 <.span(":"))
@@ -618,25 +624,28 @@ class QASRLGenerationClient[SID : Reader : Writer](
                               Styles.bolded.when(curPotentialBonus > 0),
                               s"${math.round(100 * curPotentialBonus).toInt}c"
                             )
+                          ),
+
+                          // new button for "N/A" option (Not Applicable - no QAs for this noun)
+                          <.p(
+                            <.div(
+                              Styles.unselectable,
+                              ^.float := "left",
+                              ^.minHeight := "30px",
+                              ^.marginLeft := "10px",
+                              ^.marginBottom := "6px",
+                              ^.border := "2px solid",
+                              ^.borderRadius := "2px",
+                              ^.textAlign := "center",
+                              ^.width := "460px",
+                              (^.backgroundColor := "#FFB100").when(s.isNA),
+                              ^.onClick --> flipIsNA,
+                              "No Question-Answer pair is applicable"
+                            )
                           )
                         ),
 
-                        // new button for "N/A" option (Not Applicable - no questions for this noun
-                        <.p(
-                          <.div(
-                            Styles.unselectable,
-                            ^.float := "left",
-                            ^.minHeight := "30px",
-                            ^.border := "2px solid",
-                            ^.borderRadius := "2px",
-                            ^.textAlign := "center",
-                            ^.width := "480px",
-                            (^.backgroundColor := "#FFB100").when(s.isNA),
-                            ^.onClick --> flipIsNA,
-                            "No Question-Answer is applicable"
-                          )
-                         
-                        ),
+                        // Feedback text-area
                         <.div(
                           ^.classSet1("form-group"),
                           ^.margin := "5px",
@@ -647,6 +656,8 @@ class QASRLGenerationClient[SID : Reader : Writer](
                             ^.placeholder := "Feedback? (Optional)"
                           )
                         ),
+
+                        // Submit button
                         <.input(
                           ^.classSet1("btn btn-primary btn-lg btn-block"),
                           ^.margin := "5px",
