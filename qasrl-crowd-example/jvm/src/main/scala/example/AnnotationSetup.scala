@@ -126,7 +126,7 @@ class AnnotationSetup(
   def promptDataToPrompt(pd : PromptData) : QASRLGenerationPrompt[SentenceId] = {
     QASRLGenerationPrompt(SentenceId(pd.sentence_id), pd.nominal_index, pd.verb_forms)
   }
-  val allNominalPrompts : Vector[QASRLGenerationPrompt[SentenceId]] = {
+  val allNominalPromptsFromInput : Vector[QASRLGenerationPrompt[SentenceId]] = {
     prompts_data.map(promptDataToPrompt)
   }
 
@@ -159,6 +159,20 @@ class AnnotationSetup(
   }
 
   val numGenerationAssignmentsInProduction = 8   // how many generators?
+
+  // filter nominal prompts - exclude those that have no inflected forms for any of the verb-forms,
+  // since the qasrl state-machine cannot support it
+  def hasVerbalInflection(prompt : QASRLGenerationPrompt[SentenceId]) : Boolean = {
+    prompt.verbForms.exists(vf => inflections.hasInflectedForms(vf.lowerCase))
+  }
+
+  val (allNominalPrompts, illegalNominalPrompts) = allNominalPromptsFromInput.partition(hasVerbalInflection)
+  // log (print) excluded prompts
+  println("\n*********************")
+  println(s"Prompts that have no inflected forms for neither verb-form (excluded): ${illegalNominalPrompts.size}")
+  println(illegalNominalPrompts)
+  println("*********************\n")
+
 
   lazy val experiment = new QASRLAnnotationPipeline(
     allNominalPrompts,
