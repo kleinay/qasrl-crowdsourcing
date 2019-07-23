@@ -93,14 +93,15 @@ class QASRLGenerationClient[SID : Reader : Writer](
   }
 
   @Lenses case class State(
-    isNA: Boolean,
+    isVerbal: Boolean,    // whether the target noun is a verbal nominalization
+    isNA: Boolean,        // a special NA button for cases where no QA is applicable
     selectedVerbForm: String,
     inflectedFormsMap: Map[String, InflectedForms],
     template: QuestionProcessor,
     qas: List[QAPair],
     curFocus: Option[Int])
   object State {
-    val empty: State = State(false, "", Map.empty, null, Nil, None)
+    val empty: State = State(true, false, "", Map.empty, null, Nil, None)
     def initFromResponse(response: QASRLGenerationAjaxResponse): State = response match {
       case QASRLGenerationAjaxResponse(_, sentence, formsList) =>
         // initialize verb2InfForms Map - the keys are those verbs that has inflectedForms
@@ -117,17 +118,9 @@ class QASRLGenerationClient[SID : Reader : Writer](
         val slots = new TemplateStateMachine(sentence, defaultInfForm)
         val template = new QuestionProcessor(slots)
 
-        State(false, firstVerb, verb2InfForms.withDefaultValue(defaultInfForm), template, List(QAPair.empty), None)
+        State(true, false, firstVerb, verb2InfForms.withDefaultValue(defaultInfForm), template, List(QAPair.empty), None)
     }
 
-  }
-
-  def changeSelectedVerb(state: State, newSelectedVerb : String) : State = {
-    val infForms : InflectedForms = state.inflectedFormsMap(newSelectedVerb)
-    val slots = new TemplateStateMachine(state.template.origStateMachine.sentence, infForms)
-    val template = new QuestionProcessor(slots)
-    // re-initialize QAPairs to empty list
-    State(state.isNA, newSelectedVerb, state.inflectedFormsMap, template, List(QAPair.empty), None)
   }
 
   def qaLens(qaIndex: Int) = State.qas
@@ -158,12 +151,22 @@ class QASRLGenerationClient[SID : Reader : Writer](
     val allInputRefs = mutable.Map.empty[Int, html.Element]
     var isBlurEnabled: Boolean = true
 
+    def changeSelectedVerb(state: State, newSelectedVerb : String) : State = {
+      val infForms : InflectedForms = state.inflectedFormsMap(newSelectedVerb)
+      val slots = new TemplateStateMachine(state.template.origStateMachine.sentence, infForms)
+      val template = new QuestionProcessor(slots)
+      // re-initialize QAPairs to empty list
+      allInputRefs.clear() 
+      State(state.isVerbal, state.isNA, newSelectedVerb, state.inflectedFormsMap, template, List(QAPair.empty), None)
+    }
 
     def setBlurEnabled(b: Boolean) = Callback(isBlurEnabled = b)
 
 //    def flipIsNA() = Callback(isNA = !isNA)
     // let's try an Immutable version of isNA as part of State
     def flipIsNA : Callback = scope.modState(s => s.copy(isNA = !s.isNA))
+
+    def flipIsVerbal : Callback = scope.modState(s => s.copy(isVerbal = !s.isVerbal))
 
     def setInputRef(qaIndex: Int): html.Element => Unit =
       (element: html.Element) => allInputRefs.put(qaIndex, element)
@@ -223,7 +226,7 @@ class QASRLGenerationClient[SID : Reader : Writer](
       qaIndex: Int,
       nextPotentialBonus: Double
     ) = s match {
-      case State(isNA, verbForm, infForms, template, qas, curFocus) =>
+      case State(isVerbal, isNA, verbForm, infForms, template, qas, curFocus) =>
         val isFocused = curFocus.nonEmptyAnd(_ == qaIndex)
         val numQAs = qas.size
         val QAPair(question, answers, qaState) = qas(qaIndex)
@@ -579,71 +582,98 @@ class QASRLGenerationClient[SID : Reader : Writer](
 
                             // Is this target a verbal-event noun?
                             <.div(
-                                
+                              <.span("Does the highlighted noun refer to a ",
+                                <.span(Styles.bolded, "verbal"),
+                                " event?    "),
+                              // two buttons - Yes / No
+                              <.span(
+                                Styles.smallButton,
+                                ^.disabled := s.isVerbal,
+                                ^.onClick --> flipIsVerbal,
+                                (^.backgroundColor := Styles.greenButtonColor).when(s.isVerbal),
+                                "Yes"
+                              ),
+                              <.span(
+                                Styles.smallButton,
+                                ^.disabled := !s.isVerbal,
+                                ^.onClick --> flipIsVerbal,
+                                (^.backgroundColor := Styles.redButtonColor).when(!s.isVerbal),
+                                "No"
+                              ),
+
+                              <.p("""Hint: try to see whether it make sense to ask verbal questions about it.""",
+                                """ Use the Question box below.""")
                             ),
 
-                            // Select the verb best corresponding to the nominalization
-                            <.div(
-                              <.span("Please select the best corresponding verb with which you can ask about the target noun: "),
-                              <.select(
-                                ^.marginLeft := "15px",
-                                ^.textAlign := "center",
-                                ^.value := s.selectedVerbForm,
-                                ^.disabled := false,
-                                ^.onChange ==> onVerbChange,
-                                s.inflectedFormsMap.keys.map(toOption).toTagMod
+                            <.div(    // div for all elements that should be hidden when noun not isVerbal
 
-                              )
-                            ),
 
-                            // Show user the verb it is generating questions with
-                            <.div(
-                              <.p(),
-                              <.p("Ask about the noun '" + Text.normalizeToken(sentence(prompt.verbIndex)) + "' using the the verb ",
-                                <.span(Styles.bolded, s.selectedVerbForm),
-                                <.span(":"))
-                            ),
 
-                            // QA fields
-                            <.ul(
-                              Styles.listlessList,
-                              (0 until s.qas.size).toVdomArray(qaIndex =>
-                                <.li(
-                                  ^.key := qaIndex.toString,
-                                  ^.display := "block",
-                                  qaField(s, sentence, qaIndex, nextPotentialBonus)
+                              // Select the verb best corresponding to the nominalization
+                              <.div(
+                                <.span("Select the best corresponding verb with which you can ask about the target noun: "),
+                                <.select(
+                                  ^.marginLeft := "15px",
+                                  ^.textAlign := "center",
+                                  ^.value := s.selectedVerbForm,
+                                  ^.disabled := false,
+                                  ^.onChange ==> onVerbChange,
+                                  s.inflectedFormsMap.keys.map(toOption).toTagMod
+
+                                )
+                              ),
+
+                              // Show user the verb it is generating questions with
+                              <.div(
+                                <.p(),
+                                <.p("Ask about the noun '" + Text.normalizeToken(sentence(prompt.verbIndex)) + "' using the the verb ",
+                                  <.span(Styles.bolded, s.selectedVerbForm),
+                                  <.span(":"))
+                              ),
+
+                              // QA fields
+                              <.ul(
+                                Styles.listlessList,
+                                (0 until s.qas.size).toVdomArray(qaIndex =>
+                                  <.li(
+                                    ^.key := qaIndex.toString,
+                                    ^.display := "block",
+                                    qaField(s, sentence, qaIndex, nextPotentialBonus)
+                                  )
+                                )
+                              ),
+                              // new button for "N/A" option (Not Applicable - no QAs for this noun)
+                              <.p(
+                                <.div(
+                                  Styles.unselectable,
+//                                  ^.float := "left",
+                                  ^.minHeight := "30px",
+                                  ^.marginTop := "5px",
+                                  ^.marginLeft := "10px",
+                                  ^.marginBottom := "6px",
+                                  ^.border := "2px solid",
+                                  ^.borderRadius := "2px",
+                                  ^.textAlign := "center",
+                                  ^.width := "460px",
+                                  ^.disabled := !s.isVerbal,
+                                  (^.backgroundColor := "#FFB100").when(s.isNA && s.isVerbal),
+                                  ^.onClick --> flipIsNA,
+                                  "No Question-Answer pair is applicable"
+                                )
+                              ),
+                              // Bonus information
+                              <.p(
+                                "Potential bonus so far: ",
+                                <.span(
+                                  Styles.goodGreen.when(curPotentialBonus > 0),
+                                  Styles.bolded.when(curPotentialBonus > 0),
+                                  s"${math.round(100 * curPotentialBonus).toInt}c"
                                 )
                               )
-                            )
-                          ),
-                          <.p(
-                            ^.marginTop := "5px",
-                            "Potential bonus so far: ",
-                            <.span(
-                              Styles.goodGreen.when(curPotentialBonus > 0),
-                              Styles.bolded.when(curPotentialBonus > 0),
-                              s"${math.round(100 * curPotentialBonus).toInt}c"
-                            )
-                          ),
+                            // all of this should be hidden when noun is not verbal
+                            ).when(s.isVerbal)
 
-                          // new button for "N/A" option (Not Applicable - no QAs for this noun)
-                          <.p(
-                            <.div(
-                              Styles.unselectable,
-                              ^.float := "left",
-                              ^.minHeight := "30px",
-                              ^.marginLeft := "10px",
-                              ^.marginBottom := "6px",
-                              ^.border := "2px solid",
-                              ^.borderRadius := "2px",
-                              ^.textAlign := "center",
-                              ^.width := "460px",
-                              (^.backgroundColor := "#FFB100").when(s.isNA),
-                              ^.onClick --> flipIsNA,
-                              "No Question-Answer pair is applicable"
-                            )
-                          )
-                        ),
+                        )),
 
                         // Feedback text-area
                         <.div(
@@ -662,14 +692,16 @@ class QASRLGenerationClient[SID : Reader : Writer](
                           ^.classSet1("btn btn-primary btn-lg btn-block"),
                           ^.margin := "5px",
                           ^.`type` := "submit",
-                          ^.disabled := isNotAssigned || (getAllCompleteQAPairs(s).isEmpty && !s.isNA)),
+                          ^.disabled := isNotAssigned ||
+                                        (getAllCompleteQAPairs(s).isEmpty && !s.isNA && s.isVerbal),
                           ^.id := FieldLabels.submitButtonLabel,
                           ^.value := (
                             if(isNotAssigned) "You must accept the HIT to submit results"
-                            else if(getAllCompleteQAPairs(s).isEmpty && !s.isNA) "You must write and answer at least one question to submit results, or toggle Not Applicable"
+                            else if(getAllCompleteQAPairs(s).isEmpty && !s.isNA && s.isVerbal) "You must write and answer at least one question to submit results, or toggle Not Applicable"
                             else "Submit"
                           )
                         )
+                      )
                   }))
           }))
     }

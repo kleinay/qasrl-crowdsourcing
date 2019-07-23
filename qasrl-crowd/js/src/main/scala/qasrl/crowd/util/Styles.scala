@@ -1,6 +1,7 @@
 package qasrl.crowd.util
 
 import scalacss.DevDefaults._
+
 import scala.language.postfixOps
 
 object Styles extends StyleSheet.Inline {
@@ -61,4 +62,17 @@ object Styles extends StyleSheet.Inline {
   val underlined = style(
     textDecoration := "underline"
   )
+
+  val smallButton = style(
+    Styles.unselectable,
+    minHeight :=! "30px",
+    marginLeft :=! "3px",
+    border :=! "2px solid",
+    borderRadius :=! "2px",
+    textAlign :=! "center",
+    width :=! "45px"
+  )
+
+  val greenButtonColor : String = "#1a9e15"
+  val redButtonColor : String = "#F00000"
 }
