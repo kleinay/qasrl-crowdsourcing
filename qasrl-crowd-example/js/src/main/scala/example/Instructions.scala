@@ -51,5 +51,18 @@ trait Instructions {
         <.span(answer)
       )
     )
+
+  def spanWithTooltip(spanText : String, tooltipText : String) =
+    <.span(
+      TagMod(
+        Styles.underlined,
+        dataToggle := "tooltip",
+        dataPlacement := "top",
+        ^.title := tooltipText).when(tooltipText.nonEmpty),
+      spanText
+    )
+
+
+
 }
 

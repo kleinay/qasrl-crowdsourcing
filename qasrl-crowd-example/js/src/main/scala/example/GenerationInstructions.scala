@@ -24,25 +24,89 @@ object GenerationInstructions extends Instructions {
     <.p(Styles.badRed,
       """Read through all of the instructions and make sure you understand the interface controls before beginning.
         |A full understanding of the requirements will help make sure
-        |validators approve your work and you can retain your qualification.""".stripMargin),
+        |we approve your work and you can retain your qualification.""".stripMargin),
     <.p("""This task is for an academic research project of natural language processing.
-        We wish to deconstruct the meanings of nouns in English sentences into lists of questions and answers.
-        You will be presented with a selection of English text with a target noun written in bold.
-        The target noun should correspond to some event or action, and it is commonly derived from a verb."""),
-    <.p("""You will write questions about the noun and highlight their answers in the original sentence. """),
-    <.p(<.b(""" Note: it takes exactly 2 clicks to highlight each answer; see the Interface & Controls tab for details. """)),
-    <.p("""The questions are generated using a verb form related to the target noun. """,
-      """ Questions are required to follow a strict format, which is enforced by autocomplete functionality in the interface. """,
-      """ For example, the prompt below should elicit the following questions and answers: """),
+          We wish to extract the meaning of special "verbal" nouns using questions and answers.
+          You will be presented with an English sentence with a highlighted target noun."""),
+    <.p("""Your task is twofold. """,
+      <.br(),
+      " (1) ",
+      <.span(Styles.bolded, """ Is Verbal: """),
+      """ Determine whether, in context, the target corresponds to some verb-related """,
+      spanWithTooltip("event",
+        "We use the term “event” in the widest meaning possible - everything that can be denoted by a verb."),
+      """(Yes / No); and select the best corresponding verb from a dropdown list of candidates. """,
+      <.br(),
+      " (2) ",
+      <.span(Styles.bolded, """ Q-A Generation: """),
+      """ Write questions about the target using the best corresponding verb,
+        |and provide their answers by selecting spans in the sentence.""".stripMargin
+    ),
+
+    // Example
+    <.p(""" For example, the prompt below should elicit the following response: """),
     <.blockquote(
       ^.classSet1("blockquote"),
       "The embassy suffered less ", <.span(Styles.bolded, " damage "), " from the blast last week than one could expect. "),
+    <.span("Does the highlighted noun refer to a verbal event? ",
+      <.span(Styles.goodGreen, "Yes"),
+      <.br()
+    ),
+    <.span("Best corresponding verb: ",
+      <.span(Styles.specialWord, "damage"),
+      <.br()
+    ),
+    <.span(Styles.bolded, "Q-A Generation:"),
     <.ul(
       <.li("What damaged something? --> the blast"),
       <.li("What was damaged? --> The embassy"),
       <.li("When did something damage something? --> last week")
     ),
-    <.h2("Guidelines"),
+
+    // Specifications
+    <.h2("Specifications"),
+    <.h4("Is Verbal"),
+    <.ol(
+      <.li(
+        """The best criteria for defining whether a target noun corresponds to a verbal event
+          |is using the Q-A test: such noun instance is denoting
+          |an action, process, experience, or an outcome of these, in a way that allows one
+          |to ask verbal questions about it.
+          |In the example above, the """.stripMargin,
+        <.span(Styles.niceBlue, "damage"),
+        """ can be described as an event of damaging, thus proper for asking questions
+          |like "what damaged?" or "what was damaged?".""".stripMargin
+      ),
+      <.li(
+        """If the target isn’t “verbal”, toggle “No” and submit.
+          |If it is, in most cases you can ask verbal questions about it,
+          |for which the answers are fragments of the sentence. """.stripMargin
+      ),
+      <.li(
+        """The best corresponding verb probably has “family-resemblance” to the noun.
+          |The verb you select will dominate the questions you could generate in the """.stripMargin,
+        <.span(Styles.bolded, """Q-A generation"""),
+        """part."""
+      )
+    ),
+    <.h4("Q-A Generation"),
+    <.ol(
+      <.li(
+        """Questions are required to follow a strict format, which is enforced by
+          |autocomplete functionality in the interface
+          |(more details in the Question Format tab).""".stripMargin),
+      <.li(
+        """Answers are selected highlighting spans in the sentence.
+          |It takes exactly 2 clicks to highlight each answer;
+          |read the Interface & Controls tab for details.""".stripMargin),
+      <.li(
+        """If the target is a verbal event,
+          |but no question regarding it is answerable by the sentence, toggle """.stripMargin,
+        <.i("No Q-A Applicable."))
+    ),
+
+        // Guidelines
+    <.h2("Q-A Guidelines"),
     <.ol(
       <.li(
         <.span(Styles.bolded, "Correctness. "),
@@ -52,8 +116,10 @@ object GenerationInstructions extends Instructions {
         <.span(Styles.goodGreen, "the blast damaged something, "), """ which is valid, while """,
         <.span(Styles.bolded, "What damaged? --> the blast"), """ would become """,
         <.span(Styles.badRed, "the blast damaged, "), s""" which is ungrammatical, so it is invalid.
-           Your questions will be judged by other annotators, and you must retain an accuracy of
-           ${(100.0 * generationAccuracyBlockingThreshold).toInt}% in order to remain qualified. """),
+           Your questions will be judged by other annotators, and you must retain """,
+        // s"""an accuracy of ${(100.0 * generationAccuracyBlockingThreshold).toInt}% """,
+        """a reasonable agreement rate with others """,
+        """in order to remain qualified. """),
       <.li(
         <.span(Styles.bolded, "Event-relevance. "),
         s"""The answer to a question must pertain to the participants, time, place, reason, etc., of """,
@@ -69,20 +135,16 @@ object GenerationInstructions extends Instructions {
         " the time that he made the promise, but rather the time that he might come."),
       <.li(
         <.span(Styles.bolded, "Exhaustiveness. "),
-        s"""You must write as many questions, and as many answers to each question, as possible
-            (up to ${settings.generationMaxQuestions} questions).
-           Each HIT will require you to write at least one question, and you must write more than
-           ${settings.generationCoverageQuestionsPerVerbThreshold} questions per target
-           on average in order to remain qualified for the HIT. You will be awarded a bonus for each new question,
+        s"""You must write as many questions, and as many answers to each question, as possible.
+           You will be awarded a bonus for each new question,
            starting at ${generationRewardCents}c and going up by 1c for each additional question.
-           However, note that none of the answers to your questions may overlap.
-           If there is more than one possible question that has the same answer, just write one of them."""
+           However, note that none of the answers to your questions may overlap. """
+          //"""If there is more than one possible question that has the same answer, just write one of them."""
       )
     ),
-    <.p("Occasionally, you may get a bolded word that isn't corresponding to an event," +
-      " or is hard or impossible to write questions about using the provided verb. ",
-      " In this case, please do your best to come up with one question, even if it is nonsensical. ",
-      " While it will count against your accuracy, this case is rare enough that it shouldn't matter. ")
+    // additional comments
+//    <.p("Please check out the Examples tab for a better understanding of the task."),
+    <.p("")
   )
 
 

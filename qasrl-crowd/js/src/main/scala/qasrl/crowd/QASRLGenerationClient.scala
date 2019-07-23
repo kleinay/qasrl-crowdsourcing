@@ -642,7 +642,7 @@ class QASRLGenerationClient[SID : Reader : Writer](
                                   )
                                 )
                               ),
-                              // new button for "N/A" option (Not Applicable - no QAs for this noun)
+                              // new button for "N/A" option (No Q-A Applicable for this noun in the sentence)
                               <.p(
                                 <.div(
                                   Styles.unselectable,
@@ -658,7 +658,7 @@ class QASRLGenerationClient[SID : Reader : Writer](
                                   ^.disabled := !s.isVerbal,
                                   (^.backgroundColor := "#FFB100").when(s.isNA && s.isVerbal),
                                   ^.onClick --> flipIsNA,
-                                  "No Question-Answer pair is applicable"
+                                  "No Q-A Applicable"
                                 )
                               ),
                               // Bonus information

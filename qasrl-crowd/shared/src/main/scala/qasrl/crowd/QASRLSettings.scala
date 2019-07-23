@@ -13,7 +13,7 @@ trait QASRLSettings {
 
   // annotation pipeline hyperparameters
 
-  val generationRewardCents = 5
+  val generationRewardCents = 4
   def generationReward = generationRewardCents * 0.01
 
   def generationFirstQBonusCents = generationRewardCents
