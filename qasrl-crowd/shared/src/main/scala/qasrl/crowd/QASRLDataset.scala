@@ -61,6 +61,8 @@ import monocle.macros._
 @Lenses case class QASRLSentenceEntry(
   sentenceId: String,
   sentenceTokens: Vector[String],
+  isVerbal: Boolean,
+  verbForm: String,
   labels: List[QASRLLabel]
 )
 
@@ -114,6 +116,8 @@ object QASRLDataset {
                 QASRLSentenceEntry(
                   sentenceId,
                   xe.sentenceTokens,
+                  true, // todo
+                  "do", // todo
                   combinedLabels)
               case (Some(xe), None) => xe
               case (None, Some(ye)) => ye

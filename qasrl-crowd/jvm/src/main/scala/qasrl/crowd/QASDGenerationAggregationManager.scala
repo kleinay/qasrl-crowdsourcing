@@ -33,9 +33,9 @@ class QASDGenerationAggregationManager[SID : Reader : Writer](
   var genApprovedAssingments =
     annotationDataService.loadLiveData (genAssignmentAggregationStatusFilename)
     .map (_.mkString)
-    .map (read[Map[String, List[Assignment[List[VerbQA]]]]] )
+    .map (read[Map[String, List[Assignment[QANomResponse]]]] )
     .toOption.getOrElse {
-      Map.empty[String, List[Assignment[List[VerbQA]]]]
+      Map.empty[String, List[Assignment[QANomResponse]]]
     }
 
   // save table of approved (=finished) genAssignments to file
@@ -43,18 +43,19 @@ class QASDGenerationAggregationManager[SID : Reader : Writer](
     Try (
     annotationDataService.saveLiveData (
     genAssignmentAggregationStatusFilename,
-    write[Map[String, List[Assignment[List[VerbQA]]]]] (genApprovedAssingments) )
+    write[Map[String, List[Assignment[QANomResponse]]]] (genApprovedAssingments) )
     ).toOptionLogging (logger).foreach (_ => logger.info ("generation assignments aggregation data saved.") )
   }
 
   // handle generation hit whose assignments were all completed
   def handleCompletedGenHIT(hit: HIT[QASRLGenerationPrompt[SID]],
-                            allAssignments: List[Assignment[List[VerbQA]]]) : Unit = {
+                            allAssignments: List[Assignment[QANomResponse]]) : Unit = {
     // aggregate assignments' ids and responses
     val genAssignmentIds = allAssignments.map(_.assignmentId)
-    val allQAResponses = allAssignments.map(_.response).flatten
+    val allQANomResponses : List[QANomResponse] = allAssignments.map(_.response)
+    val allQAsFromResponses : List[VerbQA] = allQANomResponses.map(_.qas).flatten  // take all qas from all respondents
     // generate validation prompt corresponding to generation HIT
-    val validationPrompt = QASRLValidationPrompt (hit.prompt, hit.hitTypeId, hit.hitId, genAssignmentIds, allQAResponses)
+    val validationPrompt = QASRLValidationPrompt (hit.prompt, hit.hitTypeId, hit.hitId, genAssignmentIds, allQANomResponses)
     validationActor ! validationHelper.Message.AddPrompt (validationPrompt)
 
     // when only single Gen worker, don't inform genAgreementActor
@@ -73,7 +74,7 @@ class QASDGenerationAggregationManager[SID : Reader : Writer](
 
   // handle new approved generation assignment
   def handleApprovedGenAssignment (hit: HIT[QASRLGenerationPrompt[SID]],
-                                   assignment: Assignment[List[VerbQA]] ) : Unit = {
+                                   assignment: Assignment[QANomResponse] ) : Unit = {
     val genHITId = hit.hitId
     // add assignment to genApprovedAssingments map
     genApprovedAssingments.get (genHITId) match {

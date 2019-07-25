@@ -111,8 +111,8 @@ class QASRLGenerationAgreementManager[SID : Reader : Writer](
       // for a specific generators vs. the other generators
       val agreementJudgments : Vector[GenAgreementJudgment] = {
       // Judgment for each question
-        for (qa <- response)
-          yield GenAgreementJudgment(assignment.hitId, qa.question, hasAgreement(qa, otherResponses))
+        for (qa <- response.qas)
+          yield GenAgreementJudgment(assignment.hitId, qa.question, hasAgreement(qa, otherResponses.map(_.qas)))
       }.toVector
 
 

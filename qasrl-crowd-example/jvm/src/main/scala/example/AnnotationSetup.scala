@@ -1,5 +1,6 @@
 package example
 
+import com.github.tototoshi.csv.{CSVReader, CSVWriter}
 import cats._
 import cats.implicits._
 import qasrl.crowd.util.Tokenizer
@@ -189,10 +190,36 @@ class AnnotationSetup(
     validationAgreementDisqualTypeLabel = None,
     sdvalidationAgreementDisqualTypeLabel = Some("Non-verb"))
 
+  // Saving the crowd annotations (generation)
+  // from Pavel
+  val qasrlColumns = List(
+    "qasrl_id", "verb_idx", "verb",
+    "worker_id", "assign_id", "source_assign_id",
+    "is_verbal", "verb_form",
+    "question", "is_redundant", "answer_range", "answer",
+    "wh", "subj", "obj", "obj2", "aux", "prep", "verb_prefix",
+    "is_passive", "is_negated")
+
+  def saveGenerationData(
+                          filename: String,
+                          genInfos: List[HITInfo[QASRLGenerationPrompt[SentenceId], QANomResponse]]
+                        ): Unit = {
+    val contents = DataIO.makeGenerationQAPairTSV(SentenceId.toString, genInfos)
+    val path = liveDataPath.resolve(filename).toString
+    val csv = CSVWriter.open(path, encoding = "utf-8")
+    csv.writeRow(qasrlColumns)
+    for (qasrl <- contents) {
+      // will iterate in order over the case class fields
+      csv.writeRow(qasrl.productIterator.toList)
+    }
+  }
+
+
+
   def saveAnnotationData[A](
     filename: String,
     ids: Vector[SentenceId],
-    genInfos: List[HITInfo[QASRLGenerationPrompt[SentenceId], List[VerbQA]]],
+    genInfos: List[HITInfo[QASRLGenerationPrompt[SentenceId], QANomResponse]],
     valInfos: List[HITInfo[QASRLValidationPrompt[SentenceId], List[QASRLValidationAnswer]]],
     labelMapper: QuestionLabelMapper[String, A],
     labelRenderer: A => String
@@ -212,7 +239,7 @@ class AnnotationSetup(
   def saveAnnotationDataReadable(
     filename: String,
     ids: Vector[SentenceId],
-    genInfos: List[HITInfo[QASRLGenerationPrompt[SentenceId], List[VerbQA]]],
+    genInfos: List[HITInfo[QASRLGenerationPrompt[SentenceId], QANomResponse]],
     valInfos: List[HITInfo[QASRLValidationPrompt[SentenceId], List[QASRLValidationAnswer]]]
   ) = {
     saveOutputFile(

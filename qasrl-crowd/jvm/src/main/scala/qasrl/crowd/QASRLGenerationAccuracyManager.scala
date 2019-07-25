@@ -57,10 +57,10 @@ class QASRLGenerationAccuracyManager[SID : Reader : Writer](
     ).toOptionLogging(logger).foreach(_ => logger.info("Worker stats data saved."))
   }
 
-  private def getGenAssignmentsFromValPrompt(valPrompt: QASRLValidationPrompt[SID]): List[Assignment[List[VerbQA]]] = {
+  private def getGenAssignmentsFromValPrompt(valPrompt: QASRLValidationPrompt[SID]): List[Assignment[QANomResponse]] = {
     val assignmentsForHIT = for {
       hit <- hitDataService.getHIT[QASRLGenerationPrompt[SID]](valPrompt.sourceHITTypeId, valPrompt.sourceHITId).toOptionLogging(logger).toList
-      assignment <- hitDataService.getAssignmentsForHIT[List[VerbQA]](valPrompt.sourceHITTypeId, valPrompt.sourceHITId).get
+      assignment <- hitDataService.getAssignmentsForHIT[QANomResponse](valPrompt.sourceHITTypeId, valPrompt.sourceHITId).get
     } yield assignment
     assignmentsForHIT.filter(asmnt => valPrompt.sourceAssignmentId.contains(asmnt.assignmentId))
   }
@@ -94,11 +94,11 @@ class QASRLGenerationAccuracyManager[SID : Reader : Writer](
     }
   }
 
-  def grantBonusForGenerator(genAssignment: Assignment[List[VerbQA]], validQuestions : List[String]) : Unit = {
+  def grantBonusForGenerator(genAssignment: Assignment[QANomResponse], validQuestions : List[String]) : Unit = {
     // award bonus for the worker of the generation assignment, for its valid questions
-    val numQAsProvided = genAssignment.response.size
+    val numQAsProvided = genAssignment.response.qas.size
     // count how many of generated questions are valid (according to validators)
-    val genQuestions = genAssignment.response.map(_.question)
+    val genQuestions = genAssignment.response.qas.map(_.question)
     val numQAsValid = genQuestions.count(validQuestions.contains(_))
     val bonusAwarded = settings.generationBonus(numQAsValid)
     val bonusCents = dollarsToCents(bonusAwarded)

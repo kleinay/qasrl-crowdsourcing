@@ -35,28 +35,29 @@ object GenerationInstructions extends Instructions {
       """ Determine whether, in context, the target corresponds to some verb-related """,
       spanWithTooltip("event",
         "We use the term “event” in the widest meaning possible - everything that can be denoted by a verb."),
-      """(Yes / No); and select the best corresponding verb from a dropdown list of candidates. """,
+      """ (Yes / No); and select the best corresponding verb from a dropdown list of candidates. """,
       <.br(),
       " (2) ",
-      <.span(Styles.bolded, """ Q-A Generation: """),
+      <.span(Styles.bolded,  """ Q-A Generation: """),
       """ Write questions about the target using the best corresponding verb,
-        |and provide their answers by selecting spans in the sentence.""".stripMargin
+        |and provide their answers by highlighting spans in the sentence.""".stripMargin
     ),
 
     // Example
     <.p(""" For example, the prompt below should elicit the following response: """),
     <.blockquote(
       ^.classSet1("blockquote"),
-      "The embassy suffered less ", <.span(Styles.bolded, " damage "), " from the blast last week than one could expect. "),
-    <.span("Does the highlighted noun refer to a verbal event? ",
+      "The embassy suffered less ", <.span(Styles.niceBlue, Styles.underlined, " damage "), " from the blast last week than one could expect. "),
+    <.span(
+      <.i("Does the highlighted noun refer to a verbal event? "),
       <.span(Styles.goodGreen, "Yes"),
       <.br()
     ),
-    <.span("Best corresponding verb: ",
+    <.span(<.i("Best corresponding verb: "),
       <.span(Styles.specialWord, "damage"),
       <.br()
     ),
-    <.span(Styles.bolded, "Q-A Generation:"),
+    <.i("Q-A Generation:"),
     <.ul(
       <.li("What damaged something? --> the blast"),
       <.li("What was damaged? --> The embassy"),
@@ -66,7 +67,7 @@ object GenerationInstructions extends Instructions {
     // Specifications
     <.h2("Specifications"),
     <.h4("Is Verbal"),
-    <.ol(
+    <.ul(
       <.li(
         """The best criteria for defining whether a target noun corresponds to a verbal event
           |is using the Q-A test: such noun instance is denoting
@@ -90,7 +91,7 @@ object GenerationInstructions extends Instructions {
       )
     ),
     <.h4("Q-A Generation"),
-    <.ol(
+    <.ul(
       <.li(
         """Questions are required to follow a strict format, which is enforced by
           |autocomplete functionality in the interface
@@ -109,17 +110,25 @@ object GenerationInstructions extends Instructions {
     <.h2("Q-A Guidelines"),
     <.ol(
       <.li(
-        <.span(Styles.bolded, "Correctness. "),
-        """Each question-answer pair must satisfy the litmus test that if you substitute the answer back into the question,
-           the result is a grammatical statement, and it is true according to the sentence given. For example, """,
-        <.span(Styles.bolded, "What damaged something? --> the blast"), """ becomes """,
-        <.span(Styles.goodGreen, "the blast damaged something, "), """ which is valid, while """,
-        <.span(Styles.bolded, "What damaged? --> the blast"), """ would become """,
-        <.span(Styles.badRed, "the blast damaged, "), s""" which is ungrammatical, so it is invalid.
-           Your questions will be judged by other annotators, and you must retain """,
-        // s"""an accuracy of ${(100.0 * generationAccuracyBlockingThreshold).toInt}% """,
-        """a reasonable agreement rate with others """,
-        """in order to remain qualified. """),
+        <.span(
+          <.span(Styles.bolded, "Correctness. "),
+          <.span("""Each question-answer pair must satisfy the litmus test that if you substitute
+            the answer back into the question, the result is a """),
+          <.i("""grammatical """),
+          <.span("""statement, and it is """),
+          <.i("""certainly true """),
+          <.span("""according to the sentence given. For example, """),
+          <.span(Styles.bolded, "What damaged something? --> the blast"), """ becomes """,
+          <.span(Styles.goodGreen, "the blast damaged something, "), """ which is valid, while """,
+          <.span(Styles.bolded, "What damaged? --> the blast"), """ would become """,
+          <.span(Styles.badRed, "the blast damaged, "),
+          <.span(s""" which is ungrammatical, so it is invalid.
+                Your questions will be judged by other annotators, and you must retain
+                a reasonable agreement rate
+                with others in order to remain qualified. """)
+          // s"""an accuracy of ${(100.0 * generationAccuracyBlockingThreshold).toInt}% """
+        )
+      ),
       <.li(
         <.span(Styles.bolded, "Event-relevance. "),
         s"""The answer to a question must pertain to the participants, time, place, reason, etc., of """,
@@ -132,10 +141,11 @@ object GenerationInstructions extends Instructions {
         """ you may """, <.span(Styles.bolded, " not "), " write ",
         <.span(Styles.badRed, " When did someone promise to do something? --> tomorrow, "),
         """ because tomorrow is """, <.i(" not "),
-        " the time that he made the promise, but rather the time that he might come."),
+        " the time that he made the promise, but rather the time that he might come."
+      ),
       <.li(
         <.span(Styles.bolded, "Exhaustiveness. "),
-        s"""You must write as many questions, and as many answers to each question, as possible.
+        s"""You should write as many questions, and as many answers to each question, as possible.
            You will be awarded a bonus for each new question,
            starting at ${generationRewardCents}c and going up by 1c for each additional question.
            However, note that none of the answers to your questions may overlap. """

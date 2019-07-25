@@ -69,7 +69,7 @@ class EvaluationDataExporter[SID : HasTokens](
               )
           }
         }
-        QASRLSentenceEntry(sentenceIdString, sentenceTokens, qaLabelLists.flatten)
+        QASRLSentenceEntry(sentenceIdString, sentenceTokens, true, "evaluate", qaLabelLists.flatten)
       }
     }
   )

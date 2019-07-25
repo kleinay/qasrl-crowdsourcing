@@ -613,8 +613,9 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
 
   lazy val sampleValPrompt = QASRLValidationPrompt[SID](
     allVerbPrompts.head, "", "", List(""),
-    List(VerbQA(3, "Who expects something?", List(Span(0, 0), Span(2, 2))),
-         VerbQA(3, "What does someone expects?", List(Span(4, 15)))))
+    List(QANomResponse(3,true,"expect",
+      List( VerbQA(3, "Who expects something?", List(Span(0, 0), Span(2, 2))),
+            VerbQA(3, "What does someone expects?", List(Span(4, 15)))))))
 
   lazy val valTaskSpec = TaskSpecification.NoWebsockets[QASRLValidationPrompt[SID], List[QASRLValidationAnswer], QASRLValidationAjaxRequest[SID]](
     settings.validationTaskKey, valHITType, valAjaxService, Vector(sampleValPrompt),
@@ -653,7 +654,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
 
   lazy val sdsampleValPrompt = QASRLValidationPrompt[SID](
     allNominalPrompts.head, "", "", List(""),
-    List(VerbQA(18, "What kind of basis?", List(Span(17, 17)))))
+    List(QANomResponse(18,false, "do", List())))
 
   lazy val sdvalTaskSpec = TaskSpecification.NoWebsockets[QASRLValidationPrompt[SID], List[QASRLValidationAnswer], QASRLValidationAjaxRequest[SID]](
     settings.sdvalidationTaskKey, sdvalHITType, sdvalAjaxService, Vector(sdsampleValPrompt),
@@ -752,7 +753,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
       sdgenAggregatorPeek
     })
 
-  val genTaskSpec = TaskSpecification.NoWebsockets[QASRLGenerationPrompt[SID], List[VerbQA], QASRLGenerationAjaxRequest[SID]](
+  val genTaskSpec = TaskSpecification.NoWebsockets[QASRLGenerationPrompt[SID], QANomResponse, QASRLGenerationAjaxRequest[SID]](
     settings.generationTaskKey, genHITType, genAjaxService, allVerbPrompts,
     taskPageHeadElements = taskPageHeadLinks,
     taskPageBodyElements = taskPageBodyLinks,
@@ -781,7 +782,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   val genActor = actorSystem.actorOf(Props(new TaskManager(genHelper, genManager)))
 
   //**** lets try to create another HITType and TaskSepc for SDGen (Sem-Dep-Generation)
-  val sdgenTaskSpec = TaskSpecification.NoWebsockets[QASRLGenerationPrompt[SID], List[VerbQA], QASRLGenerationAjaxRequest[SID]](
+  val sdgenTaskSpec = TaskSpecification.NoWebsockets[QASRLGenerationPrompt[SID], QANomResponse, QASRLGenerationAjaxRequest[SID]](
     settings.sdgenerationTaskKey, sdgenHITType, sdgenAjaxService, allSDPrompts,
     taskPageHeadElements = taskPageHeadLinks,
     taskPageBodyElements = taskPageBodyLinks,
@@ -901,9 +902,9 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   // for use while it's running. Ideally instead of having to futz around at the console calling these functions,
   // in the future you could have a nice dashboard UI that will help you examine common sources of issues
 
-  def allGenInfos = hitDataService.getAllHITInfo[QASRLGenerationPrompt[SID], List[VerbQA]](genTaskSpec.hitTypeId).get
+  def allGenInfos = hitDataService.getAllHITInfo[QASRLGenerationPrompt[SID], QANomResponse](genTaskSpec.hitTypeId).get
 
-  def allSDGenInfos = hitDataService.getAllHITInfo[QASRLGenerationPrompt[SID], List[VerbQA]](sdgenTaskSpec.hitTypeId).get
+  def allSDGenInfos = hitDataService.getAllHITInfo[QASRLGenerationPrompt[SID], QANomResponse](sdgenTaskSpec.hitTypeId).get
 
   def allValInfos = hitDataService.getAllHITInfo[QASRLValidationPrompt[SID], List[QASRLValidationAnswer]](valTaskSpec.hitTypeId).get
 
@@ -924,7 +925,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   def infosForGenWorker(workerId: String) = {
     val scored = for {
       hi <- allValInfos
-      sourceAssignment <- hitDataService.getAssignmentsForHIT[List[VerbQA]](genTaskSpec.hitTypeId, hi.hit.prompt.sourceHITId).toOptionLogging(logger).toList.flatten
+      sourceAssignment <- hitDataService.getAssignmentsForHIT[QANomResponse](genTaskSpec.hitTypeId, hi.hit.prompt.sourceHITId).toOptionLogging(logger).toList.flatten
       if sourceAssignment.assignmentId == hi.hit.prompt.sourceAssignmentId
       if sourceAssignment.workerId == workerId
     } yield (hi, sourceAssignment.submitTime)
@@ -945,7 +946,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   def renderValidation(info: HITInfo[QASRLValidationPrompt[SID], List[QASRLValidationAnswer]]) = {
     val sentence = info.hit.prompt.genPrompt.id.tokens
     val genWorkerString = hitDataService
-      .getAssignmentsForHIT[List[VerbQA]](genTaskSpec.hitTypeId, info.hit.prompt.sourceHITId).get
+      .getAssignmentsForHIT[QANomResponse](genTaskSpec.hitTypeId, info.hit.prompt.sourceHITId).get
       .find(_.assignmentId == info.hit.prompt.sourceAssignmentId)
       .fold("")(_.workerId)
     Text.render(sentence) + "\n" +

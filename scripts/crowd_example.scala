@@ -14,7 +14,7 @@ import nlpdata.util.Text
 import nlpdata.util.HasTokens.ops._
 import nlpdata.structure.Word
 
-val label = "nominals_unifiedUI_exp1_14_07_19"
+val label = "nominals_unifiedUI_exp2_25_07_19"
 
 val isProduction = false // sandbox. change to true for production
 val domain = "u.cs.biu.ac.il/~stanovg/qasrl" // change to your domain, or keep localhost for testing

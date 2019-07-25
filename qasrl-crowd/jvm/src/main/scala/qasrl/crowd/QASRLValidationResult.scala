@@ -14,7 +14,7 @@ case class QASRLValidationFinished[SID](
   validQuestions: List[String])
 
 case class QASRLGenHITFinished(
-  assignment: Assignment[List[VerbQA]],
-  response: List[VerbQA],   // the generator's QAs
-  otherResponses: List[List[VerbQA]] // the other generators' QAs
+  assignment: Assignment[QANomResponse],
+  response: QANomResponse,   // the generator's QAs
+  otherResponses: List[QANomResponse] // the other generators' QAs
 )

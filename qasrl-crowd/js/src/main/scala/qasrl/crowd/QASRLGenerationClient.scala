@@ -50,9 +50,9 @@ class QASRLGenerationClient[SID : Reader : Writer](
   instructions: VdomTag)(
   implicit settings: QASRLSettings,
   promptReader: Reader[QASRLGenerationPrompt[SID]], // macro serializers don't work for superclass constructor parameters
-  responseWriter: Writer[List[VerbQA]], // same as above
+  responseWriter: Writer[QANomResponse], // same as above
   ajaxRequestWriter: Writer[QASRLGenerationAjaxRequest[SID]] // "
-) extends TaskClient[QASRLGenerationPrompt[SID], List[VerbQA], QASRLGenerationAjaxRequest[SID]] {
+) extends TaskClient[QASRLGenerationPrompt[SID], QANomResponse, QASRLGenerationAjaxRequest[SID]] {
 
   // for monoid on Callback
   implicit def appMonoid[F[_]: Applicative, A: Monoid] = Applicative.monoid[F, A]
@@ -217,7 +217,7 @@ class QASRLGenerationClient[SID : Reader : Writer](
       )
 
     def updateResponse: Callback = scope.state.map { st =>
-      setResponse(getAllCompleteQAPairs(st))
+      setResponse(QANomResponse(prompt.verbIndex, st.isVerbal, st.selectedVerbForm, getAllCompleteQAPairs(st)))
     }
 
     def qaField(

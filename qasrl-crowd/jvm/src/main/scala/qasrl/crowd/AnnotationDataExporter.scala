@@ -57,7 +57,7 @@ class AnnotationDataExporter[SID : HasTokens](
           val qaLabelLists = for {
             HITInfo(genHIT, genAssignments) <- sentenceGenInfos
             genAssignment <- genAssignments
-            qaTuples = genAssignment.response.zip(
+            qaTuples = genAssignment.response.qas.zip(
               valAssignmentsByGenAssignmentId(genAssignment.assignmentId)
                 .map(a => a.response.map(AnswerLabel(workerAnonymizationMapping(a.workerId), _))).transpose
             )
@@ -89,7 +89,29 @@ class AnnotationDataExporter[SID : HasTokens](
                 )
             }
           }
-          QASRLSentenceEntry(sentenceIdString, sentenceTokens, qaLabelLists.flatten)
+          // general util for lists
+          def getCommon[A](list: List[A]): A = {
+            list.groupBy(identity).mapValues(_.size).maxBy(_._2)._1
+          }
+
+          val isVerbalJudgements = for {
+            HITInfo(genHIT, genAssignments) <- sentenceGenInfos
+            genAssignment <- genAssignments
+          } yield {
+            genAssignment.response.isVerbal
+          }
+          val verbFormJudgements = for {
+            HITInfo(genHIT, genAssignments) <- sentenceGenInfos
+            genAssignment <- genAssignments
+          } yield {
+            genAssignment.response.verbForm
+          }
+          val isVerbal = if (isVerbalJudgements.nonEmpty) getCommon(isVerbalJudgements) else true
+          val verbForm = if (isVerbalJudgements.nonEmpty) getCommon(verbFormJudgements) else "---"
+
+          // todo add isVerbal and verbForm fields to QASRLSentenceEntry
+          QASRLSentenceEntry(sentenceIdString, sentenceTokens,
+            isVerbal, verbForm,  qaLabelLists.flatten )
         }
       }
     )

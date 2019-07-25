@@ -105,7 +105,8 @@ lazy val example = crossProject.in(file("qasrl-crowd-example"))
   name := "qasrl-crowd-example",
   version := "0.1-SNAPSHOT"
 ).jvmSettings(commonJVMSettings).jvmSettings(
-  libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.2.3"
+  libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.2.3",
+  libraryDependencies += "com.github.tototoshi" %% "scala-csv" % "1.3.5"
 ).jsSettings(commonJSSettings)
 
 lazy val exampleJS = example.js.dependsOn(qasrlJS, crowdJS)
