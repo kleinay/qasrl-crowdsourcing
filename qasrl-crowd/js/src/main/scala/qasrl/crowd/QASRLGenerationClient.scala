@@ -93,32 +93,21 @@ class QASRLGenerationClient[SID : Reader : Writer](
   }
 
   @Lenses case class State(
-    isVerbal: Boolean,    // whether the target noun is a verbal nominalization
-    isNA: Boolean,        // a special NA button for cases where no QA is applicable
-    selectedVerbForm: String,
-    inflectedFormsMap: Map[String, InflectedForms],
+    isVerbal: Boolean, // whether the target noun is a verbal nominalization
+    isNA: Boolean, // a special NA button for cases where no QA is applicable
+    verbForm: String,
     template: QuestionProcessor,
     qas: List[QAPair],
     curFocus: Option[Int])
   object State {
-    val empty: State = State(true, false, "", Map.empty, null, Nil, None)
+    val empty: State = State(true, false, "", null, Nil, None)
     def initFromResponse(response: QASRLGenerationAjaxResponse): State = response match {
-      case QASRLGenerationAjaxResponse(_, sentence, formsList) =>
-        // initialize verb2InfForms Map - the keys are those verbs that has inflectedForms
-        val verb2InfForms : Map[String, InflectedForms] = prompt.verbForms.zipWithIndex.flatMap {
-          case (verb, index) => formsList(index) match {
-            case Some(inflectedForms) => Some(verb -> inflectedForms)
-            case None => None
-          }}
-          .toMap
-        // initialize StateMachine with the first verbForm or "do"
-        // ("do" is always manually appended to verbForms in AnnotationPipeline)
-        val firstVerb : String = verb2InfForms.keys.head
-        val defaultInfForm : InflectedForms = verb2InfForms(firstVerb)
-        val slots = new TemplateStateMachine(sentence, defaultInfForm)
+      case QASRLGenerationAjaxResponse(_, sentence, inflectedForms) =>
+
+        val slots = new TemplateStateMachine(sentence, inflectedForms.get)
         val template = new QuestionProcessor(slots)
 
-        State(true, false, firstVerb, verb2InfForms.withDefaultValue(defaultInfForm), template, List(QAPair.empty), None)
+        State(true, false, prompt.verbForm, template, List(QAPair.empty), None)
     }
 
   }
@@ -150,15 +139,6 @@ class QASRLGenerationClient[SID : Reader : Writer](
     // mutable backend stuff
     val allInputRefs = mutable.Map.empty[Int, html.Element]
     var isBlurEnabled: Boolean = true
-
-    def changeSelectedVerb(state: State, newSelectedVerb : String) : State = {
-      val infForms : InflectedForms = state.inflectedFormsMap(newSelectedVerb)
-      val slots = new TemplateStateMachine(state.template.origStateMachine.sentence, infForms)
-      val template = new QuestionProcessor(slots)
-      // re-initialize QAPairs to empty list
-      allInputRefs.clear() 
-      State(state.isVerbal, state.isNA, newSelectedVerb, state.inflectedFormsMap, template, List(QAPair.empty), None)
-    }
 
     def setBlurEnabled(b: Boolean) = Callback(isBlurEnabled = b)
 
@@ -219,7 +199,7 @@ class QASRLGenerationClient[SID : Reader : Writer](
       )
 
     def updateResponse: Callback = scope.state.map { st =>
-      setResponse(QANomResponse(prompt.verbIndex, st.isVerbal, st.selectedVerbForm, getAllCompleteQAPairs(st)))
+      setResponse(QANomResponse(prompt.verbIndex, st.isVerbal, prompt.verbForm, getAllCompleteQAPairs(st)))
     }
 
     def qaField(
@@ -228,7 +208,7 @@ class QASRLGenerationClient[SID : Reader : Writer](
       qaIndex: Int,
       nextPotentialBonus: Double
     ) = s match {
-      case State(isVerbal, isNA, verbForm, infForms, template, qas, curFocus) =>
+      case State(isVerbal, isNA, verbForm, template, qas, curFocus) =>
         val isFocused = curFocus.nonEmptyAnd(_ == qaIndex)
         val numQAs = qas.size
         val QAPair(question, answers, qaState) = qas(qaIndex)
@@ -412,7 +392,7 @@ class QASRLGenerationClient[SID : Reader : Writer](
               QASRLGenerationAjaxResponse(
                 GenerationStatSummary(numVerbsCompleted, numQuestionsWritten, workerStatsOpt),
                 sentence,
-                inflectedFormsVec)
+                inflectedForms)
             ) =>
               val questionsPerVerbOpt = if(numVerbsCompleted == 0) None else Some(
                 numQuestionsWritten.toDouble / numVerbsCompleted
@@ -435,18 +415,6 @@ class QASRLGenerationClient[SID : Reader : Writer](
                 remaining = settings.generationAgreementGracePeriod - workerStats.genAgreementJudgments.size
                 if remaining > 0
               } yield remaining
-
-              // functions for select-verb element
-              def toOption(op : String) : VdomElement =
-                <.option(
-                  ^.value := op,
-                  ^.key := op,
-                  op)
-
-              def onVerbChange(e : ReactEventFrom[HTMLSelectElement]) : Callback = {
-                val newVerb : String = e.target.value
-                scope.modState(st => changeSelectedVerb(st, newVerb))
-              }
 
 
               SpanHighlighting(
@@ -610,26 +578,11 @@ class QASRLGenerationClient[SID : Reader : Writer](
                             <.div(    // div for all elements that should be hidden when noun not isVerbal
 
 
-
-                              // Select the verb best corresponding to the nominalization
-                              <.div(
-                                <.span("Select the best corresponding verb with which you can ask about the target noun: "),
-                                <.select(
-                                  ^.marginLeft := "15px",
-                                  ^.textAlign := "center",
-                                  ^.value := s.selectedVerbForm,
-                                  ^.disabled := false,
-                                  ^.onChange ==> onVerbChange,
-                                  s.inflectedFormsMap.keys.map(toOption).toTagMod
-
-                                )
-                              ),
-
                               // Show user the verb it is generating questions with
                               <.div(
                                 <.p(),
                                 <.p("Ask about the noun '" + Text.normalizeToken(sentence(prompt.verbIndex)) + "' using the the verb ",
-                                  <.span(Styles.bolded, s.selectedVerbForm),
+                                  <.span(Styles.bolded, prompt.verbForm),
                                   <.span(":"))
                               ),
 

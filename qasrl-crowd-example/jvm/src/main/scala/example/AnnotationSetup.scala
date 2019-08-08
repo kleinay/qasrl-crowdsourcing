@@ -37,7 +37,7 @@ import io.circe
 case class PromptData(sentence_id : String,
                       tokenized_sentence : Vector[String],
                       nominal_index : Int,
-                      verb_forms : Vector[String])
+                      verb_form : String)
 
 class AnnotationSetup(
   val label: String = "trial",
@@ -111,7 +111,8 @@ class AnnotationSetup(
     val tok_sent : Vector[String] = prompt_map("tokSent").asArray.get.flatMap(_.asString)
     val nominal_index : Int = prompt_map("targetIdx").asNumber.get.toInt.get
     val verb_forms : Vector[String] = prompt_map("verbForms").asArray.get.flatMap(_.asString)
-    PromptData(sent_id, tok_sent, nominal_index, verb_forms)
+    val verb_form : String = if (verb_forms.nonEmpty) verb_forms(0) else ""
+    PromptData(sent_id, tok_sent, nominal_index, verb_form)
   }
 
   val prompts_data : Vector[PromptData] = prompts_json_data.asArray.get.map(decode_prompt)
@@ -125,7 +126,7 @@ class AnnotationSetup(
     p => p.sentence_id -> p.tokenized_sentence).toMap
 
   def promptDataToPrompt(pd : PromptData) : QASRLGenerationPrompt[SentenceId] = {
-    QASRLGenerationPrompt(SentenceId(pd.sentence_id), pd.nominal_index, pd.verb_forms)
+    QASRLGenerationPrompt(SentenceId(pd.sentence_id), pd.nominal_index, pd.verb_form)
   }
   val allNominalPromptsFromInput : Vector[QASRLGenerationPrompt[SentenceId]] = {
     prompts_data.map(promptDataToPrompt)
@@ -161,10 +162,10 @@ class AnnotationSetup(
 
   val numGenerationAssignmentsInProduction = 8   // how many generators?
 
-  // filter nominal prompts - exclude those that have no inflected forms for any of the verb-forms,
+  // filter nominal prompts - exclude those that have no inflected forms for the verb-form,
   // since the qasrl state-machine cannot support it
   def hasVerbalInflection(prompt : QASRLGenerationPrompt[SentenceId]) : Boolean = {
-    prompt.verbForms.exists(vf => inflections.hasInflectedForms(vf.lowerCase))
+    inflections.hasInflectedForms(prompt.verbForm.lowerCase)
   }
 
   val (allNominalPrompts, illegalNominalPrompts) = allNominalPromptsFromInput.partition(hasVerbalInflection)

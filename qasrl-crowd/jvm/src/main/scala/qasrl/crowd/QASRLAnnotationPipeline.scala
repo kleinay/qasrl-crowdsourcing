@@ -499,7 +499,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
 
   lazy val sdgenAjaxService = new Service[QASRLGenerationAjaxRequest[SID]] {
     override def processRequest(request: QASRLGenerationAjaxRequest[SID]) = request match {
-      case QASRLGenerationAjaxRequest(workerIdOpt, QASRLGenerationPrompt(id, verbIndex, verbForms)) =>
+      case QASRLGenerationAjaxRequest(workerIdOpt, QASRLGenerationPrompt(id, verbIndex, verbForm)) =>
         val questionListsOpt = for {
           genManagerP <- Option(sdgenManagerPeek)
           workerId <- workerIdOpt
@@ -527,9 +527,8 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
           workerStatsOpt = workerStatsOpt)
 
         val tokens = id.tokens
-        val inflectedFormsVec = (verbForms++Vector("do")).map(vf =>
-          inflections.getInflectedForms(vf.lowerCase))
-        QASRLGenerationAjaxResponse(stats, tokens, inflectedFormsVec)
+        val inflectedForms = inflections.getInflectedForms(verbForm.lowerCase)
+        QASRLGenerationAjaxResponse(stats, tokens, inflectedForms)
     }
   }
 
@@ -553,7 +552,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
 
   lazy val genAjaxService = new Service[QASRLGenerationAjaxRequest[SID]] {
     override def processRequest(request: QASRLGenerationAjaxRequest[SID]) = request match {
-      case QASRLGenerationAjaxRequest(workerIdOpt, QASRLGenerationPrompt(id, verbIndex, verbForms)) =>
+      case QASRLGenerationAjaxRequest(workerIdOpt, QASRLGenerationPrompt(id, verbIndex, verbForm)) =>
         val questionListsOpt = for {
           genManagerP <- Option(genManagerPeek)
           workerId <- workerIdOpt
@@ -574,8 +573,8 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
 
         val tokens = id.tokens
         // a Vector corresponding to verbForms : Vector[String]
-        val inflectedForms : Vector[Option[InflectedForms]] =
-          verbForms.map(verbForm => inflections.getInflectedForms(verbForm.lowerCase))
+        val inflectedForms : Option[InflectedForms] =
+          inflections.getInflectedForms(verbForm.lowerCase)
         QASRLGenerationAjaxResponse(stats, tokens, inflectedForms)
     }
   }

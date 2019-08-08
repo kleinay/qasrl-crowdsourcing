@@ -35,6 +35,11 @@ object Styles extends StyleSheet.Inline {
     fontWeight.bold
   )
 
+  val verbFormPurple = style(
+    color(c"rgb(153, 0, 153)"),
+    fontWeight.bold
+  )
+
   val badRed = style(
     color(c"rgb(216, 31, 00)"),
     fontWeight.bold

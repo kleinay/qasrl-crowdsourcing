@@ -35,7 +35,7 @@ object GenerationInstructions extends Instructions {
       """ Determine whether, in context, the target corresponds to some verb-related """,
       spanWithTooltip("event",
         "We use the term “event” in the widest meaning possible - everything that can be denoted by a verb."),
-      """ (Yes / No); and select the best corresponding verb from a dropdown list of candidates. """,
+      """ (Yes / No). """,
       <.br(),
       " (2) ",
       <.span(Styles.bolded,  """ Q-A Generation: """),
@@ -57,7 +57,7 @@ object GenerationInstructions extends Instructions {
       <.span(Styles.specialWord, "damage"),
       <.br()
     ),
-    <.i("Q-A Generation:"),
+    <.i("Q-A Generation (using the verb ", <.span(Styles.verbFormPurple, "damage"), "):"),
     <.ul(
       <.li("What damaged something? --> the blast"),
       <.li("What was damaged? --> The embassy"),
@@ -82,12 +82,6 @@ object GenerationInstructions extends Instructions {
         """If the target isn’t “verbal”, toggle “No” and submit.
           |If it is, in most cases you can ask verbal questions about it,
           |for which the answers are fragments of the sentence. """.stripMargin
-      ),
-      <.li(
-        """The best corresponding verb probably has “family-resemblance” to the noun.
-          |The verb you select will dominate the questions you could generate in the """.stripMargin,
-        <.span(Styles.bolded, """Q-A generation"""),
-        """part."""
       )
     ),
     <.h4("Q-A Generation"),
