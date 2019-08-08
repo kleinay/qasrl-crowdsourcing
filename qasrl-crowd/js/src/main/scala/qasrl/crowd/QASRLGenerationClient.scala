@@ -166,7 +166,9 @@ class QASRLGenerationClient[SID : Reader : Writer](
     // let's try an Immutable version of isNA as part of State
     def flipIsNA : Callback = scope.modState(s => s.copy(isNA = !s.isNA))
 
-    def flipIsVerbal : Callback = scope.modState(s => s.copy(isVerbal = !s.isVerbal))
+    def toggleIsVerbal(buttonIndication: Boolean) : Callback = {
+        scope.modState(s => s.copy(isVerbal = buttonIndication))
+    }
 
     def setInputRef(qaIndex: Int): html.Element => Unit =
       (element: html.Element) => allInputRefs.put(qaIndex, element)
@@ -589,14 +591,14 @@ class QASRLGenerationClient[SID : Reader : Writer](
                               <.span(
                                 Styles.smallButton,
                                 ^.disabled := s.isVerbal,
-                                ^.onClick --> flipIsVerbal,
+                                ^.onClick --> toggleIsVerbal(true),
                                 (^.backgroundColor := Styles.greenButtonColor).when(s.isVerbal),
                                 "Yes"
                               ),
                               <.span(
                                 Styles.smallButton,
                                 ^.disabled := !s.isVerbal,
-                                ^.onClick --> flipIsVerbal,
+                                ^.onClick --> toggleIsVerbal(false),
                                 (^.backgroundColor := Styles.redButtonColor).when(!s.isVerbal),
                                 "No"
                               ),

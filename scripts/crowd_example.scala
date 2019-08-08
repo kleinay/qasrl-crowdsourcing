@@ -14,7 +14,7 @@ import nlpdata.util.Text
 import nlpdata.util.HasTokens.ops._
 import nlpdata.structure.Word
 
-val label = "nominals_unifiedUI_exp2_25_07_19"
+val label = "nominals_unifiedUI_exp3_31_07_19"
 
 val isProduction = false // sandbox. change to true for production
 val domain = "u.cs.biu.ac.il/~stanovg/qasrl" // change to your domain, or keep localhost for testing
@@ -101,6 +101,12 @@ def savePOSTaggedSentences(sentences : Vector[Vector[Word]]) : Unit = {
 saveSourceSentences(setup.sentences)
 saveTokenizedIds(setup.tokenizedSentences)
 //savePOSTaggedSentences(setup.posTaggedSentences)
+
+
+def saveGenerationData(filename: String) = {
+  val nonEmptyGens = exp.allGenInfos.filter(_.assignments.nonEmpty)
+  setup.saveGenerationData(filename, nonEmptyGens)
+}
 
 // use with caution... intended mainly for sandbox
 def deleteAll = {
