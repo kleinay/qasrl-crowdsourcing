@@ -275,7 +275,7 @@ class QASRLGenerationClient[SID : Reader : Writer](
 
                 <.div(
                   <.input(
-                    (^.disabled := true).when(isNotAssigned),
+                    (^.disabled := true).when(isNotAssigned || isNA),
                     bgStyle,
                     ^.float := "left",
                     ^.`type` := "text",
@@ -374,6 +374,7 @@ class QASRLGenerationClient[SID : Reader : Writer](
                 )
               } else <.span(
                 ^.onClick --> (Callback(allInputRefs(qaIndex).focus)),
+                (^.color := "#808080").when(s.isNA),
                 answersString
               )
             }
@@ -581,8 +582,10 @@ class QASRLGenerationClient[SID : Reader : Writer](
                               // Show user the verb it is generating questions with
                               <.div(
                                 <.p(),
-                                <.p("Ask about the noun '" + Text.normalizeToken(sentence(prompt.verbIndex)) + "' using the the verb ",
-                                  <.span(Styles.bolded, prompt.verbForm),
+                                <.p(
+                                  (^.color := "#808080").when(s.isNA),
+                                  "Ask about the noun '" + Text.normalizeToken(sentence(prompt.verbIndex)) + "' using the verb ",
+                                  <.span(Styles.verbFormPurple, prompt.verbForm),
                                   <.span(":"))
                               ),
 
@@ -602,6 +605,7 @@ class QASRLGenerationClient[SID : Reader : Writer](
                                 <.div(
                                   Styles.unselectable,
 //                                  ^.float := "left",
+                                  //^.style := Styles.niceBlue,
                                   ^.minHeight := "30px",
                                   ^.marginTop := "5px",
                                   ^.marginLeft := "10px",

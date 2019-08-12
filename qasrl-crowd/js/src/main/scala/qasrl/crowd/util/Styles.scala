@@ -60,6 +60,10 @@ object Styles extends StyleSheet.Inline {
     color(c"rgb(255, 135, 0)")
   )
 
+  val disabledGray = style(
+    color(c"rgb(128, 128, 128)")
+  )
+
   val largeText = style(
     fontSize(20 pt)
   )

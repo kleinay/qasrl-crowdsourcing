@@ -27,34 +27,35 @@ object GenerationInstructions extends Instructions {
         |we approve your work and you can retain your qualification.""".stripMargin),
     <.p("""This task is for an academic research project of natural language processing.
           We wish to extract the meaning of special "verbal" nouns using questions and answers.
-          You will be presented with an English sentence with a highlighted target noun."""),
+          You will be presented with an English sentence with a highlighted """,
+      <.span(Styles.niceBlue, """target noun"""), "."),
     <.p("""Your task is twofold. """,
       <.br(),
       " (1) ",
       <.span(Styles.bolded, """ Is Verbal: """),
-      """ Determine whether, in context, the target corresponds to some verb-related """,
+      """ Determine whether, in context, the """,
+        <.span(Styles.niceBlue, """target noun"""),
+      """ corresponds to some verb-related """,
       spanWithTooltip("event",
         "We use the term “event” in the widest meaning possible - everything that can be denoted by a verb."),
       """ (Yes / No). """,
       <.br(),
       " (2) ",
       <.span(Styles.bolded,  """ Q-A Generation: """),
-      """ Write questions about the target using the best corresponding verb,
-        |and provide their answers by highlighting spans in the sentence.""".stripMargin
+      <.span(""" Write questions about the """, <.span(Styles.niceBlue, """target noun"""),
+        """ using the provided """),
+      <.span(Styles.verbFormPurple, "corresponding verb"),
+      <.span(""", and mark their answers by highlighting text in the sentence.""")
     ),
 
     // Example
     <.p(""" For example, the prompt below should elicit the following response: """),
     <.blockquote(
       ^.classSet1("blockquote"),
-      "The embassy suffered less ", <.span(Styles.niceBlue, Styles.underlined, " damage "), " from the blast last week than one could expect. "),
+      "The embassy suffered less ", <.span(Styles.niceBlue, Styles.underlined, "damage"), " from the blast last week than one could expect. "),
     <.span(
       <.i("Does the highlighted noun refer to a verbal event? "),
       <.span(Styles.goodGreen, "Yes"),
-      <.br()
-    ),
-    <.span(<.i("Best corresponding verb: "),
-      <.span(Styles.specialWord, "damage"),
       <.br()
     ),
     <.i("Q-A Generation (using the verb ", <.span(Styles.verbFormPurple, "damage"), "):"),
