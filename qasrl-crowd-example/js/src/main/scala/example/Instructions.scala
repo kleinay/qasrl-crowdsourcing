@@ -35,7 +35,23 @@ trait Instructions {
       }
     ).build
 
-  def example(question: String, answer: String, isGood: Boolean, tooltip: String = "", isRedundant: Boolean=false) =
+  def example_is_verbal(isGood: Boolean, tooltip: String = "") =
+    <.li(
+      <.span(Styles.bolded, "Is Verbal: "),
+      <.span(
+        if(isGood) Styles.goodGreen
+        else Styles.badRed,
+        TagMod(
+          Styles.underlined,
+          dataToggle := "tooltip",
+          dataPlacement := "bottom",
+          ^.title := tooltip).when(tooltip.nonEmpty),
+        <.span("Yes")
+      )
+    )
+
+
+  def example_QA(question: String, answer: String, isGood: Boolean, tooltip: String = "", isRedundant: Boolean=false) =
     <.li(
       <.span(
         if(isGood) Styles.goodGreen else

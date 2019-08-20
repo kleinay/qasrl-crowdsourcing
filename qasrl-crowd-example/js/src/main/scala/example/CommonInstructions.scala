@@ -21,152 +21,134 @@ object CommonInstructions extends Instructions {
   import InstructionsComponent._
 
 
-  val verb_span_examples = <.div(
+  val qanom_examples = <.div(
     TooltipsComponent(
       <.div(
-        <.p(Styles.bolded," This section is exactly the same between the question writing and question answering tasks. "),
-        <.p(" Below, for each verb, we list a complete set of good questions (green) and some bad ones (red). ",
+        <.p(" Below, for each prompt, we illustrate good (green) and bad (red) responses. ",
           " Hover the mouse over the underlined examples for an explanation. "),
-        <.blockquote(
-          ^.classSet1("blockquote"),
-          "Protesters ", <.span(Styles.bolded, " blamed "), " the corruption scandal on local officials, who today refused to promise that they would resume the investigation before year's end. "),
-        <.ul(
-          example(
-            "Who blamed someone?",
-            "Protesters",
-            true),
-          example(
-            "Who did someone blame something on?",
-            "local officials",
-            true),
-          example(
-            "What did someone blame someone for?",
-            "the corruption scandal",
-            true,
-            """ "What did someone blame on someone?" would also have been okay. """),
-          example(
-            "Who blamed?",
-            "Protesters",
-            false,
-            """ This question is invalid by the litmus test, because the sentence "Protesters blamed." is ungrammatical. """)
-        ),
+
 
         <.blockquote(
           ^.classSet1("blockquote"),
-          "Protesters blamed the corruption scandal on local officials, who today ", <.span(Styles.bolded, " refused "), " to promise that they would resume the investigation before year's end. "),
+          "This announcement seem to incentive workers to reduce their ", <.span(Styles.targetWord, " demands"), " from the organization. "),
         <.ul(
-          example(
-            "Who refused to do something?",
-            "local officials / they",
-            true,
-            """When answering, list all of the phrases in the sentence that refer to the correct answer, including pronouns like "they"."""),
-          example(
-            "What did someone refuse to do?",
-            "promise that they would resume the investigation before year's end",
-            true),
-          example(
-            "What did someone refuse to do?",
-            "promise that they would resume the investigation",
-            false,
-            """The answer is not specific enough: it should include "before year's end" because that was part of what they were refusing to promise."""),
-          example(
-            "What did someone refuse to do?",
-            "resume the investigation before year's end",
-            false,
-            """This answer is also bad: you should instead choose the more literal answer above."""),
-          example(
-            "When did someone refuse to do something?",
-            "today",
-            true),
-          example(
-            "Who didn't refuse to do something?",
-            "Protesters",
-            false,
-            """The sentence does not say anything about protesters refusing or not refusing, so this question is invalid.""")
+          example_is_verbal(true),
+          example_QA(
+            "Who demands something?",
+            "workers",
+            true
+          ),
+          example_QA(
+            "What does someone demand something from?",
+            "the organization",
+            true
+          )
         ),
+
 
         <.blockquote(
           ^.classSet1("blockquote"),
-          "Protesters blamed the corruption scandal on local officials, who today refused to ", <.span(Styles.bolded, " promise "), " that they would resume the investigation before year's end. "),
+          "This ", <.span(Styles.targetWord, " announcement"), " seem to incentive workers to reduce their demands from the organization. "),
         <.ul(
-          example(
-            "Who didn't promise something?",
-            "local officials / they",
-            true,
-            "Negated questions work when the sentence is indicating that the event or state expressed by the verb did not happen."),
-          example(
-            "What didn't someone promise?",
-            "that they would resume the investigation before year's end",
-            true),
-          example(
-            "Who should have promised something?",
-            "local officials / they",
+          example_is_verbal(true,
+            """'announcement' is the event (or result) of someone announcing something.
+              |It would be sensical to ask about this target noun - 'who announced something' or 'what did someone announced.
+              |Note that in this sentence, we don't have enough context and information for answering these questions, so we will
+              |toggle "No Q-A Applicable"; nevertheless the target is clearly a verbal event. """.stripMargin),
+          example_QA(
+            "Who announced something?",
+            "the organization",
             false,
-            """The question matches the same answers as a previous question ("Who didn't promise something?"), thus toggled Redundant.""",
-            true),  // redundant
-          example(
-            "When didn't someone promise to do something?",
-            "before year's end",
-            false,
-            """ This question is bad because "before year's end" refers to the timeframe of resuming the investigation, not the timeframe of the promise being made.
-            All such questions must pertain to the time/place of the chosen verb. """)
+            """ Even though somewhat plausible, there is no way to confirm that it was the organization's announcement. """)
         ),
+
 
         <.blockquote(
           ^.classSet1("blockquote"),
-          "Protesters blamed the corruption scandal on local officials, who today refused to promise that they would ", <.span(Styles.bolded, " resume "), " the investigation before year's end. "),
+          "This announcement seem to incentive workers to reduce their demands from the ", <.span(Styles.targetWord, " organization"), ". "),
         <.ul(
-          example(
-            "Who might resume something?",
-            "local officials / they",
-            true,
-            """Words like "might" or "would" are appropriate when the sentence doesn't clearly indicate whether something actually happened."""),
-          example(
-            "What might someone resume?",
-            "the investigation",
-            true),
-          example(
-            "When might someone resume something?",
-            "before year's end",
+          example_is_verbal(false,
+            """"organization" here is not describing the event of "organizing"
+              |(nor a product of such an event), but rather a standalone concept
+              |which is not related to carrying out the verb "organize".""".stripMargin)
+        ),
+
+
+        // Simple "adjective-like" nominalization
+        <.blockquote(
+          ^.classSet1("blockquote"),
+          "Then, add the ", <.span(Styles.targetWord, " baking"), " powder and stir. "),
+        <.ul(
+          example_is_verbal(true,
+            """"baking" in this sentence is describing the kind of "powder" one is referring to.
+              |It is a powder used for baking purposes.
+              |Thus, "baking" is describing the verbal event corresponding to the verb "bake".""".stripMargin)
+        ),
+
+
+        // More complex examples
+        <.blockquote(
+          ^.classSet1("blockquote"),
+          "Protesters blamed the corruption scandal on local officials, who today refused to promise that they would resume the investigation before year's ", <.span(Styles.targetWord, " end"), ". "),
+        <.ul(
+          example_is_verbal(true),
+          example_QA(
+            "What is ending?",
+            "year",
             true)
         ),
 
-        <.blockquote(
-          ^.classSet1("blockquote"),
-          <.span(Styles.bolded, " Let"), "'s go up to the counter and ask."),
-        <.ul(
-          example(
-            "Who should someone let do something?",
-            "'s",
-            true,
-            """Here, you should read 's as the word it stands for: "us".
-            So by substituting back into the question, we get "someone should let us do something",
-            which is what someone is suggesting when they say "Let's go". """),
-          example(
-            "What should someone let someone do?",
-            "go up to the counter and ask",
-            true,
-            """It would also be acceptable to mark "go up to the counter" and "ask" as two different answers. """),
-          example(
-            "Where should someone let someone do something?",
-            "the counter",
-            false,
-            """Questions should only concern the targeted verb: "letting" is not happening at the counter.""")
-        ),
 
         <.blockquote(
           ^.classSet1("blockquote"),
-          "Let's ", <.span(Styles.bolded, " go "), " up to the counter and ask."),
+          "Protesters blamed the corruption ", <.span(Styles.targetWord, " scandal"), " on local officials, who today refused to promise that they would resume the investigation before year's end. "),
         <.ul(
-          example(
-            "Who should go somewhere?",
-            "'s",
+          example_is_verbal(false, "The target, 'scandal', is indeed an event, but not a VERBAL event; no related verb can describe it, or to be used for asking question about it.")
+        ),
+
+
+        <.blockquote(
+          ^.classSet1("blockquote"),
+          <.span(Styles.targetWord, "Protesters"), " blamed the corruption scandal on local officials, who today refused to promise that they would resume the investigation before year's end. "),
+        <.ul(
+          example_is_verbal(false, "Even though 'protesters' is indeed a noun that is related to a verb - 'protest' - it doesn't refer to the EVENT of 'protesting' (but to the person who protests). ")
+        ),
+
+
+        <.blockquote(
+          ^.classSet1("blockquote"),
+          "Protesters blamed the ", <.span(Styles.targetWord, " corruption"), " scandal on local officials, who today refused to promise that they would resume the investigation before year's end. "),
+        <.ul(
+        example_is_verbal(true, "'corruption' can be realized as the event of people corrupting some public system. "),
+        example_QA(
+          "Who might have been corrupting something?",
+          "local officials",
+          true,
+          """ This is true only according to the protesters, blaming the local officials with the corruption. Therefore, we use 'might' to keep the resulting Q&A correct. """)
+        ),
+
+
+        <.blockquote(
+          ^.classSet1("blockquote"),
+          "Protesters blamed the corruption scandal on local officials, who today refused to promise that they would resume the ", <.span(Styles.targetWord, " investigation"), " before year's end. "),
+        <.ul(
+          example_is_verbal(true),
+          example_QA(
+            "Who investigated something?",
+            "local officials",
             true),
-          example(
-            "Where should someone go?",
-            "up to the counter",
-            true,
-            """Since both "up" and "to the counter" describe where they will go, they should both be included in the answer to a "where" question. """))
+          example_QA(
+            "When wouldn't someone investigate something?",
+            "before year's end",
+            true),
+          example_QA(
+            "What did someone investigate?",
+            "the corruption scandal",
+            false,
+            "There is not enough context to verify this reading - the local official might have been investigating something else, the scandal being about their refusal to resume investigation.")
+        )
+
+
       )
     )
   )
@@ -179,28 +161,28 @@ object CommonInstructions extends Instructions {
           " Hover the mouse over the underlined examples for an explanation. "),
         <.blockquote(
           ^.classSet1("blockquote"),
-          "His recent ", <.span(Styles.bolded,"appearance"), " at the Metropolitan Museum felt more like a party , or a highly polished jam session with a few friends , than a classical concert . "),
+          "His recent ", <.span(Styles.targetWord,"appearance"), " at the Metropolitan Museum felt more like a party , or a highly polished jam session with a few friends , than a classical concert . "),
         <.ul(
-          example(
+          example_QA(
             "Where was the appearance?",
             "Metropolitan Museum",
             true),
-          example(
+          example_QA(
             "When was the appearance?",
             "recent",
             true,
             """ 'Which appearance?' would also have been okay. """),
-          example(
+          example_QA(
             "When is an appearance?",
             "recent",
             false,
             """The question is valid, but share the same meaning with the previous question, thus marked as Redundant. """,
             true),  // redundant
-          example(
+          example_QA(
             "Whose appearance?",
             "His",
             true),
-          example(
+          example_QA(
             "What kind of appearance?",
             "jam session",
             false,
@@ -209,18 +191,18 @@ object CommonInstructions extends Instructions {
 
         <.blockquote(
           ^.classSet1("blockquote"),
-          "His recent appearance at the Metropolitan Museum felt more like a party , or a highly ", <.span(Styles.bolded,"polished"), " jam session with a few friends , than a classical concert . "),
+          "His recent appearance at the Metropolitan Museum felt more like a party , or a highly ", <.span(Styles.targetWord,"polished"), " jam session with a few friends , than a classical concert . "),
         <.ul(
-          example(
+          example_QA(
             "To what degree is something polished?",
             "highly",
             true),
-          example(
+          example_QA(
             "What is polished?",
             "session",
             true,
             """ 'jam session' is also correct. Shorter answer spans are usually preferred."""),
-          example(
+          example_QA(
             "What is polished?",
             "a highly polished jam session",
             false,
@@ -229,7 +211,7 @@ object CommonInstructions extends Instructions {
 
         <.blockquote(
           ^.classSet1("blockquote"),
-          "His recent appearance at the ", <.span(Styles.bolded,"Metropolitan Museum"), " felt more like a party , or a highly polished jam session with a few friends , than a classical conecrt . "),
+          "His recent appearance at the ", <.span(Styles.targetWord,"Metropolitan Museum"), " felt more like a party , or a highly polished jam session with a few friends , than a classical conecrt . "),
         <.span(
           Styles.badRed,
           TagMod(
@@ -242,9 +224,9 @@ object CommonInstructions extends Instructions {
 
         <.blockquote(
           ^.classSet1("blockquote"),
-          "His recent appearance at the Metropolitan Museum felt more like a party , or a highly polished jam session with a few friends , than a classical ", <.span(Styles.bolded,"concert"), " . "),
+          "His recent appearance at the Metropolitan Museum felt more like a party , or a highly polished jam session with a few friends , than a classical ", <.span(Styles.targetWord,"concert"), " . "),
         <.ul(
-          example(
+          example_QA(
             "What kind of concert?",
             "classical",
             true,
@@ -253,9 +235,9 @@ object CommonInstructions extends Instructions {
 
         <.blockquote(
           ^.classSet1("blockquote"),
-          "His recent appearance at the Metropolitan Museum felt more like a party , or a highly polished jam ", <.span(Styles.bolded,"session"), " with a few friends , than a classical concert . "),
+          "His recent appearance at the Metropolitan Museum felt more like a party , or a highly polished jam ", <.span(Styles.targetWord,"session"), " with a few friends , than a classical concert . "),
         <.ul(
-          example(
+          example_QA(
             "What kind of session?",
             "jam / highly polished",
             true,

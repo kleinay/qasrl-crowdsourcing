@@ -294,7 +294,7 @@ class QASRLValidationClient[SID : Writer : Reader](
                           MultiContigSpanHighlightableSentence(
                             MultiContigSpanHighlightableSentenceProps(
                               sentence = sentence,
-                              styleForIndex = i => TagMod(Styles.specialWord, Styles.niceBlue).when(i == curVerbIndex),
+                              styleForIndex = i => TagMod(Styles.targetWord).when(i == curVerbIndex),
                               highlightedSpans = (
                                 inProgressAnswerOpt.map(_ -> (^.backgroundColor := "#FF8000")) ::
                                 (curAnswers.map(_ -> (^.backgroundColor := "#FFFF00")) ++

@@ -523,7 +523,7 @@ class QASRL_SD_GenerationClient[SID : Reader : Writer](
                             MultiContigSpanHighlightableSentence(
                               MultiContigSpanHighlightableSentenceProps(
                                 sentence = sentence,
-                                styleForIndex = i => TagMod(Styles.specialWord, Styles.niceBlue).when(i == prompt.verbIndex),
+                                styleForIndex = i => TagMod(Styles.targetWord).when(i == prompt.verbIndex),
                                 highlightedSpans = (
                                   inProgressAnswerOpt.map(_ -> (^.backgroundColor := "#FF8000")) ::
                                     (curAnswerSpans.map(_ -> (^.backgroundColor := "#FFFF00")) ++

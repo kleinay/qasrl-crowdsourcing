@@ -28,13 +28,13 @@ object GenerationInstructions extends Instructions {
     <.p("""This task is for an academic research project of natural language processing.
           We wish to extract the meaning of special "verbal" nouns using questions and answers.
           You will be presented with an English sentence with a highlighted """,
-      <.span(Styles.niceBlue, """target noun"""), "."),
+      <.span(Styles.targetWord, """target noun"""), "."),
     <.p("""Your task is twofold. """,
       <.br(),
       " (1) ",
       <.span(Styles.bolded, """ Is Verbal: """),
       """ Determine whether, in context, the """,
-        <.span(Styles.niceBlue, """target noun"""),
+        <.span(Styles.targetWord, """target noun"""),
       """ corresponds to some verb-related """,
       spanWithTooltip("event",
         "We use the term “event” in the widest meaning possible - everything that can be denoted by a verb."),
@@ -42,7 +42,7 @@ object GenerationInstructions extends Instructions {
       <.br(),
       " (2) ",
       <.span(Styles.bolded,  """ Q-A Generation: """),
-      <.span(""" Write questions about the """, <.span(Styles.niceBlue, """target noun"""),
+      <.span(""" Write questions about the """, <.span(Styles.targetWord, """target noun"""),
         """ using the provided """),
       <.span(Styles.verbFormPurple, "corresponding verb"),
       <.span(""", and mark their answers by highlighting text in the sentence.""")
@@ -52,57 +52,75 @@ object GenerationInstructions extends Instructions {
     <.p(""" For example, the prompt below should elicit the following response: """),
     <.blockquote(
       ^.classSet1("blockquote"),
-      "The embassy suffered less ", <.span(Styles.niceBlue, Styles.underlined, "damage"), " from the blast last week than one could expect. "),
+      "The FTC decided that it would not challenge Google's last year ",
+      <.span(Styles.targetWord, Styles.underlined, "acquisition"),
+      " of Waze. "
+    ),
     <.span(
       <.i("Does the highlighted noun refer to a verbal event? "),
       <.span(Styles.goodGreen, "Yes"),
       <.br()
     ),
-    <.i("Q-A Generation (using the verb ", <.span(Styles.verbFormPurple, "damage"), "):"),
+    <.i("Q-A Generation (using the verb ", <.span(Styles.verbFormPurple, "acquire"), "):"),
     <.ul(
-      <.li("What damaged something? --> the blast"),
-      <.li("What was damaged? --> The embassy"),
-      <.li("When did something damage something? --> last week")
+      <.li("What acquired something? --> Google"),
+      <.li("What was acquired? --> Waze"),
+      <.li("When did something acquired something? --> last year")
     ),
 
     // Specifications
-    <.h2("Specifications"),
-    <.h4("Is Verbal"),
+    <.h2("Guidelines - Is Verbal"),
     <.ul(
       <.li(
-        """The best criteria for defining whether a target noun corresponds to a verbal event
-          |is using the Q-A test: such noun instance is denoting
+        """The best criteria for defining whether a target noun corresponds
+          |to a verbal event is using the """.stripMargin,
+        <.i("""Q-A test"""),
+        """: such noun instance is denoting
           |an action, process, experience, or an outcome of these, in a way that allows one
-          |to ask verbal questions about it.
-          |In the example above, the """.stripMargin,
-        <.span(Styles.niceBlue, "damage"),
-        """ can be described as an event of damaging, thus proper for asking questions
-          |like "what damaged?" or "what was damaged?".""".stripMargin
+          |to ask questions about it using a related verb.""".stripMargin,
+        <.br(),
+        <.span(
+          """In the example above, the """,
+          <.span(Styles.targetWord, "acquisition"),
+          """ can be described as an event of the verb `to """, <.span(Styles.verbFormPurple, "acquire"),
+          """`, thus proper for asking questions
+            |like "what acquired something??" or "what was acquired?".""".stripMargin)
       ),
       <.li(
-        """If the target isn’t “verbal”, toggle “No” and submit.
+        """If the """, <.span(Styles.targetWord, "noun"),
+          """ isn’t “verbal”, toggle “No” and submit.
           |If it is, in most cases you can ask verbal questions about it,
           |for which the answers are fragments of the sentence. """.stripMargin
+      ),
+      <.li(
+        """In case the """, <.span(Styles.targetWord, "noun"),
+          """ is “verbal” but the provided """, <.span(Styles.verbFormPurple, "verb"),
+          """ is wrong, please comment about it on the Feedback box. """.stripMargin
       )
     ),
-    <.h4("Q-A Generation"),
+
+      // Q-A Generation Guidelines
+    <.h2("Guidelines - Q-A Generation"),
+      // technical details and interface specifications
+    <.h4("Interface"),
     <.ul(
       <.li(
         """Questions are required to follow a strict format, which is enforced by
           |autocomplete functionality in the interface
           |(more details in the Question Format tab).""".stripMargin),
       <.li(
-        """Answers are selected highlighting spans in the sentence.
+        """Answers are selected by highlighting spans in the sentence.
           |It takes exactly 2 clicks to highlight each answer;
-          |read the Interface & Controls tab for details.""".stripMargin),
+          |click on the first word in the span, then on the last one (so that the answer turns """.stripMargin,
+        <.span(^.backgroundColor := "#FFFF00", "yellow"), ")."),
       <.li(
         """If the target is a verbal event,
           |but no question regarding it is answerable by the sentence, toggle """.stripMargin,
         <.i("No Q-A Applicable."))
     ),
 
-        // Guidelines
-    <.h2("Q-A Guidelines"),
+        // content guidelines
+    <.h4("Guiding principles"),
     <.ol(
       <.li(
         <.span(
@@ -113,10 +131,10 @@ object GenerationInstructions extends Instructions {
           <.span("""statement, and it is """),
           <.i("""certainly true """),
           <.span("""according to the sentence given. For example, """),
-          <.span(Styles.bolded, "What damaged something? --> the blast"), """ becomes """,
-          <.span(Styles.goodGreen, "the blast damaged something, "), """ which is valid, while """,
-          <.span(Styles.bolded, "What damaged? --> the blast"), """ would become """,
-          <.span(Styles.badRed, "the blast damaged, "),
+          <.span(Styles.bolded, "What acquired something? --> Google"), """ becomes """,
+          <.span(Styles.goodGreen, "Google acquired something, "), """ which is valid, while """,
+          <.span(Styles.bolded, "What acquired? --> Google"), """ would become """,
+          <.span(Styles.badRed, "Google acquired, "),
           <.span(s""" which is ungrammatical, so it is invalid.
                 Your questions will be judged by other annotators, and you must retain
                 a reasonable agreement rate
@@ -131,7 +149,7 @@ object GenerationInstructions extends Instructions {
         """ For example, if the sentence is """,
         <.span(Styles.bolded,
           " He made a ",
-          <.span(Styles.niceBlue, Styles.underlined, "promise"),
+          <.span(Styles.targetWord, Styles.underlined, "promise"),
           " to come tomorrow, "),
         """ you may """, <.span(Styles.bolded, " not "), " write ",
         <.span(Styles.badRed, " When did someone promise to do something? --> tomorrow, "),
@@ -244,10 +262,10 @@ object GenerationInstructions extends Instructions {
         collapseCookieId = "generationCollapseCookie",
         tabs = List(
           "Overview" -> generationOverview,
+          "Examples" -> <.div(CommonInstructions.qanom_examples),
           "Interface & Controls" -> generationControls,
           "Question Format" -> generationQuestionFormat,
           "Conditions & Bonuses" -> generationConditions
-          //"Examples" -> <.div(CommonInstructions.verb_span_examples)
         )
       )
     )

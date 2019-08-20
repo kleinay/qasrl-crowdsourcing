@@ -530,7 +530,7 @@ class QASRLGenerationClient[SID : Reader : Writer](
                             MultiContigSpanHighlightableSentence(
                               MultiContigSpanHighlightableSentenceProps(
                                 sentence = sentence,
-                                styleForIndex = i => TagMod(Styles.specialWord, Styles.niceBlue).when(i == prompt.verbIndex),
+                                styleForIndex = i => TagMod(Styles.targetWord).when(i == prompt.verbIndex),
                                 highlightedSpans = (
                                   inProgressAnswerOpt.map(_ -> (^.backgroundColor := "#FF8000")) ::
                                     (curAnswerSpans.map(_ -> (^.backgroundColor := "#FFFF00")) ++
@@ -656,7 +656,9 @@ class QASRLGenerationClient[SID : Reader : Writer](
                           ^.id := FieldLabels.submitButtonLabel,
                           ^.value := (
                             if(isNotAssigned) "You must accept the HIT to submit results"
-                            else if(getAllCompleteQAPairs(s).isEmpty && !s.isNA && s.isVerbal) "You must write and answer at least one question to submit results, or toggle Not Applicable"
+                            else if(getAllCompleteQAPairs(s).isEmpty && !s.isNA && s.isVerbal)
+                              "You must write and answer at least one question to submit results, " +
+                                "or toggle 'No Q-A Applicable'"
                             else "Submit"
                           )
                         )
