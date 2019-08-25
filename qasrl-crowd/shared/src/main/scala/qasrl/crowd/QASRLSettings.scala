@@ -13,10 +13,10 @@ trait QASRLSettings {
 
   // annotation pipeline hyperparameters
 
-  val generationRewardCents = 4
+  val generationRewardCents = 5
   def generationReward = generationRewardCents * 0.01
 
-  def generationFirstQBonusCents = generationRewardCents
+  def generationFirstQBonusCents = 4
 
   def generationBonus(nValidQAs: Int) = {
     // no bonus for the first question, hence -1
@@ -37,7 +37,7 @@ trait QASRLSettings {
   val generationCoverageQuestionsPerVerbThreshold = 2.0
   val generationCoverageGracePeriod = 15
 
-  val generationAccuracyBlockingThreshold = 0.75
+  val generationAccuracyBlockingThreshold = 0.60
   val generationAccuracyGracePeriod = 15
 
   val generationAgreementBlockingThreshold = 0.5
