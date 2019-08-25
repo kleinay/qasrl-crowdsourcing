@@ -17,7 +17,7 @@ import com.typesafe.scalalogging.StrictLogging
 import scala.util.{Try, Success, Failure}
 import upickle.default.{Reader, Writer, read}
 
-class QASDGenerationAggregationManager[SID : Reader : Writer](
+class GenerationAggregationManager[SID : Reader : Writer](
   genAgreementActor: ActorRef,
   validationHelper: HITManager.Helper[QASRLValidationPrompt[SID], List[QASRLValidationAnswer]],
   validationActor: ActorRef,

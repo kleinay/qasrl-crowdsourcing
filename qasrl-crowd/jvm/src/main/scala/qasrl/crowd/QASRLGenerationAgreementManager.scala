@@ -23,7 +23,6 @@ import upickle.default._
 
 import com.typesafe.scalalogging.StrictLogging
 
-// todo: currently copy-paste from GenerationAccuracy; change to fit goal
 class QASRLGenerationAgreementManager[SID : Reader : Writer](
  genDisqualificationTypeId: String)(
  implicit annotationDataService: AnnotationDataService,
@@ -94,8 +93,21 @@ class QASRLGenerationAgreementManager[SID : Reader : Writer](
   def hasAgreement(qa: VerbQA, otherResponses: List[List[VerbQA]]) : Boolean = {
     // check whether any of the Answers given by worker to Q have any overlapping answer in otherResponses
     val otherAnswerSpans : List[Span] = otherResponses.flatten.flatMap(_.answers)
+
+    def spanAsSet(span: Span) : Set[Int] = {
+      math.min(span.begin, span.end) to math.max(span.begin, span.end) toSet
+    }
+
+    def spanIntersectionOverUnion(span1: Span, span2: Span) : Float = {
+      val set1 = spanAsSet(span1)
+      val set2 = spanAsSet(span2)
+      // intersection over union (IOU)
+      set1.intersect(set2).size.toFloat / set1.union(set2).size
+    }
+
+    // Here define what is considered "Answer Spans overlap" w.r.t agreement
     def spanOverlap(span1: Span, span2: Span) : Boolean = {
-      span1.contains(span2.begin) || span1.contains(span2.end)
+      spanIntersectionOverUnion(span1, span2) >= 0.3
     }
     // return:
     qa.answers.exists(
@@ -108,12 +120,22 @@ class QASRLGenerationAgreementManager[SID : Reader : Writer](
 
 
     case QASRLGenHITFinished(assignment, response, otherResponses) => {
+
+      def PercentageOfOtherAgreeingWithIsVerbal(others: List[Boolean], workerIsVerbalJudgement: Boolean ) : Float = {
+        others.count(_==workerIsVerbalJudgement).toFloat/others.size
+      }
+
       // for a specific generators vs. the other generators
-      val agreementJudgments : Vector[GenAgreementJudgment] = {
-      // Judgment for each question
-        for (qa <- response.qas)
-          yield GenAgreementJudgment(assignment.hitId, qa.question, hasAgreement(qa, otherResponses.map(_.qas)))
-      }.toVector
+      val agreementJudgments : Vector[GenAgreementJudgment] =
+        // one Judgement for the isVerbal decision
+        GenAgreementJudgment(assignment.hitId, "IsVerbal",
+          PercentageOfOtherAgreeingWithIsVerbal(otherResponses.map(_.isVerbal), response.isVerbal))
+        +:
+        // Judgment for each question
+        {
+          for (qa <- response.qas)
+            yield GenAgreementJudgment(assignment.hitId, qa.question, hasAgreement(qa, otherResponses.map(_.qas)))
+        }.toVector
 
 
 

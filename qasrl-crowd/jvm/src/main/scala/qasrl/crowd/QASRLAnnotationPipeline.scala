@@ -703,11 +703,11 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   lazy val valActor = actorSystem.actorOf(Props(new TaskManager(valHelper, valManager)))
 
   // Actor for aggregating generation responses to a single validation prompt
-  var genAggregatorPeek: QASDGenerationAggregationManager[SID] = null
+  var genAggregatorPeek: GenerationAggregationManager[SID] = null
 
   lazy val genAggregator: ActorRef = actorSystem.actorOf(
     Props {
-      genAggregatorPeek = new QASDGenerationAggregationManager[SID](
+      genAggregatorPeek = new GenerationAggregationManager[SID](
         genAgreementTracker,
         valHelper,
         valManager,
@@ -738,11 +738,11 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   lazy val sdvalActor = actorSystem.actorOf(Props(new TaskManager(sdvalHelper, sdvalManager)))
 
   // Actor for aggregating sdgeneration responses to a single sdvalidation prompt
-  var sdgenAggregatorPeek: QASDGenerationAggregationManager[SID] = null
+  var sdgenAggregatorPeek: GenerationAggregationManager[SID] = null
 
   lazy val sdgenAggregator: ActorRef = actorSystem.actorOf(
     Props {
-      sdgenAggregatorPeek = new QASDGenerationAggregationManager[SID](
+      sdgenAggregatorPeek = new GenerationAggregationManager[SID](
         genAgreementTracker,
         sdvalHelper,
         sdvalManager,

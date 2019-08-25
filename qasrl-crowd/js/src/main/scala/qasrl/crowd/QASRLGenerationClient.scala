@@ -462,6 +462,7 @@ class QASRLGenerationClient[SID : Reader : Writer](
                             ^.classSet1("card"),
                             ^.margin := "5px",
                             ^.padding := "5px",
+                            // Coverage
                             <.p(
                               """So far, you have written """,
                               <.span(
@@ -479,6 +480,8 @@ class QASRLGenerationClient[SID : Reader : Writer](
                                 s" after the end of the grace period ($remaining verbs remaining)."
                               )
                             ),
+
+                            // agreement-wise accuracy
                             agreementAccuracyOpt.whenDefined(accuracy =>
                               <.p(
                                 """Of your questions that have been annotated by other workers, """,
@@ -498,25 +501,27 @@ class QASRLGenerationClient[SID : Reader : Writer](
                                 )
                               )
                             ),
-                            accuracyOpt.whenDefined(accuracy =>
-                              <.p(
-                                """Of your questions that have been validated, """,
-                                <.span(
-                                  if(accuracy <= settings.generationAccuracyBlockingThreshold) {
-                                    Styles.badRed
-                                  } else if(accuracy <= settings.generationAccuracyBlockingThreshold + 0.05) {
-                                    TagMod(Styles.uncomfortableOrange, Styles.bolded)
-                                  } else {
-                                    Styles.goodGreen
-                                  },
-                                  f"${accuracy * 100.0}%.1f%%"
-                                ),
-                                f""" were judged valid by other annotators. This must remain above ${settings.generationAccuracyBlockingThreshold * 100.0}%.1f%%""",
-                                remainingInAccuracyGracePeriodOpt.fold(".")(remaining =>
-                                  s" after the end of the grace period ($remaining verbs remaining)."
-                                )
-                              )
-                            )
+                            // Commenting out the validation-accuracy prompt for no-validation pipeline
+//                            // Validation-wise accuracy
+//                            accuracyOpt.whenDefined(accuracy =>
+//                              <.p(
+//                                """Of your questions that have been validated, """,
+//                                <.span(
+//                                  if(accuracy <= settings.generationAccuracyBlockingThreshold) {
+//                                    Styles.badRed
+//                                  } else if(accuracy <= settings.generationAccuracyBlockingThreshold + 0.05) {
+//                                    TagMod(Styles.uncomfortableOrange, Styles.bolded)
+//                                  } else {
+//                                    Styles.goodGreen
+//                                  },
+//                                  f"${accuracy * 100.0}%.1f%%"
+//                                ),
+//                                f""" were judged valid by other annotators. This must remain above ${settings.generationAccuracyBlockingThreshold * 100.0}%.1f%%""",
+//                                remainingInAccuracyGracePeriodOpt.fold(".")(remaining =>
+//                                  s" after the end of the grace period ($remaining verbs remaining)."
+//                                )
+//                              )
+//                            )
                           )
                         ),
                         <.div(
