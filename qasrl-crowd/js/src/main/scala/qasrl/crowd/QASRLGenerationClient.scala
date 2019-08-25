@@ -571,13 +571,14 @@ class QASRLGenerationClient[SID : Reader : Writer](
                                 (^.backgroundColor := Styles.redButtonColor).when(!s.isVerbal),
                                 "No"
                               ),
+                              <.span(Styles.verticalSpace),
 
-                              <.p("""Hint: try to see whether it make sense to ask verbal questions about it.""",
-                                """ Use the Question box below.""")
+                              <.p(Styles.smallerText, """Hint: try to see whether it makes sense to ask verbal questions about it """,
+                                """ (see the question box below).""")
                             ),
 
                             <.div(    // div for all elements that should be hidden when noun not isVerbal
-
+                              <.hr(Styles.verticalSpace),
 
                               // Show user the verb it is generating questions with
                               <.div(

@@ -52,14 +52,14 @@ object CommonInstructions extends Instructions {
         <.ul(
           example_is_verbal(true,
             """'announcement' is the event (or result) of someone announcing something.
-              |It would be sensical to ask about this target noun - 'who announced something' or 'what did someone announced.
+              |It would make sense to ask about this target noun - 'Who announced something?' or 'What did someone announced?'.
               |Note that in this sentence, we don't have enough context and information for answering these questions, so we will
               |toggle "No Q-A Applicable"; nevertheless the target is clearly a verbal event. """.stripMargin),
           example_QA(
             "Who announced something?",
             "the organization",
             false,
-            """ Even though somewhat plausible, there is no way to confirm that it was the organization's announcement. """)
+            """ Even though somewhat plausible, there is no way to confirm that it was the organization's announcement. You should highlight only answers that are explicit by the sentence. """)
         ),
 
 
@@ -103,7 +103,7 @@ object CommonInstructions extends Instructions {
           ^.classSet1("blockquote"),
           "Protesters blamed the corruption ", <.span(Styles.targetWord, " scandal"), " on local officials, who today refused to promise that they would resume the investigation before year's end. "),
         <.ul(
-          example_is_verbal(false, "The target, 'scandal', is indeed an event, but not a VERBAL event; no related verb can describe it, or to be used for asking question about it.")
+          example_is_verbal(false, "The target, 'scandal', is indeed an event, but not a VERBAL event; no related verb can describe it, or to be used for asking questions about it.")
         ),
 
 
@@ -111,7 +111,7 @@ object CommonInstructions extends Instructions {
           ^.classSet1("blockquote"),
           <.span(Styles.targetWord, "Protesters"), " blamed the corruption scandal on local officials, who today refused to promise that they would resume the investigation before year's end. "),
         <.ul(
-          example_is_verbal(false, "Even though 'protesters' is indeed a noun that is related to a verb - 'protest' - it doesn't refer to the EVENT of 'protesting' (but to the person who protests). ")
+          example_is_verbal(false, "Even though 'protesters' is indeed a noun that is related to a verb - 'protest' - it doesn't refer to the EVENT of 'protesting' (but to the people who protest). ")
         ),
 
 

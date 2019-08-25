@@ -72,8 +72,16 @@ object Styles extends StyleSheet.Inline {
     color(c"rgb(128, 128, 128)")
   )
 
+  val verticalSpace = style(
+    marginBottom :=! "5px"
+  )
+
   val largeText = style(
     fontSize(20 pt)
+  )
+
+  val smallerText = style(
+    fontSize(10 pt)
   )
 
   val smallButton = style(

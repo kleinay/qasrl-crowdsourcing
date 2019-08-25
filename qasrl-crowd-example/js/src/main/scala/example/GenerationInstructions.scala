@@ -75,9 +75,11 @@ object GenerationInstructions extends Instructions {
         """The best criteria for defining whether a target noun corresponds
           |to a verbal event is using the """.stripMargin,
         <.i("""Q-A test"""),
-        """: such noun instance is denoting
-          |an action, process, experience, or an outcome of these, in a way that allows one
-          |to ask questions about it using a related verb.""".stripMargin,
+        """: if a noun instance is denoting
+          |an action, process, experience, or an outcome of these, in a way that allows one to """.stripMargin,
+        <.b(" ask questions about it "),
+          """ using a related verb - it is a verbal event (""",
+        <.span(Styles.goodGreen, Styles.bolded, "Yes"), ").",
         <.br(),
         <.span(
           """In the example above, the """,
@@ -215,21 +217,12 @@ object GenerationInstructions extends Instructions {
     <.p(s"""Each question-answer pair after the first will earn you a bonus:
           ${dollarsToCents(generationReward)}c for the second question, ${dollarsToCents(generationReward) + 1}c for the third,
           then ${dollarsToCents(generationReward) + 2}c, etc.
-          While at least one is required to submit the HIT,
-          you will need to write more than ${generationCoverageQuestionsPerVerbThreshold} questions on average in order to stay qualified.
-          On average, it should take less than 30 seconds per question-answer pair, and be much quicker with practice.
           """),
-    <.p("""Your questions will be evaluated by other annotators, and """,
-      <.b(""" you will only be awarded bonuses for your valid question-answer pairs. """),
-      s""" (However, your questions-per-target average will include invalid questions.)
-          The bonus will be awarded as soon as validators have checked all of your question-answer pairs,
-          which will happen shortly after you submit (but will vary depending on worker availability).
-          Your accuracy will be updated as your questions are validated
-          and shown to you just below the task interface.
-          (Note that the validators will sometimes make mistakes,
-          so there is an element of randomness to it: don't read too deeply into small changes in your accuracy.)
-          If this number drops below ${(100 * generationAccuracyBlockingThreshold).toInt},
-          you will be disqualified from this task. """)
+    <.p(s"""Your questions will be evaluated by comparing them to other annotators.
+          You must retain an agreement rate of above ${(100 * generationAccuracyBlockingThreshold).toInt}% of both your """,
+      <.b("Is Verbal"), s""" judgements and your generated QAs.
+          Your accuracy will be updated as your questions are given to other workers,
+          and shown to you just below the task interface. """)
   )
 
 
