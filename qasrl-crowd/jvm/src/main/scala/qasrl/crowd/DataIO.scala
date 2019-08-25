@@ -6,26 +6,22 @@ import qasrl.TemplateStateMachine
 import qasrl.labeling.{QuestionLabelMapper, SlotBasedLabel}
 import qasrl.crowd.util.CategoricalDistribution
 import qasrl.crowd.util.implicits._
-
 import cats.Foldable
 import cats.data.NonEmptyList
 import cats.implicits._
-
-import spacro.HITInfo
+import spacro.{Assignment, HITInfo}
 import spacro.util.Span
-
 import nlpdata.datasets.wiktionary.Inflections
 import nlpdata.datasets.wiktionary.InflectedForms
 import nlpdata.util.HasTokens.ops._
 import nlpdata.util.LowerCaseStrings._
 import nlpdata.util.HasTokens
 import nlpdata.util.Text
-
 import com.typesafe.scalalogging.LazyLogging
 
 // from Pavel
 
-case class QANom(sid: String, verbIdx: Int, verb: String,
+case class QANom(sid: String, sentence: String, verbIdx: Int, target: String,
                  workerId: String, assignId: String, sourceAssignId: Option[String],
                  isVerbal: Boolean, verbForm: String,
                  question: String, isRedundant: Boolean, answerRanges: String, answers: String,
@@ -193,32 +189,62 @@ object DataIO extends LazyLogging {
     for {
       ((sid, verbIndex), hitInfos) <- genInfos.groupBy(idAndVerb)
       idString = writeId(sid)
-      sTokens = sid.tokens
       HITInfo(genHIT, genAssignments) <- hitInfos.sortBy(_.hit.prompt.verbIndex)
-      verb = sTokens(verbIndex).lowerCase
-      inflForms: InflectedForms <- inflections.getInflectedForms(verb).toList
+
       genAssignment <- genAssignments.sortBy(_.workerId)
-      workerId = genAssignment.workerId
-      assignId = genAssignment.assignmentId
-      // gen response info
-      isVerbal = genAssignment.response.isVerbal
-      verbForm = genAssignment.response.verbForm
+      qanomRow <- genAssignmentToQANomTSVRows(genAssignment, sid, idString, verbIndex)
+    } yield qanomRow
+  }
+
+  def genAssignmentToQANomTSVRows[SID: HasTokens](genAssignment: Assignment[QANomResponse],
+                                  sid : SID,
+                                  idString: String,
+                                  verbIndex : Int)(
+                 implicit inflections: Inflections) : Iterable[QANom] = {
+    val sTokens = sid.tokens
+    val target = sTokens(verbIndex).lowerCase
+    val sentence = sTokens.mkString(" ")
+    val workerId = genAssignment.workerId
+    val assignId = genAssignment.assignmentId
+    // gen response info
+    val isVerbal = genAssignment.response.isVerbal
+    val verbForm = genAssignment.response.verbForm
+
+    // if not verbal - yield a single row
+    if (!isVerbal) {
+      Vector(QANom(idString, sentence, verbIndex, target,
+        workerId, assignId, None,
+        isVerbal, verbForm,
+        "", false, "", "",
+        "", "", "", "",
+        "", "", "",
+        false, false))
+    // if isVerbal - yield a row for each question
+    } else for {
+      inflForms: InflectedForms <- inflections.getInflectedForms(target).toList
       verbQA: VerbQA <- genAssignment.response.qas
 
       question = verbQA.question
       // take the question string without the '?' character. Last token might be a preposition.
       // We will not identify it if it contains '?' character
-      prepositions: Set[LowerCaseString] = getAllPrepositions(question)
+      prepositions: Set[LowerCaseString]
+      = getAllPrepositions(question)
       stateMachine = new TemplateStateMachine(sTokens, inflForms, Some(prepositions))
       template = new QuestionProcessor(stateMachine)
       goodStatesOpt = template.processStringFully(question).toOption
-      slotOpt <- SlotBasedLabel.getSlotsForQuestion(sTokens, inflForms, List(question))
-      slot <- slotOpt
-      goodStates <- goodStatesOpt
-      frame: Frame = goodStates.toList.collect {
+      slotOpt
+      <- SlotBasedLabel.getSlotsForQuestion(sTokens, inflForms, List(question))
+      slot
+      <- slotOpt
+      goodStates
+      <- goodStatesOpt
+      frame: Frame
+      = goodStates.toList.collect {
         case QuestionProcessor.CompleteState(_, someFrame, _) => someFrame
       }.head
-    } yield {
+    }
+    yield
+    {
       val subj = slot.subj.getOrElse("".lowerCase)
       val aux = slot.aux.getOrElse("".lowerCase)
       val verbPrefix = slot.verbPrefix.mkString("~!~")
@@ -227,7 +253,7 @@ object DataIO extends LazyLogging {
       val obj2 = slot.obj2.getOrElse("".lowerCase)
       val answerRanges = verbQA.answers.map(getRangeAsText).mkString("~!~")
       val answers = verbQA.answers.map(getText(_, sTokens)).mkString("~!~")
-      QANom(idString, verbIndex, verb,
+      QANom(idString, sentence, verbIndex, target,
         workerId, assignId, None,
         isVerbal, verbForm,
         question, false, answerRanges, answers,
@@ -236,7 +262,6 @@ object DataIO extends LazyLogging {
         frame.isPassive, frame.isNegated)
     }
   }
-
 
 
   // how much and how long must come first so we register them as question prefix
