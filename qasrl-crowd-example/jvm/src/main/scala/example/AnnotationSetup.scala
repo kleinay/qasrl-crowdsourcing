@@ -194,7 +194,7 @@ class AnnotationSetup(
   // Saving the crowd annotations (generation)
   // from Pavel
   val qasrlColumns = List(
-    "qasrl_id", "verb_idx", "verb",
+    "qasrl_id", "sentence", "verb_idx", "verb",
     "worker_id", "assign_id", "source_assign_id",
     "is_verbal", "verb_form",
     "question", "is_redundant", "answer_range", "answer",
