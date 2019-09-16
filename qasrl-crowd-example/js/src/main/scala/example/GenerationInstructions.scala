@@ -19,6 +19,12 @@ object GenerationInstructions extends Instructions {
   import settings._
   import InstructionsComponent._
 
+  val generationGuidelinesURL = "https://docs.google.com/presentation/d/1AGLdjilE4GDaF1ybXaS4JXabGLrfK58W1p6mteU_yrw/present?usp=sharing"
+
+  val linkToGenerationGuidelines = <.div(
+    <.p("For instructions, please read the ",
+      <.a(^.href  := generationGuidelinesURL,
+        "Guidelines")))
 
   val generationOverview = <.div(
     <.p(Styles.badRed,
@@ -161,8 +167,8 @@ object GenerationInstructions extends Instructions {
       <.li(
         <.span(Styles.bolded, "Exhaustiveness. "),
         s"""You should write as many questions, and as many answers to each question, as possible.
-           You will be awarded a bonus for each new question,
-           starting at ${generationRewardCents}c and going up by 1c for each additional question.
+           You will be awarded a bonus for each new question beyond the first,
+           starting at ${generationFirstQBonusCents}c for the second question and going up by 1c for each additional question.
            However, note that none of the answers to your questions may overlap. """
           //"""If there is more than one possible question that has the same answer, just write one of them."""
       )
@@ -215,8 +221,8 @@ object GenerationInstructions extends Instructions {
 
   val generationConditions = <.div(
     <.p(s"""Each question-answer pair after the first will earn you a bonus:
-          ${dollarsToCents(generationReward)}c for the second question, ${dollarsToCents(generationReward) + 1}c for the third,
-          then ${dollarsToCents(generationReward) + 2}c, etc.
+          ${generationFirstQBonusCents}c for the second question, ${generationFirstQBonusCents + 1}c for the third,
+          then ${generationFirstQBonusCents + 2}c, etc.
           """),
     <.p(s"""Your questions will be evaluated by comparing them to other annotators.
           You must retain an agreement rate of above ${(100 * generationAccuracyBlockingThreshold).toInt}% of both your """,
@@ -259,6 +265,21 @@ object GenerationInstructions extends Instructions {
           "Interface & Controls" -> generationControls,
           "Question Format" -> generationQuestionFormat,
           "Conditions & Bonuses" -> generationConditions
+        )
+      )
+    )
+  )
+
+  val instructionsForTrainedAnnotators = <.div(
+    Instructions(
+      InstructionsProps(
+        instructionsId = "instructionsForTrained",
+        collapseCookieId = "generationForTrainedCollapseCookie",
+        tabs = List(
+          "Instructions" -> linkToGenerationGuidelines,
+          "Interface & Controls" -> generationControls,
+          "Examples" -> <.div(CommonInstructions.qanom_examples),
+          "Question Format" -> generationQuestionFormat
         )
       )
     )

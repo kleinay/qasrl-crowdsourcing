@@ -17,7 +17,10 @@ import upickle.default._
 
 object Dispatcher extends QASRLDispatcher[SentenceId] with JSApp {
 
-  override val generationInstructions = GenerationInstructions.instructions
+  // for crowd - full instructions
+  //override val generationInstructions = GenerationInstructions.instructions
+  // for trained annotators - only have link to guidelines slides
+  override val generationInstructions = GenerationInstructions.instructionsForTrainedAnnotators
 
   override val sdgenerationInstructions = SDGenerationInstructions.instructions
 
