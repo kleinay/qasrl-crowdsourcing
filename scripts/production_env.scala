@@ -14,16 +14,16 @@ import nlpdata.util.Text
 import nlpdata.util.HasTokens.ops._
 import nlpdata.structure.Word
 
-val label = "nom_labDemo_23.9.19"
+val label = "nom_production"
 
-val isProduction = false // sandbox. change to true for production
+val isProduction = true // sandbox. change to true for production
 val domain = "u.cs.biu.ac.il/~stanovg/qasrl" // change to your domain, or keep localhost for testing
 val projectName = "qasrl-crowd-example" // make sure it matches the SBT project;
 // this is how the .js file is found to send to the server
 
 val interface = "0.0.0.0"
-val httpPort = 5902
-val httpsPort = 5902
+val httpPort = 5904
+val httpsPort = 5904
 
 val annotationPath = java.nio.file.Paths.get(s"data/tqa/$label/annotations")
 implicit val timeout = akka.util.Timeout(5.seconds)
@@ -47,7 +47,7 @@ def exit = {
   System.out.println("Terminated actor system and logging. Type :q to end.")
 }
 
-val setup = new AnnotationSetup(label, Stage.WildCrowd)
+val setup = new AnnotationSetup(label, Stage.Production)
 import setup.SentenceIdHasTokens
 
 val exp = setup.experiment
@@ -103,7 +103,7 @@ saveTokenizedIds(setup.tokenizedSentences)
 //savePOSTaggedSentences(setup.posTaggedSentences)
 
 
-def saveGenerationData(filename: String = "generationData.csv") = {
+def saveGenerationData(filename: String) = {
   val nonEmptyGens = exp.allGenInfos.filter(_.assignments.nonEmpty)
   setup.saveGenerationData(filename, nonEmptyGens)
 }
@@ -181,4 +181,55 @@ def getOurActiveHITIds = {
 
 def disableAllOurHITs = {
   getOurActiveHITIds map disableHITById
+}
+
+def costOfQASD(verbsPrompts : Int, sdPrompts : Int, isValAggregated : Boolean = true) : Double = {
+  val avgGenQAPerNonVerb = 1.3
+  val avgGenQAPerVerb = 2.3
+  val numGenerators = setup.numGenerationAssignmentsInProduction
+  val numValidators = 0 // todo change manually
+  // generation cost computation
+  val verbGenAssignments = verbsPrompts * numGenerators
+  val sdGenAssignments = sdPrompts * numGenerators
+  val verbGenQAs = verbGenAssignments * avgGenQAPerVerb
+  val sdGenQAs = sdGenAssignments * avgGenQAPerNonVerb
+  // for simplicity, we'll compute as if every generated question is granted the same
+  val verbGenCost = QASRLSettings.default.generationReward * verbGenQAs
+  val sdGenCost = QASDSettings.default.generationReward * sdGenQAs
+  val genTotalCost = verbGenCost + sdGenCost
+
+  // validation cost computation
+  val valTotalCost = if(isValAggregated){
+    // When aggregated validation:
+    val verbValAssignments = verbsPrompts * numValidators
+    val sdValAssignments = sdPrompts * numValidators
+    val verbAvgQsPerTarget = avgGenQAPerVerb * numGenerators
+    val sdAvgQsPerTarget = avgGenQAPerNonVerb * numGenerators
+    // how much should one validator be paid for one assignments?
+    val verbValAvgAssignmentPayment = verbAvgQsPerTarget * QASRLSettings.default.validationBonusPerQuestion
+    val sdValAvgAssignmentPayment = sdAvgQsPerTarget * QASDSettings.default.validationBonusPerQuestion
+    val verbValCost = verbValAvgAssignmentPayment * verbValAssignments
+    val sdValCost = sdValAvgAssignmentPayment * sdValAssignments
+    verbValCost + sdValCost
+  } else {
+    // When validation is not aggregated, i.e. each generators has its own validators
+    val verbValAssignments = verbGenAssignments * numValidators
+    val sdValAssignments = sdGenAssignments * numValidators
+    val verbAvgQsPerTarget = avgGenQAPerVerb
+    val sdAvgQsPerTarget = avgGenQAPerNonVerb
+    // how much should one validator be paid for one assignments?
+    val verbValAvgAssignmentPayment = QASRLSettings.default.validationReward +
+      math.max(0, (verbAvgQsPerTarget-QASRLSettings.default.validationBonusThreshold) * QASRLSettings.default.validationBonusPerQuestion)
+    val sdValAvgAssignmentPayment = QASDSettings.default.validationReward +
+      math.max(0, (verbAvgQsPerTarget-QASDSettings.default.validationBonusThreshold) * QASDSettings.default.validationBonusPerQuestion)
+    val verbValCost = verbValAvgAssignmentPayment * verbValAssignments
+    val sdValCost = sdValAvgAssignmentPayment * sdValAssignments
+    verbValCost + sdValCost
+  }
+  // final cost
+  genTotalCost + valTotalCost
+}
+
+def currentPipelineCost(isValAggregated : Boolean = true) : Double = {
+  costOfQASD(exp.allVerbPrompts.size, exp.allSDPrompts.size, isValAggregated)
 }

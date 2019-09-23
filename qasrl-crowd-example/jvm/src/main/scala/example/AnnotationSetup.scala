@@ -41,6 +41,7 @@ case class PromptData(sentence_id : String,
 
 class AnnotationSetup(
   val label: String = "trial",
+  val stage: Stage = Stage.WildCrowd,
   val executePreprocessing : Boolean = true,
   frozenGenerationHITTypeId: Option[String] = None,
   frozenValidationHITTypeId: Option[String] = None)(
@@ -180,7 +181,7 @@ class AnnotationSetup(
     allNominalPrompts,
     numGenerationAssignmentsInProduction,
     liveAnnotationDataService,
-    annotationStage = Stage.Expert,
+    annotationStage = stage,
     //sdgenQualTestOpt = Some(SDGenQualTestExample),
     sdgenQualTestOpt = None,
     //sdvalQualTestOpt = Some(SDValQualTestExample),
