@@ -18,7 +18,7 @@ import com.amazonaws.services.mturk.model.SendBonusRequest
 import com.amazonaws.services.mturk.model.NotifyWorkersRequest
 import com.amazonaws.services.mturk.model.AssociateQualificationWithWorkerRequest
 import com.amazonaws.services.mturk.model.DisassociateQualificationFromWorkerRequest
-
+import scala.language.postfixOps
 import upickle.default._
 
 import com.typesafe.scalalogging.StrictLogging
@@ -121,18 +121,16 @@ class QASRLGenerationAgreementManager[SID : Reader : Writer](
 
     case QASRLGenHITFinished(assignment, response, otherResponses) => {
 
-      def PercentageOfOtherAgreeingWithIsVerbal(others: List[Boolean], workerIsVerbalJudgement: Boolean ) : Float = {
-        others.count(_==workerIsVerbalJudgement).toFloat/others.size
+      def PercentageOfValue[A](lst: List[A], targetValue: Boolean ) : Float = {
+        lst.count(_==targetValue).toFloat/lst.size
       }
 
       // for a specific generators vs. the other generators
       val agreementJudgments : Vector[GenAgreementJudgment] =
         // one Judgement for the isVerbal decision
-        GenAgreementJudgment(assignment.hitId, "IsVerbal",
-          PercentageOfOtherAgreeingWithIsVerbal(otherResponses.map(_.isVerbal), response.isVerbal))
-        +:
+        Vector(GenAgreementJudgment(assignment.hitId, "IsVerbal",
+          PercentageOfValue(otherResponses.map(_.isVerbal), response.isVerbal) >= 0.5)) ++ {
         // Judgment for each question
-        {
           for (qa <- response.qas)
             yield GenAgreementJudgment(assignment.hitId, qa.question, hasAgreement(qa, otherResponses.map(_.qas)))
         }.toVector

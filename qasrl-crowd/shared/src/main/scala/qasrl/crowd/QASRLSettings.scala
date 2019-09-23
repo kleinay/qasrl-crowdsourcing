@@ -32,9 +32,9 @@ trait QASRLSettings {
     math.max(0.0, validationBonusPerQuestion * (numQuestions - validationBonusThreshold))
 
   // Maximum number of generated questions allowed
-  val generationMaxQuestions = 7
+  val generationMaxQuestions = 5
 
-  val generationCoverageQuestionsPerVerbThreshold = 2.0
+  val generationCoverageQuestionsPerVerbThreshold = 0.5
   val generationCoverageGracePeriod = 15
 
   val generationAccuracyBlockingThreshold = 0.60

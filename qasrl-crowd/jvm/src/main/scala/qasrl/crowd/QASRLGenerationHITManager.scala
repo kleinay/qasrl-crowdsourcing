@@ -109,18 +109,22 @@ class QASRLGenerationHITManager[SID : Reader : Writer](
       logger.info(s"Feedback: ${assignment.feedback}")
     }
 
-    val newQuestionRecord = assignment.response.qas.size :: coverageStats.get(assignment.workerId).foldK
-    coverageStats = coverageStats.updated(assignment.workerId, newQuestionRecord)
-    val verbsCompleted = newQuestionRecord.size
-    val questionsPerVerb = newQuestionRecord.sum.toDouble / verbsCompleted
-    if(questionsPerVerb < settings.generationCoverageQuestionsPerVerbThreshold &&
-         verbsCompleted > settings.generationCoverageGracePeriod) {
-      config.service.associateQualificationWithWorker(
-        new AssociateQualificationWithWorkerRequest()
-          .withQualificationTypeId(coverageDisqualificationTypeId)
-          .withWorkerId(assignment.workerId)
-          .withIntegerValue(1)
-          .withSendNotification(true))
+
+    // update coverage statistics
+    if(assignment.response.isVerbal) {
+      val newQuestionRecord = assignment.response.qas.size :: coverageStats.get(assignment.workerId).foldK
+      coverageStats = coverageStats.updated(assignment.workerId, newQuestionRecord)
+      val verbsCompleted = newQuestionRecord.size
+      val questionsPerVerb = newQuestionRecord.sum.toDouble / verbsCompleted
+      if (questionsPerVerb < settings.generationCoverageQuestionsPerVerbThreshold &&
+        verbsCompleted > settings.generationCoverageGracePeriod) {
+        config.service.associateQualificationWithWorker(
+          new AssociateQualificationWithWorkerRequest()
+            .withQualificationTypeId(coverageDisqualificationTypeId)
+            .withWorkerId(assignment.workerId)
+            .withIntegerValue(1)
+            .withSendNotification(true))
+      }
     }
     /*
      Aggregated Validation:
