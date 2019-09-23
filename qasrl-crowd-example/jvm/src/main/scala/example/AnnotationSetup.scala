@@ -180,6 +180,7 @@ class AnnotationSetup(
     allNominalPrompts,
     numGenerationAssignmentsInProduction,
     liveAnnotationDataService,
+    annotationStage = Stage.Expert,
     //sdgenQualTestOpt = Some(SDGenQualTestExample),
     sdgenQualTestOpt = None,
     //sdvalQualTestOpt = Some(SDValQualTestExample),
