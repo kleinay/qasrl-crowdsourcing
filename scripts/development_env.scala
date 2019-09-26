@@ -47,7 +47,7 @@ def exit = {
   System.out.println("Terminated actor system and logging. Type :q to end.")
 }
 
-val setup = new AnnotationSetup(label)
+val setup = new AnnotationSetup(label, executePreprocessing=false)
 import setup.SentenceIdHasTokens
 
 val exp = setup.experiment

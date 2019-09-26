@@ -207,11 +207,12 @@ object DataIO extends LazyLogging {
     val workerId = genAssignment.workerId
     val assignId = genAssignment.assignmentId
     // gen response info
+    val qas : List[VerbQA]= genAssignment.response.qas
     val isVerbal = genAssignment.response.isVerbal
     val verbForm = genAssignment.response.verbForm
 
-    // if not verbal - yield a single row
-    if (!isVerbal) {
+    // if not verbal, or isVerbal but no-QA-Applicable - yield a single row with empty question & answer
+    if (!isVerbal || qas.isEmpty) {
       Vector(QANom(idString, sentence, verbIndex, target,
         workerId, assignId, None,
         isVerbal, verbForm,
@@ -219,10 +220,11 @@ object DataIO extends LazyLogging {
         "", "", "", "",
         "", "", "",
         false, false))
-    // if isVerbal - yield a row for each question
+
     } else for {
+    // yield a row for each question
       inflForms: InflectedForms <- inflections.getInflectedForms(target).toList
-      verbQA: VerbQA <- genAssignment.response.qas
+      verbQA: VerbQA <- qas
 
       question = verbQA.question
       // take the question string without the '?' character. Last token might be a preposition.

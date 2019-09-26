@@ -52,14 +52,15 @@ object CommonInstructions extends Instructions {
         <.ul(
           example_is_verbal(true,
             """'announcement' is the event (or result) of someone announcing something.
-              |It would make sense to ask about this target noun - 'Who announced something?' or 'What did someone announced?'.
+              |It would make sense to ask about this target noun - 'Who announced something?' or 'What did someone announce?'.
               |Note that in this sentence, we don't have enough context and information for answering these questions, so we will
               |toggle "No Q-A Applicable"; nevertheless the target is clearly a verbal event. """.stripMargin),
           example_QA(
             "Who announced something?",
             "the organization",
             false,
-            """ Even though somewhat plausible, there is no way to confirm that it was the organization's announcement. You should highlight only answers that are explicit by the sentence. """)
+            """ Even though somewhat plausible, there is no way to confirm that it was the organization's announcement.
+              | You should highlight only answers that are stated explicitly by the sentence. """.stripMargin)
         ),
 
 

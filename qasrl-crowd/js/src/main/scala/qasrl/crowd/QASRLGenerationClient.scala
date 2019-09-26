@@ -475,7 +475,7 @@ class QASRLGenerationClient[SID : Reader : Writer](
                                 },
                                 f"$questionsPerVerb%.1f"
                               ),
-                              s" questions per verb. This must remain above ${settings.generationCoverageQuestionsPerVerbThreshold}",
+                              s" questions per target. This must remain above ${settings.generationCoverageQuestionsPerVerbThreshold}",
                               remainingInCoverageGracePeriodOpt.fold(".")(remaining =>
                                 s" after the end of the grace period ($remaining verbs remaining)."
                               )
@@ -500,7 +500,7 @@ class QASRLGenerationClient[SID : Reader : Writer](
                                   s" after the end of the grace period ($remaining verbs remaining)."
                                 )
                               )
-                            ),
+                            )
                             // Commenting out the validation-accuracy prompt for no-validation pipeline
 //                            // Validation-wise accuracy
 //                            accuracyOpt.whenDefined(accuracy =>

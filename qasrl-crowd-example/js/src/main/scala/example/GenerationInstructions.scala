@@ -190,7 +190,7 @@ object GenerationInstructions extends Instructions {
       <.li(
         <.span(Styles.bolded, "Auto-suggest. "),
         """Once you have written at least one question,
-        the autocomplete dropdown will start proposing complete questions.
+        the autocomplete dropdown will start proposing additional complete questions.
         The suggestions are based on the structure of your previous questions, so to get the most out of them,
         write questions with more structure (e.g., "Who looked at someone?") rather than
         less (e.g., "Who looked?").
