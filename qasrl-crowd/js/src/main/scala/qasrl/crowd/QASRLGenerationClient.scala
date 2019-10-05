@@ -558,9 +558,9 @@ class QASRLGenerationClient[SID : Reader : Writer](
 
                             // Is this target a verbal-event noun?
                             <.div(
-                              <.span("Does the highlighted noun refer to a ",
+                              <.span("Is the highlighted noun a ",
                                 <.span(Styles.bolded, "verbal"),
-                                " event?    "),
+                                " noun?    "),
                               // two buttons - Yes / No
                               <.span(
                                 Styles.smallButton,
