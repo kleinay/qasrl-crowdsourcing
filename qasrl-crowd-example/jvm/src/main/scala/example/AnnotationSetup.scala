@@ -161,7 +161,7 @@ class AnnotationSetup(
     Wiktionary.getInflectionsForTokens(tokens)
   }
 
-  val numGenerationAssignmentsInProduction = 8   // how many generators?
+  val numGenerationAssignmentsInProduction = 2   // how many generators?
 
   // filter nominal prompts - exclude those that have no inflected forms for the verb-form,
   // since the qasrl state-machine cannot support it
