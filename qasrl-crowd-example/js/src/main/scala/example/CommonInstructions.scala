@@ -112,7 +112,12 @@ object CommonInstructions extends Instructions {
           ^.classSet1("blockquote"),
           <.span(Styles.targetWord, "Protesters"), " blamed the corruption scandal on local officials, who today refused to promise that they would resume the investigation before year's end. "),
         <.ul(
-          example_is_verbal(false, "Even though 'protesters' is indeed a noun that is related to a verb - 'protest' - it doesn't refer to the EVENT of 'protesting' (but to the people who protest). ")
+          example_is_verbal(true),
+          example_QA(
+            "Who is protesting?",
+            "Protesters",
+            true,
+            """ Protesters are people who protest. Notice there is nothing prevent highlighting the target word as an answer. """)
         ),
 
 
