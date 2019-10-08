@@ -117,7 +117,7 @@ object CommonInstructions extends Instructions {
             "Who is protesting?",
             "Protesters",
             true,
-            """ Protesters are people who protest. Notice there is nothing prevent highlighting the target word as an answer. """)
+            """ Protesters are people who protest. Notice nothing is preventing from highlighting the target word as an answer. """)
         ),
 
 
