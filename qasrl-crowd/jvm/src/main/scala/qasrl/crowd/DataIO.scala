@@ -21,7 +21,7 @@ import com.typesafe.scalalogging.LazyLogging
 
 // from Pavel
 
-case class QANom(sid: String, sentence: String, verbIdx: Int, target: String,
+case class QANom(sid: String, sentence: String, verbIdx: Int, key:String, target: String,
                  workerId: String, assignId: String, sourceAssignId: Option[String],
                  isVerbal: Boolean, verbForm: String,
                  question: String, isRedundant: Boolean, answerRanges: String, answers: String,
@@ -213,7 +213,7 @@ object DataIO extends LazyLogging {
 
     // if not verbal, or isVerbal but no-QA-Applicable - yield a single row with empty question & answer
     if (!isVerbal || qas.isEmpty) {
-      Vector(QANom(idString, sentence, verbIndex, target,
+      Vector(QANom(idString, sentence, verbIndex, idString +"_"+ verbIndex.toString, target,
         workerId, assignId, None,
         isVerbal, verbForm,
         "", false, "", "",
@@ -255,7 +255,7 @@ object DataIO extends LazyLogging {
       val obj2 = slot.obj2.getOrElse("".lowerCase)
       val answerRanges = verbQA.answers.map(getRangeAsText).mkString("~!~")
       val answers = verbQA.answers.map(getText(_, sTokens)).mkString("~!~")
-      QANom(idString, sentence, verbIndex, target,
+      QANom(idString, sentence, verbIndex, idString +"_"+ verbIndex.toString, target,
         workerId, assignId, None,
         isVerbal, verbForm,
         question, false, answerRanges, answers,

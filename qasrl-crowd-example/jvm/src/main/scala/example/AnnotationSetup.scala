@@ -196,7 +196,7 @@ class AnnotationSetup(
   // Saving the crowd annotations (generation)
   // from Pavel
   val qasrlColumns = List(
-    "qasrl_id", "sentence", "verb_idx", "verb",
+    "qasrl_id", "sentence", "verb_idx", "key", "verb",
     "worker_id", "assign_id", "source_assign_id",
     "is_verbal", "verb_form",
     "question", "is_redundant", "answer_range", "answer",
@@ -207,7 +207,10 @@ class AnnotationSetup(
                           filename: String,
                           genInfos: List[HITInfo[QASRLGenerationPrompt[SentenceId], QANomResponse]]
                         ): Unit = {
-    val contents = DataIO.makeGenerationQAPairTSV(SentenceId.toString, genInfos)
+    // take only genInfos of sentences that are in the current batch
+    def idInCurrentBatch : SentenceId => Boolean = allIds.contains(_)
+    val currentBatchGenInfos = genInfos.filter(gInf => idInCurrentBatch(gInf.hit.prompt.id))
+    val contents = DataIO.makeGenerationQAPairTSV(SentenceId.toString, currentBatchGenInfos)
     val path = liveDataPath.resolve(filename).toString
     val csv = CSVWriter.open(path, encoding = "utf-8")
     csv.writeRow(qasrlColumns)
