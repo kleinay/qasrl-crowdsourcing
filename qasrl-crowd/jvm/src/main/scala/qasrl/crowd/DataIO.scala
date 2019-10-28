@@ -267,7 +267,7 @@ object DataIO extends LazyLogging {
 
 
   // how much and how long must come first so we register them as question prefix
-  val whPhrases = List("how much", "how long", "in what circumstances", "for what purpose", "who", "what", "when", "where", "why", "how").map(_.lowerCase)
+  val whPhrases = List("how much", "how long", "who", "what", "when", "where", "why", "how").map(_.lowerCase)
 
   def makeReadableQAPairTSV[SID : HasTokens](
     ids: List[SID],

@@ -48,7 +48,7 @@ object DiscreteLabel {
   ).map(_.lowerCase)
 
   val advDiscreteLabels = Set(
-    "when", "where", "why", "how", "how much", "how long", "in what circumstances", "for what purpose"
+    "when", "where", "why", "how", "how much", "how long"
   ).map(_.lowerCase)
 
   // TODO test: nonempty for good QA-SRL questions
