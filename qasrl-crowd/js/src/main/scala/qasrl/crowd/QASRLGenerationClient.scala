@@ -125,6 +125,11 @@ class QASRLGenerationClient[SID : Reader : Writer](
 
   def isComplete(qa: QAPair): Boolean = qa.state.isComplete && qa.answers.nonEmpty
 
+  def isQuestionEmpty(qa: QAPair): Boolean = qa.question.isEmpty
+
+  // incomplete QA is a QA with incomplete non-empty question, or with complete question but no answer
+  def isIncomplete(qa: QAPair): Boolean = (!qa.state.isComplete && !isQuestionEmpty(qa)) || (qa.state.isComplete && qa.answers.isEmpty)
+
   def getAllCompleteQAPairs(state: State): List[VerbQA] = for {
     qa <- state.qas
     if isComplete(qa)
@@ -658,13 +663,18 @@ class QASRLGenerationClient[SID : Reader : Writer](
                           ^.margin := "5px",
                           ^.`type` := "submit",
                           ^.disabled := isNotAssigned ||
-                                        (getAllCompleteQAPairs(s).isEmpty && !s.isNA && s.isVerbal),
+                                      // no generated QA (except when not-verbal or when isNA is selected)
+                                      (getAllCompleteQAPairs(s).isEmpty && !s.isNA && s.isVerbal) ||
+                                      // there is an incomplete QA (partial Q or full Q with no answer)
+                                      s.qas.exists(qa => isIncomplete(qa)),
                           ^.id := FieldLabels.submitButtonLabel,
                           ^.value := (
                             if(isNotAssigned) "You must accept the HIT to submit results"
                             else if(getAllCompleteQAPairs(s).isEmpty && !s.isNA && s.isVerbal)
                               "You must write and answer at least one question to submit results, " +
                                 "or toggle 'No Q-A Applicable'"
+                            else if(s.qas.exists(qa => isIncomplete(qa)))
+                              "You have incomplete Q-A pairs"
                             else "Submit"
                           )
                         )
