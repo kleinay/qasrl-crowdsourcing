@@ -1104,4 +1104,6 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
       println(f"${"Num invalids:"}%-20s$numInvalidAnswers%d")
       println(f"${"Total cost:"}%-20s$totalCost%.2f")
   }
+
+  def getGenHitTypeId: String = genHelper.taskSpec.hitTypeId
 }
