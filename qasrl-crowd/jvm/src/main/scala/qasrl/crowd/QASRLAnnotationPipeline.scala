@@ -529,8 +529,16 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
         } yield qCounts
         val questionLists = questionListsOpt.getOrElse(Nil)
 
+        // this is for taking worker stat from accuracyTrackerPeek which contains accuracy by validation
+        //        val workerStatsOpt = for {
+        //          accTrackP <- Option(accuracyTrackerPeek)
+        //          workerId <- workerIdOpt
+        //          stats <- accTrackP.allWorkerStats.get(workerId)
+        //        } yield stats
+
+        // this is for taking worker stat from genAgreementTrackerPeek which contains accuracy by agreement
         val workerStatsOpt = for {
-          accTrackP <- Option(accuracyTrackerPeek)
+          accTrackP <- Option(genAgreementTrackerPeek)
           workerId <- workerIdOpt
           stats <- accTrackP.allWorkerStats.get(workerId)
         } yield stats
