@@ -78,6 +78,16 @@ class AnnotationSetup(
     Files.lines(path).iterator.asScala.toList
   }
 
+  def copyFile(srcPath: Path, destPath: Path) : Unit = {
+    import java.io.{File,FileInputStream,FileOutputStream}
+    val src : File = srcPath.toFile
+    val dest : File = destPath.toFile
+    new FileOutputStream(dest) getChannel() transferFrom(
+      new FileInputStream(src) getChannel, 0, Long.MaxValue )
+  }
+
+
+
   /*
   Data Route:
   1. raw input - csv file with sentences + sentence-Ids
@@ -121,6 +131,9 @@ class AnnotationSetup(
   val sentences = tokenizedSentences.map(s_vec => s_vec.mkString(" "))
   // Instead of:
   //val tokenizedSentences = sentences.map(Tokenizer.tokenize_with_ner)
+
+  // copy source.txt to live data directory
+  copyFile(raw_data_path, liveDataPath.resolve("sourceSentences.csv"))
 
   // save mapping between sentence_IDs to sentences (tokenized)
   val sentenceIdToTokens : Map[String, Vector[String]] = prompts_data.map(
@@ -206,7 +219,7 @@ class AnnotationSetup(
   def saveGenerationData(
                           filename: String,
                           genInfos: List[HITInfo[QASRLGenerationPrompt[SentenceId], QANomResponse]]
-                        ): Unit = {
+                        ): List[QANom] = {
     // take only genInfos of sentences that are in the current batch
     def idInCurrentBatch : SentenceId => Boolean = allIds.contains(_)
     val currentBatchGenInfos = genInfos.filter(gInf => idInCurrentBatch(gInf.hit.prompt.id))
@@ -218,6 +231,7 @@ class AnnotationSetup(
       // will iterate in order over the case class fields
       csv.writeRow(qasrl.productIterator.toList)
     }
+    contents.toList
   }
 
 
