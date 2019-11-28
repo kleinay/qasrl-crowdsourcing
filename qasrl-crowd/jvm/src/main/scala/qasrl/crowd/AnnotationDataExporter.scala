@@ -17,14 +17,12 @@ class AnnotationDataExporter[SID : HasTokens](
 ) extends StrictLogging {
   import experiment.inflections
   val genInfos = experiment.allGenInfos
-  val sdgenInfos = experiment.allSDGenInfos
-  val allGenInfos = genInfos ++ sdgenInfos
+  val allGenInfos = genInfos
   val valInfos = experiment.allValInfos
 
   val genWorkers = genInfos.flatMap(_.assignments).map(_.workerId).toSet
-  val sdgenWorkers = sdgenInfos.flatMap(_.assignments).map(_.workerId).toSet
   val valWorkers = valInfos.flatMap(_.assignments).map(_.workerId).toSet
-  val allWorkers = genWorkers ++ sdgenWorkers ++ valWorkers
+  val allWorkers = genWorkers ++ valWorkers
 
   def workerAnonymizationMapping(
     label: String,
@@ -62,7 +60,7 @@ class AnnotationDataExporter[SID : HasTokens](
                 .map(a => a.response.map(AnswerLabel(workerAnonymizationMapping(a.workerId), _))).transpose
             )
             verbInflectedForms <- inflections.getInflectedForms(
-              sentenceTokens(genHIT.prompt.verbIndex).lowerCase
+              genHIT.prompt.verbForm.lowerCase
             )
           } yield {
             val questionStrings = qaTuples

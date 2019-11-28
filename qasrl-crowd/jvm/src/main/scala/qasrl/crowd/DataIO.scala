@@ -190,16 +190,17 @@ object DataIO extends LazyLogging {
       ((sid, verbIndex), hitInfos) <- genInfos.groupBy(idAndVerb)
       idString = writeId(sid)
       HITInfo(genHIT, genAssignments) <- hitInfos.sortBy(_.hit.prompt.verbIndex)
-
+      verbForm = genHIT.prompt.verbForm
       genAssignment <- genAssignments.sortBy(_.workerId)
-      qanomRow <- genAssignmentToQANomTSVRows(genAssignment, sid, idString, verbIndex)
+      qanomRow <- genAssignmentToQANomTSVRows(genAssignment, sid, idString, verbIndex, verbForm)
     } yield qanomRow
   }
 
   def genAssignmentToQANomTSVRows[SID: HasTokens](genAssignment: Assignment[QANomResponse],
                                   sid : SID,
                                   idString: String,
-                                  verbIndex : Int)(
+                                  verbIndex : Int,
+                                  verbForm: String)(
                  implicit inflections: Inflections) : Iterable[QANom] = {
     val sTokens = sid.tokens
     val target = sTokens(verbIndex).lowerCase
@@ -222,8 +223,8 @@ object DataIO extends LazyLogging {
         false, false))
 
     } else for {
-    // yield a row for each question
-      inflForms: InflectedForms <- inflections.getInflectedForms(target).toList
+      // yield a row for each question
+      inflForms: InflectedForms <- inflections.getInflectedForms(verbForm.lowerCase).toList
       verbQA: VerbQA <- qas
 
       question = verbQA.question
@@ -244,9 +245,7 @@ object DataIO extends LazyLogging {
       = goodStates.toList.collect {
         case QuestionProcessor.CompleteState(_, someFrame, _) => someFrame
       }.head
-    }
-    yield
-    {
+    } yield {
       val subj = slot.subj.getOrElse("".lowerCase)
       val aux = slot.aux.getOrElse("".lowerCase)
       val verbPrefix = slot.verbPrefix.mkString("~!~")

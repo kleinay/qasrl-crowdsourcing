@@ -41,22 +41,15 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   numGenerationAssignmentsInProduction: Int,
   annotationDataService: AnnotationDataService,
   annotationStage: Stage = Stage.Expert,
-  sdgenQualTestOpt : Option[QualTest] = None,
-  sdvalQualTestOpt : Option[QualTest] = None,
   frozenGenerationHITTypeId: Option[String] = None,
   frozenValidationHITTypeId: Option[String] = None,
   generationAccuracyDisqualTypeLabel: Option[String] = None,
   generationCoverageDisqualTypeLabel: Option[String] = None,
-  validationAgreementDisqualTypeLabel: Option[String] = None,
-  sdvalidationAgreementDisqualTypeLabel: Option[String] = None,
-  sdgenerationTestQualTypeLabel: Option[String] = None,
-  sdvalidationTestQualTypeLabel: Option[String] = None)(
+  validationAgreementDisqualTypeLabel: Option[String] = None)(
   implicit val config: TaskConfig,
   val settings: QASRLSettings,
   val inflections: Inflections
 ) extends StrictLogging {
-
-  val qasdSettings = QASDSettings.default
 
   // define numGenerationAssignmentsForPrompt for either production or sandbox
   def numGenerationAssignmentsForPrompt : QASRLGenerationPrompt[SID] => Int =
@@ -65,11 +58,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
 
   // define numValidatorsAssignmentsForPrompt for verbs, for either production or sandbox
   def numValidatorsAssignmentsForPrompt : QASRLValidationPrompt[SID] => Int =
-    if(config.isProduction) (_ => 2) else (_ => 1)  // how many validators?
-
-  // define numValidatorsAssignmentsForPrompt for non-verbs, for either production or sandbox
-  def numSDValidatorsAssignmentsForPrompt : QASRLValidationPrompt[SID] => Int =
-    if(config.isProduction) (_ => 0) else (_ => 0)  // how many sd-validators?
+    if(config.isProduction) (_ => 0) else (_ => 0)  // how many validators?
 
   // collect indices of verbs in the sentence to generate prompt
   def getVerbKeyIndices(id: SID): Set[Int] = {
@@ -131,7 +120,6 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
 
   // Current Nominalizations Experiment: use only verb-generation pipeline, for nominalizations
   lazy val allVerbPrompts = allNominalPrompts
-  lazy val allSDPrompts: Vector[QASRLGenerationPrompt[SID]] = Vector.empty
 
   implicit val ads = annotationDataService
 
@@ -148,15 +136,18 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     qualResult.getQualificationType
   }
 
-  private def findQualificationType (qualificationName: String): Option[QualificationType] = {
-    val qualificationTypes = config.service.listQualificationTypes(
-      new ListQualificationTypesRequest()
-        .withQuery(qualificationName)
-        .withMustBeOwnedByCaller(true)
-        .withMustBeRequestable(false)
-        .withMaxResults(100)
-    ).getQualificationTypes.asScala.toList
-    val found = qualificationTypes.find(_.getName == qualificationName)
+  // general list of all our qualifications on MTurk
+  val ourRequesterName = "BIU NLP"
+  lazy val allMTurkQualificationTypes = config.service.listQualificationTypes(
+    new ListQualificationTypesRequest()
+      .withQuery(ourRequesterName)
+      .withMustBeOwnedByCaller(true)
+      .withMustBeRequestable(false)
+      .withMaxResults(100)
+  ).getQualificationTypes.asScala.toList
+
+  def findQualificationType (qualificationName: String): Option[QualificationType] = {
+    val found = allMTurkQualificationTypes.find(_.getName == qualificationName)
     found
   }
 
@@ -241,6 +232,14 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     case Stage.WildCrowd => Array.empty
   }
 
+  val stageRelatedTaskTitleSuffix : String = annotationStage match {
+    case Stage.Trap => ""
+    case Stage.Training => "[Training]"
+    case Stage.Production => "[Production]"
+    case Stage.Expert => "[Internal]"
+    case Stage.WildCrowd => ""
+  }
+
   // Generators Agreement Disqualification
   val genAgreementDisqualTypeName = s"Question-answer writing inter-worker agreement disqualification"
   val genAgreementDisqualType = findQualificationType(genAgreementDisqualTypeName).getOrElse {
@@ -272,19 +271,6 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   val genCoverageRequirement = createDisqualificationReq(genCoverageDisqualType)
 
 
-  // duplicate generation-coverage qualification for non-verbs
-  val sdgenCoverageDisqualTypeLabelString = generationCoverageDisqualTypeLabel.fold("")(x => s"[$x] ")
-  val sdgenCoverageDisqualTypeName = s"${sdgenCoverageDisqualTypeLabelString} Questions asked per target word disqualification"
-  val sdgenCoverageDisqualType = findQualificationType(sdgenCoverageDisqualTypeName).getOrElse{
-    logger.info("Generating sdgeneration coverage disqualification type...")
-    createQualification(sdgenCoverageDisqualTypeName, "Number of questions asked for each target in our question-answer " +
-      "pair generation task is too low.")
-  }
-  val sdgenCoverageDisqualTypeId = sdgenCoverageDisqualType.getQualificationTypeId
-  val sdgenCoverageRequirement = createDisqualificationReq(sdgenCoverageDisqualType)
-
-
-
   val valAgrDisqualTypeLabelString = validationAgreementDisqualTypeLabel.fold("")(x => s"[$x] ")
   val valAgrDisqualTypeName = s"${valAgrDisqualTypeLabelString}Question answering agreement disqualification"
   val valAgrDisqualType = findQualificationType(valAgrDisqualTypeName).getOrElse{
@@ -294,97 +280,6 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   }
   val valAgrDisqualTypeId = valAgrDisqualType.getQualificationTypeId
   val valAgreementRequirement = createDisqualificationReq(valAgrDisqualType)
-
-  // copy last paragraph for sdvalidation qualification
-  val sdvalAgrDisqualTypeLabelString = sdvalidationAgreementDisqualTypeLabel.fold("")(x => s"[$x] ")
-  val sdvalAgrDisqualTypeName = s"${sdvalAgrDisqualTypeLabelString}Question answering agreement disqualification"
-  val sdvalAgrDisqualType = findQualificationType(sdvalAgrDisqualTypeName).getOrElse{
-    logger.info("Generating sdvalidation disqualification type...")
-    createQualification(sdvalAgrDisqualTypeName, "Agreement with other annotators on answers and validity " +
-      "judgments in our question answering task is too low.")
-  }
-  val sdvalAgrDisqualTypeId = sdvalAgrDisqualType.getQualificationTypeId
-
-  val sdvalAgreementRequirement = createDisqualificationReq(sdvalAgrDisqualType)
-
-
-  // Optoinal: add Qualification Test as qualification to sdvalidation
-
-  val sdvalTestQualTypeLabelString = sdvalidationTestQualTypeLabel.fold("")(x => s"[$x] ")
-  val sdvalTestQualTypeName = if(config.isProduction)
-                                s"${sdvalTestQualTypeLabelString}Question answering test score (%)"
-                              else "Sandbox sdvalidation test score qual"
-  val sdvalTestQualTypeOpt = sdvalQualTestOpt.flatMap(qualTest => Some({
-    config.service.listQualificationTypes (
-    new ListQualificationTypesRequest ()
-      .withQuery (sdvalTestQualTypeName)
-      .withMustBeOwnedByCaller (true)
-      .withMustBeRequestable (false)
-      .withMaxResults(100)
-    ).getQualificationTypes.asScala.toList.find(_.getName == sdvalTestQualTypeName).getOrElse {
-      System.out.println ("Generating sdvalidation test qualification type...")
-      config.service.createQualificationType (
-      new CreateQualificationTypeRequest ()
-        .withName (sdvalTestQualTypeName)
-        .withKeywords ("language,english,question answering")
-        .withDescription ("""Score on the qualification test for the question answering task,
-                as a test of your understanding of the instructions.""".replaceAll ("\\s+", " ") )
-        .withQualificationTypeStatus (QualificationTypeStatus.Active)
-        .withRetryDelayInSeconds (300L)
-        .withTest (qualTest.testString)
-        .withAnswerKey (qualTest.answerKeyString)
-        .withTestDurationInSeconds (1200L)
-        .withAutoGranted (false)
-      ).getQualificationType
-    }
-  }))
-  val sdvalTestQualTypeIdOpt = sdvalTestQualTypeOpt.map(_.getQualificationTypeId)
-  val sdvalTestRequirementOpt = sdvalTestQualTypeIdOpt.map(qualTypeId =>
-    new QualificationRequirement()
-    .withQualificationTypeId(qualTypeId)
-    .withComparator("GreaterThanOrEqualTo")
-    .withIntegerValues(75)
-    .withRequiredToPreview(false)
-  )
-
-  // Optoinal: add Qualification Test as qualification to sdgeneration
-
-  val sdgenTestQualTypeLabelString = sdgenerationTestQualTypeLabel.fold("")(x => s"[$x] ")
-  val sdgenTestQualTypeName = if(config.isProduction)
-    s"${sdgenTestQualTypeLabelString}'Writing and answering questions on a sentence' test score (%)"
-  else "Sandbox sdgeneration test score qual"
-  val sdgenTestQualTypeOpt = sdgenQualTestOpt.flatMap(qualTest => Some({
-    config.service.listQualificationTypes (
-      new ListQualificationTypesRequest ()
-        .withQuery (sdgenTestQualTypeName)
-        .withMustBeOwnedByCaller (true)
-        .withMustBeRequestable (false)
-        .withMaxResults(100)
-    ).getQualificationTypes.asScala.toList.find(_.getName == sdgenTestQualTypeName).getOrElse {
-      System.out.println ("Generating sdgeneration test qualification type...")
-      config.service.createQualificationType (
-        new CreateQualificationTypeRequest ()
-          .withName (sdgenTestQualTypeName)
-          .withKeywords ("language,english,question answering")
-          .withDescription ("""Score on the qualification test for the question writing task,
-                as a test of your understanding of the instructions.""".replaceAll ("\\s+", " ") )
-          .withQualificationTypeStatus (QualificationTypeStatus.Active)
-          .withRetryDelayInSeconds (90L)
-          .withTest (qualTest.testString)
-          .withAnswerKey (qualTest.answerKeyString)
-          .withTestDurationInSeconds (1500L)
-          .withAutoGranted (false)
-      ).getQualificationType
-    }
-  }))
-  val sdgenTestQualTypeIdOpt = sdgenTestQualTypeOpt.map(_.getQualificationTypeId)
-  val sdgenTestRequirementOpt = sdgenTestQualTypeIdOpt.map(qualTypeId =>
-    new QualificationRequirement()
-      .withQualificationTypeId(qualTypeId)
-      .withComparator("GreaterThanOrEqualTo")
-      .withIntegerValues(70)
-      .withRequiredToPreview(false)
-  )
 
 
   // NOTE may need to call multiple times to cover all workers... sigh TODO pagination
@@ -407,12 +302,10 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
       genAccDisqualTypeId,
       genAgreementDisqualTypeId,
       genCoverageDisqualTypeId,
-      sdgenCoverageDisqualTypeId,
       valAgrDisqualTypeId,
       nomTrapQualTypeId,
       nomTrainingQualTypeId,
-      nomProductionQualTypeId,
-      sdvalAgrDisqualTypeId) ++ sdvalTestQualTypeIdOpt ++ sdgenTestQualTypeIdOpt
+      nomProductionQualTypeId)
 
     activeQualsList.foreach(revokeAllWorkerQuals)
   }
@@ -445,64 +338,8 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     (headLinks, bodyLinks)
   }
 
-  val sdgenHITType = HITType(
-    title = s"Write question-answer pairs about a word",
-    description = s"""
-      Given a sentence containing a single highlighted word,
-      Your goals are: (1) write questions about that word which
-      are answerable by the sentence and (2) mark their
-      respective answers in the sentence.
-      Questions must adhere to certain templates,
-      provided by autocomplete functionality.
-      Bonuses are granted for each generated question.
-      Maintain high accuracy to stay qualified.
-    """.trim.replace("\\s+", " "),
-    reward = qasdSettings.generationReward,
-    keywords = "language,english,question answering",
-    qualRequirements = Array[QualificationRequirement](
-      approvalRateRequirement, localeRequirement, genAccuracyRequirement,
-      genAgreementRequirement, sdgenCoverageRequirement
-    ) ++ sdgenTestRequirementOpt,
-    autoApprovalDelay = 2592000L, // 30 days
-    assignmentDuration = 3600L)
-
-  lazy val sdgenAjaxService = new Service[QASRLGenerationAjaxRequest[SID]] {
-    override def processRequest(request: QASRLGenerationAjaxRequest[SID]) = request match {
-      case QASRLGenerationAjaxRequest(workerIdOpt, QASRLGenerationPrompt(id, verbIndex, verbForm)) =>
-        val questionListsOpt = for {
-          genManagerP <- Option(sdgenManagerPeek)
-          workerId <- workerIdOpt
-          qCounts <- genManagerP.coverageStats.get(workerId)
-        } yield qCounts
-        val questionLists = questionListsOpt.getOrElse(Nil)
-
-        // this is for taking worker stat from accuracyTrackerPeek which contains accuracy by validation
-//        val workerStatsOpt = for {
-//          accTrackP <- Option(accuracyTrackerPeek)
-//          workerId <- workerIdOpt
-//          stats <- accTrackP.allWorkerStats.get(workerId)
-//        } yield stats
-
-        // this is for taking worker stat from genAgreementTrackerPeek which contains accuracy by agreement
-        val workerStatsOpt = for {
-          accTrackP <- Option(genAgreementTrackerPeek)
-          workerId <- workerIdOpt
-          stats <- accTrackP.allWorkerStats.get(workerId)
-        } yield stats
-
-        val stats = GenerationStatSummary(
-          numVerbsCompleted = questionLists.size,
-          numQuestionsWritten = questionLists.sum,
-          workerStatsOpt = workerStatsOpt)
-
-        val tokens = id.tokens
-        val inflectedForms = inflections.getInflectedForms(verbForm.lowerCase)
-        QASRLGenerationAjaxResponse(stats, tokens, inflectedForms)
-    }
-  }
-
   val genHITType = HITType(
-    title = s"Write question-answer pairs about verbal nouns",
+    title = s"Write question-answer pairs about verbal nouns  $stageRelatedTaskTitleSuffix",
     description = s"""
       Given a sentence and a noun from that sentence,
       write questions and answers about that noun.
@@ -599,45 +436,6 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     taskPageBodyElements = taskPageBodyLinks,
     frozenHITTypeId = frozenValidationHITTypeId)
 
-  // Same for SD validation - seperate hitType, taskSpec, AjaxService
-  val sdvalHITType = HITType(
-    title = s"Answer simple questions about a word in a sentence",
-    description = s"""
-      Given a sentence with a highlighted word and several questions about it,
-      highlight the part of the sentence that answers each question,
-      and mark questions that are invalid or redundant.
-      Maintain high agreement with others to stay qualified.
-    """.trim,
-    reward = qasdSettings.validationReward,
-    keywords = "language,english,question answering",
-    qualRequirements = Array[QualificationRequirement](
-      approvalRateRequirement, localeRequirement, sdvalAgreementRequirement) ++ sdvalTestRequirementOpt,
-    autoApprovalDelay = 2592000L, // 30 days
-    assignmentDuration = 3600L)
-
-  lazy val sdvalAjaxService = new Service[QASRLValidationAjaxRequest[SID]] {
-    override def processRequest(request: QASRLValidationAjaxRequest[SID]) = request match {
-      case QASRLValidationAjaxRequest(workerIdOpt, id) =>
-        val workerInfoSummaryOpt = for {
-          valManagerP <- Option(sdvalManagerPeek)
-          workerId <- workerIdOpt
-          info <- valManagerP.allWorkerInfo.get(workerId)
-        } yield info.summary
-
-        QASRLValidationAjaxResponse(workerInfoSummaryOpt, id.tokens)
-    }
-  }
-
-  lazy val sdsampleValPrompt = QASRLValidationPrompt[SID](
-    allNominalPrompts.head, "", "", List(""),
-    List(QANomResponse(18,false, "do", List())))
-
-  lazy val sdvalTaskSpec = TaskSpecification.NoWebsockets[QASRLValidationPrompt[SID], List[QASRLValidationAnswer], QASRLValidationAjaxRequest[SID]](
-    settings.sdvalidationTaskKey, sdvalHITType, sdvalAjaxService, Vector(sdsampleValPrompt),
-    taskPageHeadElements = taskPageHeadLinks,
-    taskPageBodyElements = taskPageBodyLinks,
-    frozenHITTypeId = frozenValidationHITTypeId)
-
   // hit management --- circularly defined so they can communicate
 
   import config.actorSystem
@@ -693,42 +491,6 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
       genAggregatorPeek
     })
 
-  // copy for SDValidation - Helper, Manager, ManagerPeek, Actor (Task Manager)
-  var sdvalManagerPeek: QASRLValidationHITManager[SID] = null
-
-  lazy val sdvalHelper = new HITManager.Helper(sdvalTaskSpec)
-  lazy val sdvalManager: ActorRef = actorSystem.actorOf(
-    Props {
-      // use same class but override file naming using suffix
-      sdvalManagerPeek = new QASRLValidationHITManager(
-        sdvalHelper,
-        sdvalAgrDisqualTypeId,
-        accuracyTracker,
-        // sentenceTracker,
-        numSDValidatorsAssignmentsForPrompt, // how many validators per HIT?
-        if(config.isProduction) 100 else 100,
-        qasdSettings,
-        "NonVerb")
-      sdvalManagerPeek
-    })
-
-  lazy val sdvalActor = actorSystem.actorOf(Props(new TaskManager(sdvalHelper, sdvalManager)))
-
-  // Actor for aggregating sdgeneration responses to a single sdvalidation prompt
-  var sdgenAggregatorPeek: GenerationAggregationManager[SID] = null
-
-  lazy val sdgenAggregator: ActorRef = actorSystem.actorOf(
-    Props {
-      sdgenAggregatorPeek = new GenerationAggregationManager[SID](
-        genAgreementTracker,
-        sdvalHelper,
-        sdvalManager,
-        numGenerationAssignmentsForPrompt,
-        "NonVerb"
-      )
-      sdgenAggregatorPeek
-    })
-
   val genTaskSpec = TaskSpecification.NoWebsockets[QASRLGenerationPrompt[SID], QANomResponse, QASRLGenerationAjaxRequest[SID]](
     settings.generationTaskKey, genHITType, genAjaxService, allVerbPrompts,
     taskPageHeadElements = taskPageHeadLinks,
@@ -757,56 +519,15 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   )
   val genActor = actorSystem.actorOf(Props(new TaskManager(genHelper, genManager)))
 
-  //**** lets try to create another HITType and TaskSepc for SDGen (Sem-Dep-Generation)
-  val sdgenTaskSpec = TaskSpecification.NoWebsockets[QASRLGenerationPrompt[SID], QANomResponse, QASRLGenerationAjaxRequest[SID]](
-    settings.sdgenerationTaskKey, sdgenHITType, sdgenAjaxService, allSDPrompts,
-    taskPageHeadElements = taskPageHeadLinks,
-    taskPageBodyElements = taskPageBodyLinks,
-    frozenHITTypeId = frozenGenerationHITTypeId)
 
-  var sdgenManagerPeek: QASRLGenerationHITManager[SID] = null
-
-  val sdgenHelper = new HITManager.Helper(sdgenTaskSpec)
-  val sdgenManager: ActorRef = actorSystem.actorOf(
-    Props {
-      sdgenManagerPeek = new QASRLGenerationHITManager(
-        sdgenHelper,
-        sdvalHelper,
-        sdvalManager, // here we pass the valManager to genManager, so that when reviewing assignment it add promtp to valManager
-        sdgenAggregator,
-        accuracyTracker,
-        sdgenCoverageDisqualTypeId,
-        // sentenceTracker,
-        numGenerationAssignmentsForPrompt,
-        numSDValidatorsAssignmentsForPrompt,
-        if(config.isProduction) 100 else 3,
-        allSDPrompts.iterator, // the prompts itarator determines what genHITs are generated
-        qasdSettings,
-        "nonVerb")
-      sdgenManagerPeek
-    }
-  )
-
-  val sdgenActor = actorSystem.actorOf(Props(new TaskManager(sdgenHelper, sdgenManager)))
-
-    /** until here is the "copy"- gen to sdgen.  new objects:
-      *   genHITType
-      *   genTaskSpec
-      *   genActor
-      *   genHelper
-      *   genManager
-      *   genManagerPeek
-      *   genAjaxService
-      */
-
-  lazy val server = new Server(List(genTaskSpec, sdgenTaskSpec, valTaskSpec, sdvalTaskSpec))
+  lazy val server = new Server(List(genTaskSpec, valTaskSpec))
 
   // used to schedule data-saves
   private[this] var schedule: List[Cancellable] = Nil
   def startSaves(interval: FiniteDuration = 5 minutes): Unit = {
     if(schedule.exists(_.isCancelled) || schedule.isEmpty) {
-      schedule = List(genManager, sdgenManager, valManager, sdvalManager,
-        accuracyTracker, genAgreementTracker, genAggregator, sdgenAggregator).map(actor =>
+      schedule = List(genManager, valManager,
+        accuracyTracker, genAgreementTracker, genAggregator).map(actor =>
         config.actorSystem.scheduler.schedule(
           2 seconds, interval, actor, SaveData)(
           config.actorSystem.dispatcher, actor)
@@ -818,14 +539,8 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   def setGenHITsActiveEach(n: Int) = {
     genManager ! SetNumHITsActive(n)
   }
-  def setSDGenHITsActiveEach(n: Int) = {
-    sdgenManager ! SetNumHITsActive(n)
-  }
   def setValHITsActive(n: Int) = {
     valManager ! SetNumHITsActive(n)
-  }
-  def setSDValHITsActive(n: Int) = {
-    sdvalManager ! SetNumHITsActive(n)
   }
 
   import TaskManager.Message._
@@ -833,46 +548,33 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     server
     startSaves()
     genActor ! Start(interval, delay = 2 seconds)
-    sdgenActor ! Start(interval, delay = 3 seconds)
     valActor ! Start(interval, delay = 3 seconds)
-    sdvalActor ! Start(interval, delay = 3 seconds)
   }
   def stop() = {
     genActor ! Stop
-    sdgenActor ! Stop
     valActor ! Stop
-    sdvalActor ! Stop
     stopSaves
   }
   def delete() = {
     genActor ! Delete
-    sdgenActor ! Delete
     valActor ! Delete
-    sdvalActor ! Delete
   }
   def expire() = {
     genActor ! Expire
-    sdgenActor ! Expire
     valActor ! Expire
-    sdvalActor ! Expire
   }
   def update() = {
     server
     genActor ! Update
-    sdgenActor ! Update
     valActor ! Update
-    sdvalActor ! Update
   }
   def save() = {
     // sentenceTracker ! SaveData
     accuracyTracker ! SaveData
     genAgreementTracker ! SaveData
     genManager ! SaveData
-    sdgenManager ! SaveData
     valManager ! SaveData
-    sdvalManager ! SaveData
     genAggregator ! SaveData
-    sdgenAggregator ! SaveData
   }
 
   // for use while it's running. Ideally instead of having to futz around at the console calling these functions,
@@ -880,11 +582,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
 
   def allGenInfos = hitDataService.getAllHITInfo[QASRLGenerationPrompt[SID], QANomResponse](genTaskSpec.hitTypeId).get
 
-  def allSDGenInfos = hitDataService.getAllHITInfo[QASRLGenerationPrompt[SID], QANomResponse](sdgenTaskSpec.hitTypeId).get
-
   def allValInfos = hitDataService.getAllHITInfo[QASRLValidationPrompt[SID], List[QASRLValidationAnswer]](valTaskSpec.hitTypeId).get
-
-  def allSDValInfos = hitDataService.getAllHITInfo[QASRLValidationPrompt[SID], List[QASRLValidationAnswer]](sdvalTaskSpec.hitTypeId).get
 
   def currentGenSentences: List[(SID, String)] = {
     genHelper.activeHITInfosByPromptIterator.map(_._1.id).map(id =>
@@ -1078,9 +776,6 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   def printGenFeedback(n: Int) = genManagerPeek.feedbacks.take(n).foreach(a =>
     println(a.workerId + " " + a.feedback)
   )
-  def printSDGenFeedback(n: Int) = sdgenManagerPeek.feedbacks.take(n).foreach(a =>
-    println(a.workerId + " " + a.feedback)
-  )
   def printValFeedback(n: Int) = valManagerPeek.feedbacks.take(n).foreach(a =>
     println(a.workerId + " " + a.feedback)
   )
@@ -1088,8 +783,6 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   def printAllFeedbacks(n: Int = Int.MaxValue) = {
     println("Generation (verbs):")
     printGenFeedback(n)
-    println("\nGeneration (non-verbs):")
-    printSDGenFeedback(n)
     println("\nValidation:")
     printValFeedback(n)
   }
