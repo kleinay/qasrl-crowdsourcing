@@ -14,7 +14,7 @@ import nlpdata.util.Text
 import nlpdata.util.HasTokens.ops._
 import nlpdata.structure.Word
 
-val label = "nom_production_3workers"
+val label = "nom_production_"
 
 val isProduction = true // sandbox. change to true for production
 val domain = "u.cs.biu.ac.il/~stanovg/qasrl" // change to your domain, or keep localhost for testing
@@ -37,6 +37,19 @@ implicit val config: TaskConfig = {
   }
 }
 
+val setup = new AnnotationSetup(label, Stage.Production)
+import setup.SentenceIdHasTokens
+
+val exp = setup.experiment
+exp.server
+
+
+def saveGenerationData(filename: String) = {
+  val nonEmptyGens = exp.allGenInfos.filter(_.assignments.nonEmpty)
+  setup.saveGenerationData(filename, nonEmptyGens)
+}
+
+
 def exit = {
   // actor system has to be terminated for JVM to be able to terminate properly upon :q
   config.actorSystem.terminate
@@ -45,67 +58,6 @@ def exit = {
   import ch.qos.logback.classic.LoggerContext
   LoggerFactory.getILoggerFactory.asInstanceOf[LoggerContext].stop
   System.out.println("Terminated actor system and logging. Type :q to end.")
-}
-
-val setup = new AnnotationSetup(label, Stage.Production)
-import setup.SentenceIdHasTokens
-
-val exp = setup.experiment
-exp.server
-
-// save source sentences
-def saveSourceSentences(sentences : Vector[String] ) : Unit = {
-  import io.circe.Json
-  val jsn=Json.fromValues(sentences.map(Json.fromString))
-  import java.io.{OutputStreamWriter, File, FileOutputStream}
-  import java.nio.charset.StandardCharsets
-  val writer = new OutputStreamWriter(
-    new FileOutputStream(s"data/tqa/$label/sourceSentences.json"), StandardCharsets.UTF_8)
-  //      PrintWriter(new File(s"data/tqa/$label/tokenizedSentences.json"))
-  writer.write(jsn.toString)
-  writer.close()
-}
-
-// save tokenized sentences
-def saveTokenizedIds(sentences : Vector[Vector[String]] ) : Unit = {
-  import io.circe.Json
-  def sent2json(sentence : Vector[String]) : Json = Json.fromValues(sentence.map(Json.fromString))
-  val jsn=Json.fromValues(sentences.map(sent2json))
-  import java.io.{OutputStreamWriter, File, FileOutputStream}
-  import java.nio.charset.StandardCharsets
-  val writer = new OutputStreamWriter(
-    new FileOutputStream(s"data/tqa/$label/tokenizedSentences.json"), StandardCharsets.UTF_8)
-//      PrintWriter(new File(s"data/tqa/$label/tokenizedSentences.json"))
-  writer.write(jsn.toString)
-  writer.close()
-}
-
-def savePOSTaggedSentences(sentences : Vector[Vector[Word]]) : Unit = {
-  import io.circe.Json
-  def word2json(word : Word) : Json = Json.fromFields(List(
-    ("index", Json.fromInt(word.index)),
-    ("pos", Json.fromString(word.pos)),
-    ("token", Json.fromString(word.token))
-  ))
-  def posSent2json(posSent : Vector[Word]) : Json = Json.fromValues(posSent.map(word2json))
-  val jsn = Json.fromValues(sentences.map(posSent2json))
-  import java.io.{OutputStreamWriter, File, FileOutputStream}
-  import java.nio.charset.StandardCharsets
-  val writer = new OutputStreamWriter(
-    new FileOutputStream(s"data/tqa/$label/posTaggedSentences.json"), StandardCharsets.UTF_8)
-//    new PrintWriter(new File(s"data/tqa/$label/posTaggedSentences.json"))
-  writer.write(jsn.toString)
-  writer.close()
-}
-
-saveSourceSentences(setup.sentences)
-saveTokenizedIds(setup.tokenizedSentences)
-//savePOSTaggedSentences(setup.posTaggedSentences)
-
-
-def saveGenerationData(filename: String) = {
-  val nonEmptyGens = exp.allGenInfos.filter(_.assignments.nonEmpty)
-  setup.saveGenerationData(filename, nonEmptyGens)
 }
 
 // use with caution... intended mainly for sandbox
