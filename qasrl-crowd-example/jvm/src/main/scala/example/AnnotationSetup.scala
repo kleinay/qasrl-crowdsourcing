@@ -52,7 +52,7 @@ class AnnotationSetup(
   val scriptsPath = java.nio.file.Paths.get("scripts")
 
   import java.nio.file.{Paths, Path, Files}
-  val liveDataPath = Paths.get(s"data/example/$label/live")
+  private[this] val liveDataPath = Paths.get(s"data/example/$label/live")
   val liveAnnotationDataService = new FileSystemAnnotationDataService(liveDataPath)
 
   val staticDataPath = Paths.get(s"data/example/$label/static")
@@ -133,7 +133,7 @@ class AnnotationSetup(
   //val tokenizedSentences = sentences.map(Tokenizer.tokenize_with_ner)
 
   // copy source.txt to live data directory
-  copyFile(raw_data_path, liveDataPath.resolve("sourceSentences.csv"))
+//  copyFile(raw_data_path, liveDataPath.resolve("sourceSentences.csv"))
 
   // save mapping between sentence_IDs to sentences (tokenized)
   val sentenceIdToTokens : Map[String, Vector[String]] = prompts_data.map(
@@ -195,16 +195,11 @@ class AnnotationSetup(
     numGenerationAssignmentsInProduction,
     liveAnnotationDataService,
     annotationStage = stage,
-    //sdgenQualTestOpt = Some(SDGenQualTestExample),
-    sdgenQualTestOpt = None,
-    //sdvalQualTestOpt = Some(SDValQualTestExample),
-    sdvalQualTestOpt = None,
     frozenGenerationHITTypeId = frozenGenerationHITTypeId,
     frozenValidationHITTypeId = frozenValidationHITTypeId,
     generationAccuracyDisqualTypeLabel = None,
     generationCoverageDisqualTypeLabel = None,
-    validationAgreementDisqualTypeLabel = None,
-    sdvalidationAgreementDisqualTypeLabel = Some("Non-verb"))
+    validationAgreementDisqualTypeLabel = None)
 
   // Saving the crowd annotations (generation)
   // from Pavel
