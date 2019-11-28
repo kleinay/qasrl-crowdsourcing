@@ -65,7 +65,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
 
   // define numValidatorsAssignmentsForPrompt for verbs, for either production or sandbox
   def numValidatorsAssignmentsForPrompt : QASRLValidationPrompt[SID] => Int =
-    if(config.isProduction) (_ => 2) else (_ => 1)  // how many validators?
+    if(config.isProduction) (_ => 0) else (_ => 0)  // how many validators?
 
   // define numValidatorsAssignmentsForPrompt for non-verbs, for either production or sandbox
   def numSDValidatorsAssignmentsForPrompt : QASRLValidationPrompt[SID] => Int =
@@ -148,15 +148,18 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     qualResult.getQualificationType
   }
 
-  private def findQualificationType (qualificationName: String): Option[QualificationType] = {
-    val qualificationTypes = config.service.listQualificationTypes(
-      new ListQualificationTypesRequest()
-        .withQuery(qualificationName)
-        .withMustBeOwnedByCaller(true)
-        .withMustBeRequestable(false)
-        .withMaxResults(100)
-    ).getQualificationTypes.asScala.toList
-    val found = qualificationTypes.find(_.getName == qualificationName)
+  // general list of all our qualifications on MTurk
+  val ourRequesterName = "BIU NLP"
+  lazy val allMTurkQualificationTypes = config.service.listQualificationTypes(
+    new ListQualificationTypesRequest()
+      .withQuery(ourRequesterName)
+      .withMustBeOwnedByCaller(true)
+      .withMustBeRequestable(false)
+      .withMaxResults(100)
+  ).getQualificationTypes.asScala.toList
+
+  def findQualificationType (qualificationName: String): Option[QualificationType] = {
+    val found = allMTurkQualificationTypes.find(_.getName == qualificationName)
     found
   }
 
@@ -239,6 +242,14 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     case Stage.Production => Array(nomProductionPhaseRequirement)
     case Stage.Expert => Array.empty
     case Stage.WildCrowd => Array.empty
+  }
+
+  val stageRelatedTaskTitleSuffix : String = annotationStage match {
+    case Stage.Trap => ""
+    case Stage.Training => "[Training]"
+    case Stage.Production => "[Production]"
+    case Stage.Expert => "[Internal]"
+    case Stage.WildCrowd => ""
   }
 
   // Generators Agreement Disqualification
@@ -502,7 +513,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   }
 
   val genHITType = HITType(
-    title = s"Write question-answer pairs about verbal nouns",
+    title = s"Write question-answer pairs about verbal nouns  $stageRelatedTaskTitleSuffix",
     description = s"""
       Given a sentence and a noun from that sentence,
       write questions and answers about that noun.
