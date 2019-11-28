@@ -119,7 +119,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
 
 
   // Current Nominalizations Experiment: use only verb-generation pipeline, for nominalizations
-  lazy val allVerbPrompts = allNominalPrompts
+  lazy val allVerbPrompts: Vector[QASRLGenerationPrompt[SID]]= allNominalPrompts
 
   implicit val ads = annotationDataService
 
@@ -223,9 +223,13 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   val nomProductionPhaseWorkersDisqualificationFromTrainingRequirement =
     createDisqualificationReq(nomProductionQualType, requiredToPreview = true)
 
+  // disqualify (previous) qualified workers from Trap stage HITs
+  val nomQualifiedWorkersDisqualificationFromTrapRequirement =
+    createDisqualificationReq(nomTrainingQualType, requiredToPreview = true)
+
   // now combine the current-stage related requirements for the generation HITs
   val stageRelatedRequirements : Array[QualificationRequirement] = annotationStage match {
-    case Stage.Trap => Array(nomTrapPhaseRequirement)
+    case Stage.Trap => Array(nomTrapPhaseRequirement, nomQualifiedWorkersDisqualificationFromTrapRequirement)
     case Stage.Training => Array(nomTrainingPhaseRequirement, nomProductionPhaseWorkersDisqualificationFromTrainingRequirement)
     case Stage.Production => Array(nomProductionPhaseRequirement)
     case Stage.Expert => Array.empty
@@ -499,10 +503,10 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
 
   var genManagerPeek: QASRLGenerationHITManager[SID] = null
 
-  val genHelper = new HITManager.Helper(genTaskSpec)
+  val genHelper = new HITManager.Helper[QASRLGenerationPrompt[SID], QANomResponse](genTaskSpec)
   val genManager: ActorRef = actorSystem.actorOf(
     Props {
-      genManagerPeek = new QASRLGenerationHITManager(
+      genManagerPeek = new QASRLGenerationHITManager[SID](
         genHelper,
         valHelper,
         valManager,
@@ -799,4 +803,13 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   }
 
   def getGenHitTypeId: String = genHelper.taskSpec.hitTypeId
+
+  // Tracking progress
+  def seeProgress: Unit = {
+    println(f"Finished HITs: ${genHelper.finishedHITInfosByPromptIterator.toList.size}")
+    println(f"Currently active HITs: ${genHelper.numActiveHITs}")
+    val approved = genAggregatorPeek.genApprovedAssingments
+    val doneByWorker = approved.values.flatten.groupBy(_.workerId)
+    for (worker <- doneByWorker.keys) { println(f"${worker}: ${doneByWorker(worker).size} assignments done") }
+  }
 }

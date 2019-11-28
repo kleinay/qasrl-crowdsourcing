@@ -55,7 +55,7 @@ class GenerationAggregationManager[SID : Reader : Writer](
     val allQANomResponses : List[QANomResponse] = allAssignments.map(_.response)
     val allQAsFromResponses : List[VerbQA] = allQANomResponses.map(_.qas).flatten  // take all qas from all respondents
     // generate validation prompt corresponding to generation HIT
-    val validationPrompt = QASRLValidationPrompt (hit.prompt, hit.hitTypeId, hit.hitId, genAssignmentIds, allQANomResponses)
+    val validationPrompt = QASRLValidationPrompt[SID] (hit.prompt, hit.hitTypeId, hit.hitId, genAssignmentIds, allQANomResponses)
     validationActor ! validationHelper.Message.AddPrompt (validationPrompt)
 
     // when only single Gen worker, don't inform genAgreementActor

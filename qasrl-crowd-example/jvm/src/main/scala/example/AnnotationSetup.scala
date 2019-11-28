@@ -52,7 +52,7 @@ class AnnotationSetup(
   val scriptsPath = java.nio.file.Paths.get("scripts")
 
   import java.nio.file.{Paths, Path, Files}
-  private[this] val liveDataPath = Paths.get(s"data/example/$label/live")
+  val liveDataPath = Paths.get(s"data/example/$label/live")
   val liveAnnotationDataService = new FileSystemAnnotationDataService(liveDataPath)
 
   val staticDataPath = Paths.get(s"data/example/$label/static")

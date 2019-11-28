@@ -40,7 +40,7 @@ trait QASRLSettings {
   val generationAccuracyBlockingThreshold = 0.60
   val generationAccuracyGracePeriod = 15
 
-  val generationAgreementBlockingThreshold = 0.5
+  val generationAgreementBlockingThreshold = 0.2
   val generationAgreementGracePeriod = 15
 
   val validationAgreementBlockingThreshold = 0.85

@@ -14,9 +14,9 @@ import nlpdata.util.Text
 import nlpdata.util.HasTokens.ops._
 import nlpdata.structure.Word
 
-val label = "nom_training_09.19"
+val label = "nom_production_3workers"
 
-val isProduction = false // sandbox. change to true for production
+val isProduction = true // sandbox. change to true for production
 val domain = "u.cs.biu.ac.il/~stanovg/qasrl" // change to your domain, or keep localhost for testing
 val projectName = "qasrl-crowd-example" // make sure it matches the SBT project;
 // this is how the .js file is found to send to the server

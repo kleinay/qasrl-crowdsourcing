@@ -52,13 +52,9 @@ class QASRLValidationHITManager[SID : Reader : Writer](
   }
 
   override def addPrompt(prompt: QASRLValidationPrompt[SID]): Unit = {
-    if(prompt.qaPairs.nonEmpty) {
-      super.addPrompt(prompt)
-      allPrompts = prompt :: allPrompts
-      refreshHITs
-    } else {
-      logger.warn(s"Validation prompt contains response with no QA pairs: $prompt")
-    }
+    super.addPrompt(prompt)
+    allPrompts = prompt :: allPrompts
+    refreshHITs
   }
 
   def christenWorker(workerId: String, numAgreementsToAdd: Int) = {
@@ -75,8 +71,7 @@ class QASRLValidationHITManager[SID : Reader : Writer](
     val prompts = annotationDataService.loadLiveData(validationPromptsFilename)
       .toOption
       .fold(List.empty[QASRLValidationPrompt[SID]])(lines => read[List[QASRLValidationPrompt[SID]]](lines.mkString))
-    prompts.reverse.foreach(p =>
-      if(p.qaPairs.nonEmpty) super.addPrompt(p) else ()
+    prompts.reverse.foreach(p => super.addPrompt(p)
     ) // add them back while loading
     prompts
   }
@@ -230,6 +225,10 @@ class QASRLValidationHITManager[SID : Reader : Writer](
     if(!blockedValidators.contains(assignment.workerId)) {
       accuracyStatsActor ! QASRLValidationResult(hit.prompt, assignment.workerId, assignment.response)
     }
+
+    promptToAssignments = promptToAssignments.updated(
+         hit.prompt,
+         assignment :: promptToAssignments.getOrElse(hit.prompt, Nil))
 
     // TODO NEW VERSION
     // do comparisons with other workers
