@@ -302,10 +302,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
       genAccDisqualTypeId,
       genAgreementDisqualTypeId,
       genCoverageDisqualTypeId,
-      valAgrDisqualTypeId,
-      nomTrapQualTypeId,
-      nomTrainingQualTypeId,
-      nomProductionQualTypeId)
+      valAgrDisqualTypeId)
 
     activeQualsList.foreach(revokeAllWorkerQuals)
   }
@@ -520,13 +517,13 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   val genActor = actorSystem.actorOf(Props(new TaskManager(genHelper, genManager)))
 
 
-  lazy val server = new Server(List(genTaskSpec, valTaskSpec))
+  lazy val server = new Server(List(genTaskSpec))
 
   // used to schedule data-saves
   private[this] var schedule: List[Cancellable] = Nil
   def startSaves(interval: FiniteDuration = 5 minutes): Unit = {
     if(schedule.exists(_.isCancelled) || schedule.isEmpty) {
-      schedule = List(genManager, valManager,
+      schedule = List(genManager, // valManager,
         accuracyTracker, genAgreementTracker, genAggregator).map(actor =>
         config.actorSystem.scheduler.schedule(
           2 seconds, interval, actor, SaveData)(
@@ -685,7 +682,9 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     numInvalidAnswers: Option[Int],
     pctBad: Option[Double],
     agreement: Option[Double],
-    earnings: Double)
+    earnings: Double) {
+    override def toString = f"worker $workerId:  #verb=$numVerbs   #Qs=$numQs  agreement-rate=$genAgreement  earned=$earnings"
+  }
 
   case class AggregateStatSummary(
     numVerbs: Int,
@@ -759,14 +758,19 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
       printSingleStatSummary(ss)
   }
 
-  def printStats[B : Ordering](sortFn: StatSummary => B) = {
+  def batchSize: Int = allNominalPrompts.size
+
+  def printStatsSorted[B : Ordering](sortFn: StatSummary => B) = {
     val summaries = allStatSummaries.sortBy(sortFn)
     printStatsHeading
     summaries.foreach(printSingleStatSummary)
   }
 
-  def printQStats = printStats(-_.numQs.getOrElse(0))
-  def printAStats = printStats(-_.numAs.getOrElse(0))
+  def printQStats = printStatsSorted(-_.numQs.getOrElse(0))
+  def printAStats = printStatsSorted(-_.numAs.getOrElse(0))
+  def printStatsByAgreement = printStatsSorted(_.genAgreement.getOrElse(0.0).toDouble *(-1.0))
+  def printStatsByVerbs = printStatsSorted(-_.numVerbs.getOrElse(0))
+  def printStats = printStatsByVerbs
 
   def printCoverageStats = genManagerPeek.coverageStats.toList
     .sortBy(-_._2.size)
