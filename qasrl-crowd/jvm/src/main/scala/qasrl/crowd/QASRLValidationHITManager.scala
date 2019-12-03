@@ -231,6 +231,10 @@ class QASRLValidationHITManager[SID : Reader : Writer](
       accuracyStatsActor ! QASRLValidationResult(hit.prompt, assignment.workerId, assignment.response)
     }
 
+    promptToAssignments = promptToAssignments.updated(
+         hit.prompt,
+         assignment :: promptToAssignments.getOrElse(hit.prompt, Nil))
+
     // TODO NEW VERSION
     // do comparisons with other workers
   //   promptToAssignments.get(hit.prompt).getOrElse(Nil).foreach { otherAssignment =>

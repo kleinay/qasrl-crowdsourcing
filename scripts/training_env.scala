@@ -14,9 +14,9 @@ import nlpdata.util.Text
 import nlpdata.util.HasTokens.ops._
 import nlpdata.structure.Word
 
-val label = "nom_training_09.19"
+val label = "nom_training_"
 
-val isProduction = false // sandbox. change to true for production
+val isProduction = true // sandbox. change to true for production
 val domain = "u.cs.biu.ac.il/~stanovg/qasrl" // change to your domain, or keep localhost for testing
 val projectName = "qasrl-crowd-example" // make sure it matches the SBT project;
 // this is how the .js file is found to send to the server
@@ -37,6 +37,18 @@ implicit val config: TaskConfig = {
   }
 }
 
+val setup = new AnnotationSetup(label, Stage.Training)
+import setup.SentenceIdHasTokens
+
+val exp = setup.experiment
+exp.server
+
+def saveGenerationData(filename: String) = {
+  val nonEmptyGens = exp.allGenInfos.filter(_.assignments.nonEmpty)
+  setup.saveGenerationData(filename, nonEmptyGens)
+}
+
+
 def exit = {
   // actor system has to be terminated for JVM to be able to terminate properly upon :q
   config.actorSystem.terminate
@@ -47,73 +59,10 @@ def exit = {
   System.out.println("Terminated actor system and logging. Type :q to end.")
 }
 
-val setup = new AnnotationSetup(label, Stage.Training)
-import setup.SentenceIdHasTokens
-
-val exp = setup.experiment
-exp.server
-
-// save source sentences
-def saveSourceSentences(sentences : Vector[String] ) : Unit = {
-  import io.circe.Json
-  val jsn=Json.fromValues(sentences.map(Json.fromString))
-  import java.io.{OutputStreamWriter, File, FileOutputStream}
-  import java.nio.charset.StandardCharsets
-  val writer = new OutputStreamWriter(
-    new FileOutputStream(s"data/tqa/$label/sourceSentences.json"), StandardCharsets.UTF_8)
-  //      PrintWriter(new File(s"data/tqa/$label/tokenizedSentences.json"))
-  writer.write(jsn.toString)
-  writer.close()
-}
-
-// save tokenized sentences
-def saveTokenizedIds(sentences : Vector[Vector[String]] ) : Unit = {
-  import io.circe.Json
-  def sent2json(sentence : Vector[String]) : Json = Json.fromValues(sentence.map(Json.fromString))
-  val jsn=Json.fromValues(sentences.map(sent2json))
-  import java.io.{OutputStreamWriter, File, FileOutputStream}
-  import java.nio.charset.StandardCharsets
-  val writer = new OutputStreamWriter(
-    new FileOutputStream(s"data/tqa/$label/tokenizedSentences.json"), StandardCharsets.UTF_8)
-//      PrintWriter(new File(s"data/tqa/$label/tokenizedSentences.json"))
-  writer.write(jsn.toString)
-  writer.close()
-}
-
-def savePOSTaggedSentences(sentences : Vector[Vector[Word]]) : Unit = {
-  import io.circe.Json
-  def word2json(word : Word) : Json = Json.fromFields(List(
-    ("index", Json.fromInt(word.index)),
-    ("pos", Json.fromString(word.pos)),
-    ("token", Json.fromString(word.token))
-  ))
-  def posSent2json(posSent : Vector[Word]) : Json = Json.fromValues(posSent.map(word2json))
-  val jsn = Json.fromValues(sentences.map(posSent2json))
-  import java.io.{OutputStreamWriter, File, FileOutputStream}
-  import java.nio.charset.StandardCharsets
-  val writer = new OutputStreamWriter(
-    new FileOutputStream(s"data/tqa/$label/posTaggedSentences.json"), StandardCharsets.UTF_8)
-//    new PrintWriter(new File(s"data/tqa/$label/posTaggedSentences.json"))
-  writer.write(jsn.toString)
-  writer.close()
-}
-
-saveSourceSentences(setup.sentences)
-saveTokenizedIds(setup.tokenizedSentences)
-//savePOSTaggedSentences(setup.posTaggedSentences)
-
-
-def saveGenerationData(filename: String) = {
-  val nonEmptyGens = exp.allGenInfos.filter(_.assignments.nonEmpty)
-  setup.saveGenerationData(filename, nonEmptyGens)
-}
-
 // use with caution... intended mainly for sandbox
 def deleteAll = {
   exp.setGenHITsActiveEach(0)
-  exp.setSDGenHITsActiveEach(0)
   exp.setValHITsActive(0)
-  exp.setSDValHITsActive(0)
   Thread.sleep(200)
   exp.expire
   exp.delete
@@ -181,55 +130,4 @@ def getOurActiveHITIds = {
 
 def disableAllOurHITs = {
   getOurActiveHITIds map disableHITById
-}
-
-def costOfQASD(verbsPrompts : Int, sdPrompts : Int, isValAggregated : Boolean = true) : Double = {
-  val avgGenQAPerNonVerb = 1.3
-  val avgGenQAPerVerb = 2.3
-  val numGenerators = setup.numGenerationAssignmentsInProduction
-  val numValidators = 0 // todo change manually
-  // generation cost computation
-  val verbGenAssignments = verbsPrompts * numGenerators
-  val sdGenAssignments = sdPrompts * numGenerators
-  val verbGenQAs = verbGenAssignments * avgGenQAPerVerb
-  val sdGenQAs = sdGenAssignments * avgGenQAPerNonVerb
-  // for simplicity, we'll compute as if every generated question is granted the same
-  val verbGenCost = QASRLSettings.default.generationReward * verbGenQAs
-  val sdGenCost = QASDSettings.default.generationReward * sdGenQAs
-  val genTotalCost = verbGenCost + sdGenCost
-
-  // validation cost computation
-  val valTotalCost = if(isValAggregated){
-    // When aggregated validation:
-    val verbValAssignments = verbsPrompts * numValidators
-    val sdValAssignments = sdPrompts * numValidators
-    val verbAvgQsPerTarget = avgGenQAPerVerb * numGenerators
-    val sdAvgQsPerTarget = avgGenQAPerNonVerb * numGenerators
-    // how much should one validator be paid for one assignments?
-    val verbValAvgAssignmentPayment = verbAvgQsPerTarget * QASRLSettings.default.validationBonusPerQuestion
-    val sdValAvgAssignmentPayment = sdAvgQsPerTarget * QASDSettings.default.validationBonusPerQuestion
-    val verbValCost = verbValAvgAssignmentPayment * verbValAssignments
-    val sdValCost = sdValAvgAssignmentPayment * sdValAssignments
-    verbValCost + sdValCost
-  } else {
-    // When validation is not aggregated, i.e. each generators has its own validators
-    val verbValAssignments = verbGenAssignments * numValidators
-    val sdValAssignments = sdGenAssignments * numValidators
-    val verbAvgQsPerTarget = avgGenQAPerVerb
-    val sdAvgQsPerTarget = avgGenQAPerNonVerb
-    // how much should one validator be paid for one assignments?
-    val verbValAvgAssignmentPayment = QASRLSettings.default.validationReward +
-      math.max(0, (verbAvgQsPerTarget-QASRLSettings.default.validationBonusThreshold) * QASRLSettings.default.validationBonusPerQuestion)
-    val sdValAvgAssignmentPayment = QASDSettings.default.validationReward +
-      math.max(0, (verbAvgQsPerTarget-QASDSettings.default.validationBonusThreshold) * QASDSettings.default.validationBonusPerQuestion)
-    val verbValCost = verbValAvgAssignmentPayment * verbValAssignments
-    val sdValCost = sdValAvgAssignmentPayment * sdValAssignments
-    verbValCost + sdValCost
-  }
-  // final cost
-  genTotalCost + valTotalCost
-}
-
-def currentPipelineCost(isValAggregated : Boolean = true) : Double = {
-  costOfQASD(exp.allVerbPrompts.size, exp.allSDPrompts.size, isValAggregated)
 }

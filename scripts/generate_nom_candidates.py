@@ -3,7 +3,7 @@
 import os, sys, subprocess
 
 # globals
-qanom_repo_root_locaction = 'QANom' 	# location of the QANom project root directory 
+qanom_repo_root_locaction = '/home/qasrl/QANom/QANom' 	# location of the QANom project root directory 
 							# (where the qanom package and virtual env resides)
 assert os.path.isdir(qanom_repo_root_locaction), "Wrong location for QANom repository"							
 							
