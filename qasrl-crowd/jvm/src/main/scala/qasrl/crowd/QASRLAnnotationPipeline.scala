@@ -776,9 +776,16 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   def printStatsByVerbs = printStatsSorted(-_.numVerbs.getOrElse(0))
   def printStats = printStatsByVerbs
 
-  def printCoverageStats = genManagerPeek.coverageStats.toList
+  def printAllStats = genManagerPeek.coverageStats.toList
     .sortBy(-_._2.size)
-    .map { case (workerId, numQs) => f"$workerId%s\t${numQs.size}%d\t${numQs.sum.toDouble / numQs.size}%.2f" }
+    .map { case (workerId, numQs) => {
+      val statSummary: StatSummary = statsForWorker(workerId).get
+      val isVerbalTrueCount = numQs.size
+      val numPredicates = statSummary.numVerbs.get
+      val proportionIsVerbal = isVerbalTrueCount.toDouble / numPredicates
+      val agreementRate = statSummary.genAgreement.get
+      f"$workerId%s\tHITs:$numPredicates%d \tperc. verbal: $proportionIsVerbal%.2f \tQAs-per-verbal-noun:${numQs.sum.toDouble / numQs.size}%.2f \tIAA:$agreementRate%.2f"
+    } }
     .foreach(println)
 
   def printGenFeedback(n: Int) = genManagerPeek.feedbacks.take(n).foreach(a =>

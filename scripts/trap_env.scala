@@ -14,16 +14,16 @@ import nlpdata.util.Text
 import nlpdata.util.HasTokens.ops._
 import nlpdata.structure.Word
 
-val label = "nom_trap"
+val label = "nom_trap_small_test_21.11.19"
 
-val isProduction = true // sandbox. change to true for production
+val isProduction = false // sandbox. change to true for production
 val domain = "u.cs.biu.ac.il/~stanovg/qasrl" // change to your domain, or keep localhost for testing
 val projectName = "qasrl-crowd-example" // make sure it matches the SBT project;
 // this is how the .js file is found to send to the server
 
 val interface = "0.0.0.0"
-val httpPort = 5905
-val httpsPort = 5905
+val httpPort = 5906
+val httpsPort = 5906
 
 val annotationPath = java.nio.file.Paths.get(s"data/tqa/$label/annotations")
 implicit val timeout = akka.util.Timeout(5.seconds)
@@ -103,7 +103,7 @@ saveTokenizedIds(setup.tokenizedSentences)
 //savePOSTaggedSentences(setup.posTaggedSentences)
 
 
-def saveGenerationData(filename: String) = {
+def saveGenerationData(filename: String) :List[QANom] = {
   val nonEmptyGens = exp.allGenInfos.filter(_.assignments.nonEmpty)
   setup.saveGenerationData(filename, nonEmptyGens)
 }
