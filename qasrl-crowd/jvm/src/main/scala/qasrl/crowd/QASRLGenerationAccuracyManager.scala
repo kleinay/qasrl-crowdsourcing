@@ -94,35 +94,6 @@ class QASRLGenerationAccuracyManager[SID : Reader : Writer](
     }
   }
 
-  def grantBonusForGenerator(genAssignment: Assignment[QANomResponse], validQuestions : List[String]) : Unit = {
-    // award bonus for the worker of the generation assignment, for its valid questions
-    val numQAsProvided = genAssignment.response.qas.size
-    // count how many of generated questions are valid (according to validators)
-    val genQuestions = genAssignment.response.qas.map(_.question)
-    val numQAsValid = genQuestions.count(validQuestions.contains(_))
-    val bonusAwarded = settings.generationBonus(numQAsValid)
-    val bonusCents = dollarsToCents(bonusAwarded)
-    if(bonusAwarded > 0.0) {
-      Try(
-        service.sendBonus(
-          new SendBonusRequest()
-            .withWorkerId(genAssignment.workerId)
-            .withBonusAmount(f"$bonusAwarded%.2f")
-            .withAssignmentId(genAssignment.assignmentId)
-            .withReason(
-              s"""$numQAsValid out of $numQAsProvided question-answer pairs were judged to be valid, for a bonus of ${bonusCents}c."""))
-      ).toOptionLogging(logger).ifEmpty(logger.error(s"Failed to grant bonus of $bonusCents to worker ${genAssignment.workerId}"))
-    }
-
-    allWorkerStats = allWorkerStats.updated(
-      genAssignment.workerId,
-      allWorkerStats
-        .get(genAssignment.workerId)
-        .getOrElse(QASRLGenerationWorkerStats.empty(genAssignment.workerId))
-        .registerValidationFinished(settings.generationReward + bonusAwarded)
-    )
-  }
-
   override def receive = {
     case SaveData => save
     case ChristenWorker(workerId, numAgreementsToAdd) => christenWorker(workerId, numAgreementsToAdd)
@@ -146,11 +117,6 @@ class QASRLGenerationAccuracyManager[SID : Reader : Writer](
 
           assessQualification(assignment.workerId)
         }
-    }
-    case vr: QASRLValidationFinished[SID] => vr match {
-      case QASRLValidationFinished(valPrompt, validQuestions) =>
-        // award bonuses to all generators
-        getGenAssignmentsFromValPrompt(valPrompt).foreach(grantBonusForGenerator(_, validQuestions))
     }
   }
 }

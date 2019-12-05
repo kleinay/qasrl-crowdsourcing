@@ -47,7 +47,7 @@ class QASRLValidationHITManager[SID : Reader : Writer](
 
     val validQuestions = QASRLValidationAnswer.validQuestions(prompt.questions, assignments.map(_.response))
 
-    accuracyStatsActor ! QASRLValidationFinished(prompt, validQuestions)
+//    accuracyStatsActor ! QASRLValidationFinished(prompt, validQuestions)
     promptToAssignments = promptToAssignments - prompt
   }
 

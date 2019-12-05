@@ -2,7 +2,11 @@ package qasrl.crowd
 
 import cats.implicits._
 
+import com.amazonaws.services.mturk.model.{SendBonusRequest, SendBonusResult}
+import qasrl.crowd.util.implicits._
+import qasrl.crowd.util.dollarsToCents
 import spacro._
+import spacro.util.RichTry
 import spacro.tasks._
 
 // import qamr.Pring
@@ -102,6 +106,27 @@ class QASRLGenerationHITManager[SID : Reader : Writer](
     logger.info("Generation"+ namingSuffix+" data saved.")
   }
 
+  def grantBonusForGenerator(genAssignment: Assignment[QANomResponse]) : Unit = {
+    // award bonus for the worker of the generation assignment, for its valid questions
+    val numQAsProvided = genAssignment.response.qas.size
+    // count how many of generated questions are valid (according to validators)
+    val bonusAwarded = settings.generationBonus(numQAsProvided)
+    val bonusCents = dollarsToCents(bonusAwarded)
+    if(bonusAwarded > 0.0) {
+      Try(
+        service.sendBonus(
+          new SendBonusRequest()
+            .withWorkerId(genAssignment.workerId)
+            .withBonusAmount(f"$bonusAwarded%.2f")
+            .withAssignmentId(genAssignment.assignmentId)
+            .withReason(
+              s"""You have generated $numQAsProvided question-answer pairs, for a bonus of ${bonusCents}c."""))
+      ).toOptionLogging(logger).ifEmpty(logger.error(s"Failed to grant bonus of $bonusCents to worker ${genAssignment.workerId}"))
+    }
+  }
+  val f: Option[Int] = Some(3)
+  f.ifEmpty()
+
   override def reviewAssignment(hit: HIT[QASRLGenerationPrompt[SID]], assignment: Assignment[QANomResponse]): Unit = {
     evaluateAssignment(hit, startReviewing(assignment), Approval(""))
     if(!assignment.feedback.isEmpty) {
@@ -126,27 +151,9 @@ class QASRLGenerationHITManager[SID : Reader : Writer](
             .withSendNotification(true))
       }
     }
-    /*
-     Aggregated Validation:
-     Changed the creation of the validation prompt into a message to the QASDGenerationAggregationManager;
-     It is it's responsibility to inform the validationActor
-      */
-    aggregationManager ! ApprovedGenAssignment(hit, assignment)
-
-    // previous (non-aggregated)
-//    val validationPrompt = QASRLValidationPrompt(hit.prompt, hit.hitTypeId, hit.hitId, assignment.assignmentId, assignment.response)
-//    validationActor ! validationHelper.Message.AddPrompt(validationPrompt)
 
     // Grant Bonus (automatically) if no validators in pipeline
-    val validationPrompt = QASRLValidationPrompt(hit.prompt, hit.hitTypeId, hit.hitId, List(assignment.assignmentId), List(assignment.response))
-    // validationPrompt is not really going to be sent to validators. it is only for the message to accuracyManager
-    val numValidators = numValidationAssignmentForPrompt(validationPrompt)
-    if (numValidators == 0) {
-      // grant bonus by sending genAccruacyManager a message that tells him as if a validation
-      // HIT approved all his questions (it only grant bonus)
-      val allQuestionsInGenAssignment = assignment.response.qas.map(_.question)
-      accuracyManager ! QASRLValidationFinished(validationPrompt, allQuestionsInGenAssignment)
-    }
+    grantBonusForGenerator(assignment)
   }
 
   override lazy val receiveAux2: PartialFunction[Any, Unit] = {
