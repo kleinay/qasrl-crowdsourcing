@@ -20,6 +20,8 @@ import spacro.tasks._
 import spacro.util.Span
 import upickle.default._
 
+import java.nio.file.{Files, Path, Paths}
+
 import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.collection.JavaConverters._
@@ -762,7 +764,34 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
       printSingleStatSummary(ss)
   }
 
+  /*
+  Info about current batch (HITs uploaded in the current run of setup.
+
+  Note that many data that is dependant of annotationDataService of hitDataService are saving
+  all their info in the same files as long as we are in the same label, so, e.g. allGenInfos
+  contains genInfos of HITs of previous batches of the same label.
+   */
   def batchSize: Int = allNominalPrompts.size
+  val batchPrompts = allNominalPrompts
+  lazy val batchGenInfos = allGenInfos.filter(gi => allNominalPrompts.contains(gi.hit.prompt))
+  lazy val batchHitIds = batchGenInfos.map(_.hit.hitId)
+  def batchAssignmentIds = batchGenInfos.flatMap(_.assignments.map(_.assignmentId))
+  def batchFeedbacks = genManagerPeek.feedbacks.filter(a => batchHitIds.contains(a.hitId))
+
+
+  def getAssignmentPrompt(a: spacro.Assignment[QANomResponse]): QASRLGenerationPrompt[SID] = {
+    hitDataService.getHIT[QASRLGenerationPrompt[SID]](a.hitTypeId, a.hitId).get.prompt
+  }
+
+  def exportFeedbacks(feedbackFileName: String): Unit = {
+    val feedbacks = batchFeedbacks.groupBy(a => getAssignmentPrompt(a).id).flatMap {
+      case (id, assignments) => assignments.map(assignment =>
+        s"${id.tokens.mkString(" ")}, ${assignment.feedback}")
+    }
+    val path = Paths.get(feedbackFileName)
+    Files.write(path, feedbacks.mkString("\n").getBytes())
+  }
+
 
   def printStatsSorted[B : Ordering](sortFn: StatSummary => B) = {
     val summaries = allStatSummaries.sortBy(sortFn)
@@ -788,9 +817,15 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     } }
     .foreach(println)
 
-  def printGenFeedback(n: Int) = genManagerPeek.feedbacks.take(n).foreach(a =>
-    println(a.workerId + " " + a.feedback)
-  )
+  def printGenFeedback(n: Int) = batchFeedbacks.take(n).foreach(a => {
+    val prompt = getAssignmentPrompt(a)
+    val sentence : String = prompt.id.tokens.mkString(" ")
+    val target : String = prompt.id.tokens(prompt.verbIndex)
+    println(a.workerId + " --- S:\t" + sentence)
+    println(s"  Target: $target (${prompt.verbIndex}) \tVerb-Form: ${a.response.verbForm}\t" +
+      s"is-verbal: " + a.response.isVerbal.toString )
+    println("  Feedback: " + a.feedback)
+  })
   def printValFeedback(n: Int) = valManagerPeek.feedbacks.take(n).foreach(a =>
     println(a.workerId + " " + a.feedback)
   )
@@ -798,8 +833,8 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   def printAllFeedbacks(n: Int = Int.MaxValue) = {
     println("Generation (verbs):")
     printGenFeedback(n)
-    println("\nValidation:")
-    printValFeedback(n)
+//    println("\nValidation:")
+//    printValFeedback(n)
   }
 
   def aggregateStats = allStatSummaries.foldLeft(AggregateStatSummary.empty)(_ combine _)
@@ -817,10 +852,17 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
 
   // Tracking progress
   def seeProgress: Unit = {
-    println(f"Finished HITs: ${genHelper.finishedHITInfosByPromptIterator.toList.size}")
+    val finishedPrompts = genHelper.finishedHITInfosByPromptIterator.map(_._1)
+    val currentBatchFinished = finishedPrompts.filter(fp => batchPrompts.contains(fp))
+    println(f"Finished HITs: This batch- ${currentBatchFinished.size} ; General- ${finishedPrompts.size}")
     println(f"Currently active HITs: ${genHelper.numActiveHITs}")
-    val approved = genAggregatorPeek.genApprovedAssingments
-    val doneByWorker = approved.values.flatten.groupBy(_.workerId)
+    print("Workers General workload:")
+    val approved : List[spacro.Assignment[QANomResponse]] = genAggregatorPeek.genApprovedAssingments.values.toList.flatten
+    val doneByWorker = approved.groupBy(_.workerId)
     for (worker <- doneByWorker.keys) { println(f"${worker}: ${doneByWorker(worker).size} assignments done") }
+    print("Workers Batch workload:")
+    val b_approved = approved.filter(a => batchAssignmentIds.contains(a.assignmentId))
+    val b_doneByWorker = b_approved.groupBy(_.workerId)
+    for (worker <- b_doneByWorker.keys) { println(f"${worker}: ${b_doneByWorker(worker).size} assignments done") }
   }
 }
