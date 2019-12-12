@@ -13,14 +13,15 @@ trait QASRLSettings {
 
   // annotation pipeline hyperparameters
 
-  val generationRewardCents = 5
+  val generationRewardCents = 6
   def generationReward = generationRewardCents * 0.01
 
-  def generationFirstQBonusCents = 4
+  def generationFirstQBonusCents = 2
 
   def generationBonus(nValidQAs: Int) = {
-    // no bonus for the first question, hence -1
-    val cents = (0 until (nValidQAs - 1)).map(_ + generationFirstQBonusCents).sum
+    // modified bonus calculation: grant 2 cents on the first QA, and then an additional 1 for any additional QA
+    def bool2int(b:Boolean) = if (b) 1 else 0
+    val cents = nValidQAs + bool2int(nValidQAs!=0)
     cents * 0.01
   }
 
