@@ -62,67 +62,6 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   def numValidatorsAssignmentsForPrompt : QASRLValidationPrompt[SID] => Int =
     if(config.isProduction) (_ => 0) else (_ => 0)  // how many validators?
 
-  // collect indices of verbs in the sentence to generate prompt
-  def getVerbKeyIndices(id: SID): Set[Int] = {
-    val posTaggedTokens = PosTagger.posTag(id.tokens)
-    posTaggedTokens.collect {
-      case Word(index, pos, token) if PosTags.verbPosTags.contains(pos) =>
-        if( // detect if "have"-verb is an auxiliary
-          Inflections.haveVerbs.contains(token.lowerCase) &&
-            (posTaggedTokens.lift(index + 1).map(_.token.lowerCase).nonEmptyAnd(Inflections.negationWords.contains) || // negation appears directly after, or
-               posTaggedTokens.drop(index + 1).forall(_.pos != "VBN") || // there is no past-participle verb afterward, or
-               posTaggedTokens.drop(index + 1) // after the "have" verb,
-               .takeWhile(_.pos != "VBN") // until the next past-participle form verb,
-               .forall(w => Inflections.negationWords.contains(w.token.lowerCase) || PosTags.adverbPosTags.contains(w.pos)) // everything is an adverb or negation (though I guess negs are RB)
-            )
-        ) None else if( // detect if "do"-verb is an auxiliary
-          Inflections.doVerbs.contains(token.lowerCase) &&
-            (posTaggedTokens.lift(index + 1).map(_.token.lowerCase).nonEmptyAnd(Inflections.negationWords.contains) || // negation appears directly after, or
-               posTaggedTokens.drop(index + 1).forall(w => w.pos != "VB" && w.pos != "VBP") || // there is no stem or non-3rd-person present verb afterward (to mitigate pos tagger mistakes), or
-               posTaggedTokens.drop(index + 1) // after the "do" verb,
-               .takeWhile(w => w.pos != "VB" && w.pos != "VBP") // until the next VB or VBP verb,
-               .forall(w => Inflections.negationWords.contains(w.token.lowerCase) || PosTags.adverbPosTags.contains(w.pos)) // everything is an adverb or negation (though I guess negs are RB)
-            )
-        ) None else inflections.getInflectedForms(token.lowerCase).map(_ => index)
-    }.flatten.toSet
-  }
-
-  // collect indices of nouns in the sentence to generate noun-prompt
-  def getNounKeyIndices(id: SID): Set[Int] = {
-    val posTaggedTokens = PosTagger.posTag(id.tokens)
-    posTaggedTokens.collect {
-      case Word(index, pos, token) if PosTags.nounPosTags.contains(pos) => index
-    }.toSet
-  }
-
-  // collect indices of adjectives in the sentence to generate noun-prompt
-  def getAdjectiveKeyIndices(id: SID): Set[Int] = {
-    val posTaggedTokens = PosTagger.posTag(id.tokens)
-    posTaggedTokens.collect {
-      case Word(index, pos, token) if PosTags.adjectivePosTags.contains(pos) => index
-    }.toSet
-  }
-
-  // collect indices of adverbs in the sentence to generate noun-prompt
-  def getAdverbKeyIndices(id: SID): Set[Int] = {
-    val posTaggedTokens = PosTagger.posTag(id.tokens)
-    posTaggedTokens.collect {
-      case Word(index, pos, token) if PosTags.adverbPosTags.contains(pos) => index
-    }.toSet
-  }
-
-  // collect indices of numbers in the sentence to generate noun-prompt
-  def getNumberKeyIndices(id: SID): Set[Int] = {
-    val posTaggedTokens = PosTagger.posTag(id.tokens)
-    posTaggedTokens.collect {
-      case Word(index, pos, token) if pos=="CD" => index
-    }.toSet
-  }
-
-
-  // Current Nominalizations Experiment: use only verb-generation pipeline, for nominalizations
-  lazy val allVerbPrompts: Vector[QASRLGenerationPrompt[SID]]= allNominalPrompts
-
   implicit val ads = annotationDataService
 
   import config.hitDataService
@@ -428,7 +367,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   }
 
   lazy val sampleValPrompt = QASRLValidationPrompt[SID](
-    allVerbPrompts.head, "", "", List(""),
+    allNominalPrompts.head, "", "", List(""),
     List(QANomResponse(3,true,"expect",
       List( VerbQA(3, "Who expects something?", List(Span(0, 0), Span(2, 2))),
             VerbQA(3, "What does someone expects?", List(Span(4, 15)))))))
@@ -495,7 +434,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     })
 
   val genTaskSpec = TaskSpecification.NoWebsockets[QASRLGenerationPrompt[SID], QANomResponse, QASRLGenerationAjaxRequest[SID]](
-    settings.generationTaskKey, genHITType, genAjaxService, allVerbPrompts,
+    settings.generationTaskKey, genHITType, genAjaxService, allNominalPrompts,
     taskPageHeadElements = taskPageHeadLinks,
     taskPageBodyElements = taskPageBodyLinks,
     frozenHITTypeId = frozenGenerationHITTypeId)
@@ -509,14 +448,14 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
         genHelper,
         valHelper,
         valManager,
-        genAggregator,
+        genAgreementTracker,
         accuracyTracker,
         genCoverageDisqualTypeId,
         // sentenceTracker,
         numGenerationAssignmentsForPrompt,
         numValidatorsAssignmentsForPrompt,
         if(config.isProduction) 100 else 100,
-        allVerbPrompts.iterator)  // the prompts itarator determines what genHITs are generated
+        allNominalPrompts.iterator)  // the prompts itarator determines what genHITs are generated
       genManagerPeek
     }
   )
@@ -712,16 +651,16 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
 
   object StatSummary {
     def makeFromStatsAndInfo(
+      accStats: Option[QASRLGenerationWorkerStats],
       stats: Option[QASRLGenerationWorkerStats],
-      genAgrStats: Option[QASRLGenerationWorkerStats],
       info: Option[QASRLValidationWorkerInfo]
-    ) = stats.map(_.workerId).orElse(info.map(_.workerId)).map { wid =>
+    ) = stats.map(_.workerId).map { wid =>
       StatSummary(
         workerId = wid,
         numVerbs = stats.map(_.numAssignmentsCompleted),
         numQs = stats.map(_.numQAPairsWritten),
         accuracy = stats.map(_.accuracy),
-        genAgreement = genAgrStats.map(_.genAgreementAccuracy),
+        genAgreement = stats.map(_.genAgreementAccuracy),
         numAs = info.map(i => i.numAnswerSpans + i.numInvalids),
         numInvalidAnswers = info.map(_.numInvalids),
         pctBad = info.map(_.proportionInvalid * 100.0),
@@ -784,12 +723,25 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   }
 
   def exportFeedbacks(feedbackFileName: String): Unit = {
-    val feedbacks = batchFeedbacks.groupBy(a => getAssignmentPrompt(a).id).flatMap {
-      case (id, assignments) => assignments.map(assignment =>
-        s"${id.tokens.mkString(" ")}, ${assignment.feedback}")
+    // only feedbacks of current batch
+    val header : String = "qasrl_id\tsentence\tverb_idx\tverb_form\tfeedback\n"
+    val feedbacks = batchFeedbacks.groupBy(a => getAssignmentPrompt(a)).flatMap {
+      case (prompt, assignments) => assignments.map(assignment =>
+        s"${prompt.id}\t${prompt.id.tokens.mkString(" ")}\t${prompt.verbIndex}\t${prompt.verbForm}\t${assignment.feedback}")
     }
     val path = Paths.get(feedbackFileName)
-    Files.write(path, feedbacks.mkString("\n").getBytes())
+    Files.write(path, (header + feedbacks.mkString("\n")).getBytes())
+  }
+
+  def exportAllFeedbacks(feedbackFileName: String): Unit = {
+    // all feedback of label
+    val header : String = "qasrl_id\tverb_idx\tverb_form\tfeedback\n"
+    val feedbacks = genManagerPeek.feedbacks.groupBy(a => getAssignmentPrompt(a)).flatMap {
+      case (prompt, assignments) => assignments.map(assignment =>
+        s"${prompt.id}\t${prompt.verbIndex}\t${prompt.verbForm}\t${assignment.feedback}")
+    }
+    val path = Paths.get(feedbackFileName)
+    Files.write(path, (header + feedbacks.mkString("\n")).getBytes())
   }
 
 
@@ -852,15 +804,15 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
 
   // Tracking progress
   def seeProgress: Unit = {
-    val finishedPrompts = genHelper.finishedHITInfosByPromptIterator.map(_._1)
+    val finishedPrompts = genHelper.finishedHITInfosByPromptIterator.map(_._1).toList
     val currentBatchFinished = finishedPrompts.filter(fp => batchPrompts.contains(fp))
-    println(f"Finished HITs: This batch- ${currentBatchFinished.size} ; General- ${finishedPrompts.size}")
+    println(f"Finished HITs: This batch- ${currentBatchFinished.size} ;    General- ${finishedPrompts.size}")
     println(f"Currently active HITs: ${genHelper.numActiveHITs}")
-    print("Workers General workload:")
-    val approved : List[spacro.Assignment[QANomResponse]] = genAggregatorPeek.genApprovedAssingments.values.toList.flatten
+    println("Workers General workload:")
+    val approved : List[spacro.Assignment[QANomResponse]] = genManagerPeek.genApprovedAssingments.values.toList.flatten
     val doneByWorker = approved.groupBy(_.workerId)
     for (worker <- doneByWorker.keys) { println(f"${worker}: ${doneByWorker(worker).size} assignments done") }
-    print("Workers Batch workload:")
+    println("Workers Batch workload:")
     val b_approved = approved.filter(a => batchAssignmentIds.contains(a.assignmentId))
     val b_doneByWorker = b_approved.groupBy(_.workerId)
     for (worker <- b_doneByWorker.keys) { println(f"${worker}: ${b_doneByWorker(worker).size} assignments done") }

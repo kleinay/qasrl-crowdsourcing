@@ -145,7 +145,8 @@ class QASRLGenerationAgreementManager[SID : Reader : Writer](
           .addGenAgreementJudgments(agreementJudgments)
       )
 
-      assessQualification(assignment.workerId)
+      // Disregard agreement qualfication for now
+      //assessQualification(assignment.workerId)
 
     }
 

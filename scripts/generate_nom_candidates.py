@@ -8,7 +8,7 @@ qanom_repo_root_locaction = '/home/qasrl/QANom/QANom' 	# location of the QANom p
 assert os.path.isdir(qanom_repo_root_locaction), "Wrong location for QANom repository"							
 							
 qanom_repo_root = os.path.abspath(qanom_repo_root_locaction)							
-virtual_env_name = '.venv3'							
+virtual_env_name = '.venv38'
 python_exe = os.path.join(qanom_repo_root, virtual_env_name, 'bin/python')
 assert os.path.isfile(python_exe), "Cannot find python executable"
 
