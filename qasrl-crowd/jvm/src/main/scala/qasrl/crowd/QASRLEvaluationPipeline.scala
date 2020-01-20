@@ -234,7 +234,8 @@ class QASRLEvaluationPipeline[SID : Reader : Writer : HasTokens](
     println()
     println(s"Production Qualification Id: ${productionQualType.getQualificationTypeId}")
     println()
+    println(f"Total HITs in batch: ${allPrompts.length}")
     println(f"Assignments: $completedCount/$totalPrompts (completed / total)")
-    println(f"Uploaded generation hits to MTurk: $uploadedCount")
+    println(f"Uploaded arbitration hits to MTurk: $uploadedCount")
   }
 }

@@ -70,7 +70,7 @@ object DataIO extends LazyLogging {
     // if not verbal, or isVerbal but no-QA-Applicable - yield a single row with empty question & answer
     if (!isVerbal || qas.isEmpty) {
       Vector(QANom(idString, sentence, targetIndex, idString +"_"+ targetIndex.toString, target,
-        workerId, assignId, None,
+        workerId, assignId, "",
         isVerbal, verbForm,
         "", false, "", "",
         "", "", "", "",
