@@ -18,11 +18,11 @@ import scala.util.{Try, Success, Failure}
 import upickle.default.{Reader, Writer, read}
 
 class GenerationAggregationManager[SID : Reader : Writer](
-  genAgreementActor: ActorRef,
-  validationHelper: HITManager.Helper[QASRLValidationPrompt[SID], List[QASRLValidationAnswer]],
-  validationActor: ActorRef,
-  numAssignmentsForPrompt: QASRLGenerationPrompt[SID] => Int,
-  namingSuffix: String = ""
+                                                           genAgreementActor: ActorRef,
+                                                           validationHelper: HITManager.Helper[QASRLValidationPrompt[SID], List[QASRLValidationAnswer]],
+                                                           validationActor: ActorRef,
+                                                           numAssignmentsForPrompt: QANomGenerationPrompt[SID] => Int,
+                                                           namingSuffix: String = ""
     )( implicit annotationDataService: AnnotationDataService
 ) extends Actor with StrictLogging {
 
@@ -48,7 +48,7 @@ class GenerationAggregationManager[SID : Reader : Writer](
   }
 
   // handle generation hit whose assignments were all completed
-  def handleCompletedGenHIT(hit: HIT[QASRLGenerationPrompt[SID]],
+  def handleCompletedGenHIT(hit: HIT[QANomGenerationPrompt[SID]],
                             allAssignments: List[Assignment[QANomResponse]]) : Unit = {
     // aggregate assignments' ids and responses
     val genAssignmentIds = allAssignments.map(_.assignmentId)
@@ -73,7 +73,7 @@ class GenerationAggregationManager[SID : Reader : Writer](
   }
 
   // handle new approved generation assignment
-  def handleApprovedGenAssignment (hit: HIT[QASRLGenerationPrompt[SID]],
+  def handleApprovedGenAssignment (hit: HIT[QANomGenerationPrompt[SID]],
                                    assignment: Assignment[QANomResponse] ) : Unit = {
     val genHITId = hit.hitId
     // add assignment to genApprovedAssingments map

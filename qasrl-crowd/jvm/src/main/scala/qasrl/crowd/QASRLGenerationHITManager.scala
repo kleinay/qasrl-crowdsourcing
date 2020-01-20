@@ -33,21 +33,21 @@ import com.typesafe.scalalogging.StrictLogging
 case class FlagBadSentence[SID](id: SID)
 
 class QASRLGenerationHITManager[SID : Reader : Writer](
-  helper: HITManager.Helper[QASRLGenerationPrompt[SID], QANomResponse],
-  validationHelper: HITManager.Helper[QASRLValidationPrompt[SID], List[QASRLValidationAnswer]],
-  validationActor: ActorRef,
-  genAgreementActor: ActorRef,
-  accuracyManager: ActorRef, // of class QASRLGenerationAccuracyManager[SID],
-  coverageDisqualificationTypeId: String,
-  // sentenceTrackingActor: ActorRef,
-  numAssignmentsForPrompt: QASRLGenerationPrompt[SID] => Int,
-  numValidationAssignmentForPrompt: QASRLValidationPrompt[SID] => Int,
-  initNumHITsToKeepActive: Int,
-  _promptSource: Iterator[QASRLGenerationPrompt[SID]],
-  settings: QASRLSettings = QASRLSettings.default,
-  namingSuffix: String = "")(
+                                                        helper: HITManager.Helper[QANomGenerationPrompt[SID], QANomResponse],
+                                                        validationHelper: HITManager.Helper[QASRLValidationPrompt[SID], List[QASRLValidationAnswer]],
+                                                        validationActor: ActorRef,
+                                                        genAgreementActor: ActorRef,
+                                                        accuracyManager: ActorRef, // of class QASRLGenerationAccuracyManager[SID],
+                                                        coverageDisqualificationTypeId: String,
+                                                        // sentenceTrackingActor: ActorRef,
+                                                        numAssignmentsForPrompt: QANomGenerationPrompt[SID] => Int,
+                                                        numValidationAssignmentForPrompt: QASRLValidationPrompt[SID] => Int,
+                                                        initNumHITsToKeepActive: Int,
+                                                        _promptSource: Iterator[QANomGenerationPrompt[SID]],
+                                                        settings: QASRLSettings = QASRLSettings.default,
+                                                        namingSuffix: String = "")(
   implicit annotationDataService: AnnotationDataService
-) extends NumAssignmentsHITManager[QASRLGenerationPrompt[SID], QANomResponse](
+) extends NumAssignmentsHITManager[QANomGenerationPrompt[SID], QANomResponse](
   helper, numAssignmentsForPrompt, initNumHITsToKeepActive, _promptSource
 ) with StrictLogging {
 
@@ -55,7 +55,7 @@ class QASRLGenerationHITManager[SID : Reader : Writer](
   import config._
   import taskSpec.hitTypeId
 
-  override def promptFinished(prompt: QASRLGenerationPrompt[SID]): Unit = {
+  override def promptFinished(prompt: QANomGenerationPrompt[SID]): Unit = {
     // sentenceTrackingActor ! GenerationFinished(prompt)
   }
 
@@ -145,10 +145,8 @@ class QASRLGenerationHITManager[SID : Reader : Writer](
     }
   }
 
-  val f: Option[Int] = Some(3)
-  f.ifEmpty()
 
-  override def reviewAssignment(hit: HIT[QASRLGenerationPrompt[SID]], assignment: Assignment[QANomResponse]): Unit = {
+  override def reviewAssignment(hit: HIT[QANomGenerationPrompt[SID]], assignment: Assignment[QANomResponse]): Unit = {
     evaluateAssignment(hit, startReviewing(assignment), Approval(""))
     if (!assignment.feedback.isEmpty) {
       feedbacks = assignment :: feedbacks
@@ -203,7 +201,7 @@ class QASRLGenerationHITManager[SID : Reader : Writer](
   }
 
   // handle generation hit whose assignments were all completed
-  def handleCompletedGenHIT(hit: HIT[QASRLGenerationPrompt[SID]],
+  def handleCompletedGenHIT(hit: HIT[QANomGenerationPrompt[SID]],
                             allAssignments: List[Assignment[QANomResponse]]): Unit = {
     // aggregate assignments' ids and responses
     val genAssignmentIds = allAssignments.map(_.assignmentId)

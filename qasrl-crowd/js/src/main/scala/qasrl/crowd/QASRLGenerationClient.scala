@@ -48,11 +48,11 @@ import nlpdata.datasets.wiktionary.InflectedForms
 
 class QASRLGenerationClient[SID : Reader : Writer](
   instructions: VdomTag)(
-  implicit settings: QASRLSettings,
-  promptReader: Reader[QASRLGenerationPrompt[SID]], // macro serializers don't work for superclass constructor parameters
-  responseWriter: Writer[QANomResponse], // same as above
-  ajaxRequestWriter: Writer[QASRLGenerationAjaxRequest[SID]] // "
-) extends TaskClient[QASRLGenerationPrompt[SID], QANomResponse, QASRLGenerationAjaxRequest[SID]] {
+                                                    implicit settings: QASRLSettings,
+                                                    promptReader: Reader[QANomGenerationPrompt[SID]], // macro serializers don't work for superclass constructor parameters
+                                                    responseWriter: Writer[QANomResponse], // same as above
+                                                    ajaxRequestWriter: Writer[QANomGenerationAjaxRequest[SID]] // "
+) extends TaskClient[QANomGenerationPrompt[SID], QANomResponse, QANomGenerationAjaxRequest[SID]] {
 
   // for monoid on Callback
   implicit def appMonoid[F[_]: Applicative, A: Monoid] = Applicative.monoid[F, A]
@@ -66,7 +66,7 @@ class QASRLGenerationClient[SID : Reader : Writer](
   // import WebsocketLoadableComponent._
   val SpanHighlightingComponent = new SpanHighlightingComponent[Int]
   import SpanHighlightingComponent._
-  val AsyncContentComponent = new AsyncContentComponent[QASRLGenerationAjaxResponse]
+  val AsyncContentComponent = new AsyncContentComponent[QANomGenerationAjaxResponse]
   import AsyncContentComponent._
 
   val IntState = new LocalStateComponent[Int]
@@ -101,8 +101,8 @@ class QASRLGenerationClient[SID : Reader : Writer](
     curFocus: Option[Int])
   object State {
     val empty: State = State(true, false, "", null, Nil, None)
-    def initFromResponse(response: QASRLGenerationAjaxResponse): State = response match {
-      case QASRLGenerationAjaxResponse(_, sentence, inflectedForms) =>
+    def initFromResponse(response: QANomGenerationAjaxResponse): State = response match {
+      case QANomGenerationAjaxResponse(_, sentence, inflectedForms) =>
 
         val slots = new TemplateStateMachine(sentence, inflectedForms.get)
         val template = new QuestionProcessor(slots)
@@ -133,7 +133,7 @@ class QASRLGenerationClient[SID : Reader : Writer](
   def getAllCompleteQAPairs(state: State): List[VerbQA] = for {
     qa <- state.qas
     if isComplete(qa)
-  } yield VerbQA(prompt.verbIndex, qa.question, qa.answers)
+  } yield VerbQA(prompt.targetIndex, qa.question, qa.answers)
 
   // better: a PTraversal that doesn't ask for the index back. would fix the issue of the iso being bad
   def indexingIso[A] = Iso[List[A], List[(A, Int)]](_.zipWithIndex)(_.map(_._1))
@@ -204,7 +204,7 @@ class QASRLGenerationClient[SID : Reader : Writer](
       )
 
     def updateResponse: Callback = scope.state.map { st =>
-      setResponse(QANomResponse(prompt.verbIndex, st.isVerbal, prompt.verbForm, getAllCompleteQAPairs(st)))
+      setResponse(QANomResponse(prompt.targetIndex, st.isVerbal, prompt.verbForm, getAllCompleteQAPairs(st)))
     }
 
     def qaField(
@@ -285,8 +285,8 @@ class QASRLGenerationClient[SID : Reader : Writer](
                     ^.float := "left",
                     ^.`type` := "text",
                     ^.placeholder := (
-                      if(qaIndex == 0) ("Question about \"" + Text.normalizeToken(sentence(prompt.verbIndex)) + "\" (required)")
-                      else ("Question about \"" + Text.normalizeToken(sentence(prompt.verbIndex)) + "\"" + s" (+${math.round(100 * nextPotentialBonus).toInt}c)")
+                      if(qaIndex == 0) ("Question about \"" + Text.normalizeToken(sentence(prompt.targetIndex)) + "\" (required)")
+                      else ("Question about \"" + Text.normalizeToken(sentence(prompt.targetIndex)) + "\"" + s" (+${math.round(100 * nextPotentialBonus).toInt}c)")
                     ),
                     ^.padding := s"1px",
                     ^.width := "480px",
@@ -390,12 +390,12 @@ class QASRLGenerationClient[SID : Reader : Writer](
     def render(s: State) = {
       AsyncContent(
         AsyncContentProps(
-          getContent = () => makeAjaxRequest(QASRLGenerationAjaxRequest(workerIdOpt, prompt)),
-          willLoad = ((response: QASRLGenerationAjaxResponse) => scope.setState(State.initFromResponse(response))),
+          getContent = () => makeAjaxRequest(QANomGenerationAjaxRequest(workerIdOpt, prompt)),
+          willLoad = ((response: QANomGenerationAjaxResponse) => scope.setState(State.initFromResponse(response))),
           render = {
             case Loading => <.div("Retrieving data...")
             case Loaded(
-              QASRLGenerationAjaxResponse(
+              QANomGenerationAjaxResponse(
                 GenerationStatSummary(numVerbsCompleted, numQuestionsWritten, workerStatsOpt),
                 sentence,
                 inflectedForms)
@@ -541,7 +541,7 @@ class QASRLGenerationClient[SID : Reader : Writer](
                             MultiContigSpanHighlightableSentence(
                               MultiContigSpanHighlightableSentenceProps(
                                 sentence = sentence,
-                                styleForIndex = i => TagMod(Styles.targetWord).when(i == prompt.verbIndex),
+                                styleForIndex = i => TagMod(Styles.targetWord).when(i == prompt.targetIndex),
                                 highlightedSpans = (
                                   inProgressAnswerOpt.map(_ -> (^.backgroundColor := "#FF8000")) ::
                                     (curAnswerSpans.map(_ -> (^.backgroundColor := "#FFFF00")) ++
@@ -596,7 +596,7 @@ class QASRLGenerationClient[SID : Reader : Writer](
                                 <.p(),
                                 <.p(
                                   (^.color := "#808080").when(s.isNA),
-                                  "Ask about the noun '" + Text.normalizeToken(sentence(prompt.verbIndex)) + "' using the verb ",
+                                  "Ask about the noun '" + Text.normalizeToken(sentence(prompt.targetIndex)) + "' using the verb ",
                                   <.span(Styles.verbFormPurple, prompt.verbForm),
                                   <.span(":"))
                               ),

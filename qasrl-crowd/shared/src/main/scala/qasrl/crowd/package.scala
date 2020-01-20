@@ -6,9 +6,9 @@ import nlpdata.datasets.wiktionary.InflectedForms
 
 package object crowd {
 
-  case class QASRLGenerationPrompt[SID](
+  case class QANomGenerationPrompt[SID](
                                          id: SID,
-                                         verbIndex: Int,
+                                         targetIndex: Int,
                                          verbForm: String)
 
   case class GenerationStatSummary(
@@ -16,22 +16,22 @@ package object crowd {
     numQuestionsWritten: Int, // before validation: "
     workerStatsOpt: Option[QASRLGenerationWorkerStats])
 
-  case class QASRLGenerationAjaxRequest[SID](
+  case class QANomGenerationAjaxRequest[SID](
     workerIdOpt: Option[String],
-    prompt: QASRLGenerationPrompt[SID]) {
-    type Response = QASRLGenerationAjaxResponse
+    prompt: QANomGenerationPrompt[SID]) {
+    type Response = QANomGenerationAjaxResponse
   }
-  object QASRLGenerationAjaxRequest {
+  object QANomGenerationAjaxRequest {
     import upickle.default._
-    implicit def responseRW[SID] = new ResponseRW[QASRLGenerationAjaxRequest[SID]] {
-      override def getReader(request: QASRLGenerationAjaxRequest[SID]) =
-        implicitly[Reader[QASRLGenerationAjaxResponse]]
-      override def getWriter(request: QASRLGenerationAjaxRequest[SID]) =
-        implicitly[Writer[QASRLGenerationAjaxResponse]]
+    implicit def responseRW[SID] = new ResponseRW[QANomGenerationAjaxRequest[SID]] {
+      override def getReader(request: QANomGenerationAjaxRequest[SID]) =
+        implicitly[Reader[QANomGenerationAjaxResponse]]
+      override def getWriter(request: QANomGenerationAjaxRequest[SID]) =
+        implicitly[Writer[QANomGenerationAjaxResponse]]
     }
   }
 
-  case class QASRLGenerationAjaxResponse(
+  case class QANomGenerationAjaxResponse(
     stats: GenerationStatSummary,
     tokens: Vector[String],
     inflectedForms: Option[InflectedForms])

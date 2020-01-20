@@ -9,9 +9,17 @@ trait QASRLEvaluationSettings {
 
   // annotation pipeline hyperparameters
 
-  val validationReward = 0.02
+  val validationReward = 0.04
   val validationBonusPerQuestion = 0.02
   val validationBonusThreshold = 1
+
+  val arbitrationReward = 0.06
+  val arbitrationBonusPerQuestion = 0.03
+  val arbitrationBonusThreshold = 2
+
+
+  def arbitrationBonus(numQuestions: Int) =
+    math.max(0.0, arbitrationBonusPerQuestion * (numQuestions - arbitrationBonusThreshold))
 
   def validationBonus(numQuestions: Int) =
     math.max(0.0, validationBonusPerQuestion * (numQuestions - validationBonusThreshold))

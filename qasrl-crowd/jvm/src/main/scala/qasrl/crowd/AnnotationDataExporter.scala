@@ -81,7 +81,7 @@ class AnnotationDataExporter[SID : HasTokens](
                 QASRLLabel(
                   QuestionLabel(
                     Set(s"turk-${genAssignment.workerId}"),
-                    genHIT.prompt.verbIndex, verbInflectedForms,
+                    genHIT.prompt.targetIndex, verbInflectedForms,
                     questionString, questionSlots),
                   answers
                 )

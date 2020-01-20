@@ -59,7 +59,7 @@ class QASRLGenerationAccuracyManager[SID : Reader : Writer](
 
   private def getGenAssignmentsFromValPrompt(valPrompt: QASRLValidationPrompt[SID]): List[Assignment[QANomResponse]] = {
     val assignmentsForHIT = for {
-      hit <- hitDataService.getHIT[QASRLGenerationPrompt[SID]](valPrompt.sourceHITTypeId, valPrompt.sourceHITId).toOptionLogging(logger).toList
+      hit <- hitDataService.getHIT[QANomGenerationPrompt[SID]](valPrompt.sourceHITTypeId, valPrompt.sourceHITId).toOptionLogging(logger).toList
       assignment <- hitDataService.getAssignmentsForHIT[QANomResponse](valPrompt.sourceHITTypeId, valPrompt.sourceHITId).get
     } yield assignment
     assignmentsForHIT.filter(asmnt => valPrompt.sourceAssignmentId.contains(asmnt.assignmentId))

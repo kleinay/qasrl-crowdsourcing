@@ -5,7 +5,7 @@ import cats._
 import cats.implicits._
 import qasrl.crowd.util.Tokenizer
 import qasrl.crowd.util.PosTagger
-import qasrl.crowd.{QASRLGenerationPrompt, _}
+import qasrl.crowd.{QANomGenerationPrompt, _}
 import qasrl.labeling._
 import spacro._
 import spacro.tasks._
@@ -139,10 +139,10 @@ class AnnotationSetup(
   val sentenceIdToTokens : Map[String, Vector[String]] = prompts_data.map(
     p => p.sentence_id -> p.tokenized_sentence).toMap
 
-  def promptDataToPrompt(pd : PromptData) : QASRLGenerationPrompt[SentenceId] = {
-    QASRLGenerationPrompt(SentenceId(pd.sentence_id), pd.nominal_index, pd.verb_form)
+  def promptDataToPrompt(pd : PromptData) : QANomGenerationPrompt[SentenceId] = {
+    QANomGenerationPrompt(SentenceId(pd.sentence_id), pd.nominal_index, pd.verb_form)
   }
-  val allNominalPromptsFromInput : Vector[QASRLGenerationPrompt[SentenceId]] = {
+  val allNominalPromptsFromInput : Vector[QANomGenerationPrompt[SentenceId]] = {
     prompts_data.map(promptDataToPrompt)
   }
 
@@ -178,7 +178,7 @@ class AnnotationSetup(
 
   // filter nominal prompts - exclude those that have no inflected forms for the verb-form,
   // since the qasrl state-machine cannot support it
-  def hasVerbalInflection(prompt : QASRLGenerationPrompt[SentenceId]) : Boolean = {
+  def hasVerbalInflection(prompt : QANomGenerationPrompt[SentenceId]) : Boolean = {
     inflections.hasInflectedForms(prompt.verbForm.lowerCase)
   }
 
@@ -203,17 +203,10 @@ class AnnotationSetup(
 
   // Saving the crowd annotations (generation)
   // from Pavel
-  val qasrlColumns = List(
-    "qasrl_id", "sentence", "verb_idx", "key", "verb",
-    "worker_id", "assign_id", "source_assign_id",
-    "is_verbal", "verb_form",
-    "question", "is_redundant", "answer_range", "answer",
-    "wh", "subj", "obj", "obj2", "aux", "prep", "verb_prefix",
-    "is_passive", "is_negated")
 
   def saveGenerationData(
                           filename: String,
-                          genInfos: List[HITInfo[QASRLGenerationPrompt[SentenceId], QANomResponse]]
+                          genInfos: List[HITInfo[QANomGenerationPrompt[SentenceId], QANomResponse]]
                         ): List[QANom] = {
     // take only genInfos of sentences that are in the current batch
     def idInCurrentBatch : SentenceId => Boolean = allIds.contains(_)
@@ -221,7 +214,7 @@ class AnnotationSetup(
     val contents = DataIO.makeGenerationQAPairTSV(SentenceId.toString, currentBatchGenInfos)
     val path = liveDataPath.resolve(filename).toString
     val csv = CSVWriter.open(path, encoding = "utf-8")
-    csv.writeRow(qasrlColumns)
+    csv.writeRow(DataIO.qasrlColumns)
     for (qasrl <- contents) {
       // will iterate in order over the case class fields
       csv.writeRow(qasrl.productIterator.toList)
@@ -230,42 +223,41 @@ class AnnotationSetup(
   }
 
 
+//  def saveAnnotationData[A](
+//    filename: String,
+//    ids: Vector[SentenceId],
+//    genInfos: List[HITInfo[QASRLGenerationPrompt[SentenceId], QANomResponse]],
+//    valInfos: List[HITInfo[QASRLValidationPrompt[SentenceId], List[QASRLValidationAnswer]]],
+//    labelMapper: QuestionLabelMapper[String, A],
+//    labelRenderer: A => String
+//  ) = {
+//    saveOutputFile(
+//      s"$filename.tsv",
+//      DataIO.makeQAPairTSV(
+//        ids.toList,
+//        SentenceId.toString,
+//        genInfos,
+//        valInfos,
+//        labelMapper,
+//        labelRenderer)
+//    )
+//  }
 
-  def saveAnnotationData[A](
-    filename: String,
-    ids: Vector[SentenceId],
-    genInfos: List[HITInfo[QASRLGenerationPrompt[SentenceId], QANomResponse]],
-    valInfos: List[HITInfo[QASRLValidationPrompt[SentenceId], List[QASRLValidationAnswer]]],
-    labelMapper: QuestionLabelMapper[String, A],
-    labelRenderer: A => String
-  ) = {
-    saveOutputFile(
-      s"$filename.tsv",
-      DataIO.makeQAPairTSV(
-        ids.toList,
-        SentenceId.toString,
-        genInfos,
-        valInfos,
-        labelMapper,
-        labelRenderer)
-    )
-  }
-
-  def saveAnnotationDataReadable(
-    filename: String,
-    ids: Vector[SentenceId],
-    genInfos: List[HITInfo[QASRLGenerationPrompt[SentenceId], QANomResponse]],
-    valInfos: List[HITInfo[QASRLValidationPrompt[SentenceId], List[QASRLValidationAnswer]]]
-  ) = {
-    saveOutputFile(
-      s"$filename.tsv",
-      DataIO.makeReadableQAPairTSV(
-        ids.toList,
-        SentenceId.toString,
-        identity,
-        genInfos,
-        valInfos,
-        (id: SentenceId, qa: VerbQA, responses: List[QASRLValidationAnswer]) => responses.forall(_.isAnswer))
-    )
-  }
+//  def saveAnnotationDataReadable(
+//    filename: String,
+//    ids: Vector[SentenceId],
+//    genInfos: List[HITInfo[QASRLGenerationPrompt[SentenceId], QANomResponse]],
+//    valInfos: List[HITInfo[QASRLValidationPrompt[SentenceId], List[QASRLValidationAnswer]]]
+//  ) = {
+//    saveOutputFile(
+//      s"$filename.tsv",
+//      DataIO.makeReadableQAPairTSV(
+//        ids.toList,
+//        SentenceId.toString,
+//        identity,
+//        genInfos,
+//        valInfos,
+//        (id: SentenceId, qa: VerbQA, responses: List[QASRLValidationAnswer]) => responses.forall(_.isAnswer))
+//    )
+//  }
 }

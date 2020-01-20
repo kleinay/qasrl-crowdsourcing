@@ -38,23 +38,23 @@ object Stage extends Enumeration {
 }
 
 class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
-  val allNominalPrompts: Vector[QASRLGenerationPrompt[SID]],
-//  val allIds: Vector[SID], // IDs of sentences to annotate
-  numGenerationAssignmentsInProduction: Int,
-  annotationDataService: AnnotationDataService,
-  annotationStage: Stage = Stage.Expert,
-  frozenGenerationHITTypeId: Option[String] = None,
-  frozenValidationHITTypeId: Option[String] = None,
-  generationAccuracyDisqualTypeLabel: Option[String] = None,
-  generationCoverageDisqualTypeLabel: Option[String] = None,
-  validationAgreementDisqualTypeLabel: Option[String] = None)(
+                                                                  val allNominalPrompts: Vector[QANomGenerationPrompt[SID]],
+                                                                  //  val allIds: Vector[SID], // IDs of sentences to annotate
+                                                                  numGenerationAssignmentsInProduction: Int,
+                                                                  annotationDataService: AnnotationDataService,
+                                                                  annotationStage: Stage = Stage.Expert,
+                                                                  frozenGenerationHITTypeId: Option[String] = None,
+                                                                  frozenValidationHITTypeId: Option[String] = None,
+                                                                  generationAccuracyDisqualTypeLabel: Option[String] = None,
+                                                                  generationCoverageDisqualTypeLabel: Option[String] = None,
+                                                                  validationAgreementDisqualTypeLabel: Option[String] = None)(
   implicit val config: TaskConfig,
   val settings: QASRLSettings,
   val inflections: Inflections
 ) extends StrictLogging {
 
   // define numGenerationAssignmentsForPrompt for either production or sandbox
-  def numGenerationAssignmentsForPrompt : QASRLGenerationPrompt[SID] => Int =
+  def numGenerationAssignmentsForPrompt : QANomGenerationPrompt[SID] => Int =
     if(config.isProduction) (_ => numGenerationAssignmentsInProduction) else (_ => 2) // how many generators?
 //    if(config.isProduction) (_ => 2) else (_ => 1) // how many generators?
 
@@ -298,9 +298,9 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     autoApprovalDelay = 2592000L, // 30 days
     assignmentDuration = 3600L)
 
-  lazy val genAjaxService = new Service[QASRLGenerationAjaxRequest[SID]] {
-    override def processRequest(request: QASRLGenerationAjaxRequest[SID]) = request match {
-      case QASRLGenerationAjaxRequest(workerIdOpt, QASRLGenerationPrompt(id, verbIndex, verbForm)) =>
+  lazy val genAjaxService = new Service[QANomGenerationAjaxRequest[SID]] {
+    override def processRequest(request: QANomGenerationAjaxRequest[SID]) = request match {
+      case QANomGenerationAjaxRequest(workerIdOpt, QANomGenerationPrompt(id, verbIndex, verbForm)) =>
         val questionListsOpt = for {
           genManagerP <- Option(genManagerPeek)
           workerId <- workerIdOpt
@@ -331,7 +331,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
         // a Vector corresponding to verbForms : Vector[String]
         val inflectedForms : Option[InflectedForms] =
           inflections.getInflectedForms(verbForm.lowerCase)
-        QASRLGenerationAjaxResponse(stats, tokens, inflectedForms)
+        QANomGenerationAjaxResponse(stats, tokens, inflectedForms)
     }
   }
 
@@ -433,7 +433,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
       genAggregatorPeek
     })
 
-  val genTaskSpec = TaskSpecification.NoWebsockets[QASRLGenerationPrompt[SID], QANomResponse, QASRLGenerationAjaxRequest[SID]](
+  val genTaskSpec = TaskSpecification.NoWebsockets[QANomGenerationPrompt[SID], QANomResponse, QANomGenerationAjaxRequest[SID]](
     settings.generationTaskKey, genHITType, genAjaxService, allNominalPrompts,
     taskPageHeadElements = taskPageHeadLinks,
     taskPageBodyElements = taskPageBodyLinks,
@@ -441,7 +441,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
 
   var genManagerPeek: QASRLGenerationHITManager[SID] = null
 
-  val genHelper = new HITManager.Helper[QASRLGenerationPrompt[SID], QANomResponse](genTaskSpec)
+  val genHelper = new HITManager.Helper[QANomGenerationPrompt[SID], QANomResponse](genTaskSpec)
   val genManager: ActorRef = actorSystem.actorOf(
     Props {
       genManagerPeek = new QASRLGenerationHITManager[SID](
@@ -522,7 +522,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   // for use while it's running. Ideally instead of having to futz around at the console calling these functions,
   // in the future you could have a nice dashboard UI that will help you examine common sources of issues
 
-  def allGenInfos = hitDataService.getAllHITInfo[QASRLGenerationPrompt[SID], QANomResponse](genTaskSpec.hitTypeId).get
+  def allGenInfos = hitDataService.getAllHITInfo[QANomGenerationPrompt[SID], QANomResponse](genTaskSpec.hitTypeId).get
 
   def allValInfos = hitDataService.getAllHITInfo[QASRLValidationPrompt[SID], List[QASRLValidationAnswer]](valTaskSpec.hitTypeId).get
 
@@ -718,8 +718,8 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   def batchFeedbacks = genManagerPeek.feedbacks.filter(a => batchHitIds.contains(a.hitId))
 
 
-  def getAssignmentPrompt(a: spacro.Assignment[QANomResponse]): QASRLGenerationPrompt[SID] = {
-    hitDataService.getHIT[QASRLGenerationPrompt[SID]](a.hitTypeId, a.hitId).get.prompt
+  def getAssignmentPrompt(a: spacro.Assignment[QANomResponse]): QANomGenerationPrompt[SID] = {
+    hitDataService.getHIT[QANomGenerationPrompt[SID]](a.hitTypeId, a.hitId).get.prompt
   }
 
   def exportFeedbacks(feedbackFileName: String): Unit = {
@@ -727,7 +727,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     val header : String = "qasrl_id\tsentence\tverb_idx\tverb_form\tfeedback\n"
     val feedbacks = batchFeedbacks.groupBy(a => getAssignmentPrompt(a)).flatMap {
       case (prompt, assignments) => assignments.map(assignment =>
-        s"${prompt.id}\t${prompt.id.tokens.mkString(" ")}\t${prompt.verbIndex}\t${prompt.verbForm}\t${assignment.feedback}")
+        s"${prompt.id}\t${prompt.id.tokens.mkString(" ")}\t${prompt.targetIndex}\t${prompt.verbForm}\t${assignment.feedback}")
     }
     val path = Paths.get(feedbackFileName)
     Files.write(path, (header + feedbacks.mkString("\n")).getBytes())
@@ -738,7 +738,7 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
     val header : String = "qasrl_id\tverb_idx\tverb_form\tfeedback\n"
     val feedbacks = genManagerPeek.feedbacks.groupBy(a => getAssignmentPrompt(a)).flatMap {
       case (prompt, assignments) => assignments.map(assignment =>
-        s"${prompt.id}\t${prompt.verbIndex}\t${prompt.verbForm}\t${assignment.feedback}")
+        s"${prompt.id}\t${prompt.targetIndex}\t${prompt.verbForm}\t${assignment.feedback}")
     }
     val path = Paths.get(feedbackFileName)
     Files.write(path, (header + feedbacks.mkString("\n")).getBytes())
@@ -772,9 +772,9 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
   def printGenFeedback(n: Int) = batchFeedbacks.take(n).foreach(a => {
     val prompt = getAssignmentPrompt(a)
     val sentence : String = prompt.id.tokens.mkString(" ")
-    val target : String = prompt.id.tokens(prompt.verbIndex)
+    val target : String = prompt.id.tokens(prompt.targetIndex)
     println(a.workerId + " --- S:\t" + sentence)
-    println(s"  Target: $target (${prompt.verbIndex}) \tVerb-Form: ${a.response.verbForm}\t" +
+    println(s"  Target: $target (${prompt.targetIndex}) \tVerb-Form: ${a.response.verbForm}\t" +
       s"is-verbal: " + a.response.isVerbal.toString )
     println("  Feedback: " + a.feedback)
   })

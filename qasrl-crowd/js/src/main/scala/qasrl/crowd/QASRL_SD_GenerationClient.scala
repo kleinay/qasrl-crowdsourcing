@@ -56,10 +56,10 @@ import japgolly.scalajs.react.CatsReact._
 
 class QASRL_SD_GenerationClient[SID : Reader : Writer](
     instructions: VdomTag)(
-    implicit promptReader: Reader[QASRLGenerationPrompt[SID]], // macro serializers don't work for superclass constructor parameters
-    responseWriter: Writer[List[VerbQA]], // same as above
-    ajaxRequestWriter: Writer[QASRLGenerationAjaxRequest[SID]] // "
-  ) extends TaskClient[QASRLGenerationPrompt[SID], List[VerbQA], QASRLGenerationAjaxRequest[SID]] {
+                                                        implicit promptReader: Reader[QANomGenerationPrompt[SID]], // macro serializers don't work for superclass constructor parameters
+                                                        responseWriter: Writer[List[VerbQA]], // same as above
+                                                        ajaxRequestWriter: Writer[QANomGenerationAjaxRequest[SID]] // "
+  ) extends TaskClient[QANomGenerationPrompt[SID], List[VerbQA], QANomGenerationAjaxRequest[SID]] {
 
   val settings = QASDSettings.default
   // for monoid on Callback
@@ -74,7 +74,7 @@ class QASRL_SD_GenerationClient[SID : Reader : Writer](
   // import WebsocketLoadableComponent._
   val SpanHighlightingComponent = new SpanHighlightingComponent[Int]
   import SpanHighlightingComponent._
-  val AsyncContentComponent = new AsyncContentComponent[QASRLGenerationAjaxResponse]
+  val AsyncContentComponent = new AsyncContentComponent[QANomGenerationAjaxResponse]
   import AsyncContentComponent._
 
   val IntState = new LocalStateComponent[Int]
@@ -107,9 +107,9 @@ class QASRL_SD_GenerationClient[SID : Reader : Writer](
                             curFocus: Option[Int])
   object State {
     val empty: State = State(null, Nil, None)
-    def initFromResponse(response: QASRLGenerationAjaxResponse): State = response match {
-      case QASRLGenerationAjaxResponse(_, sentence, _) =>
-        val targetWord : String = sentence(prompt.verbIndex)
+    def initFromResponse(response: QANomGenerationAjaxResponse): State = response match {
+      case QANomGenerationAjaxResponse(_, sentence, _) =>
+        val targetWord : String = sentence(prompt.targetIndex)
         val template = new QASDQuestionProcessor(sentence.mkString(" "), targetWord, "adjective")
         State(template, List(QAPair.empty), None)
     }
@@ -131,7 +131,7 @@ class QASRL_SD_GenerationClient[SID : Reader : Writer](
   def getAllCompleteQAPairs(state: State): List[VerbQA] = for {
     qa <- state.qas
     if isComplete(qa)
-  } yield VerbQA(prompt.verbIndex, qa.question, qa.answers)
+  } yield VerbQA(prompt.targetIndex, qa.question, qa.answers)
 
   // better: a PTraversal that doesn't ask for the index back. would fix the issue of the iso being bad
   def indexingIso[A] = Iso[List[A], List[(A, Int)]](_.zipWithIndex)(_.map(_._1))
@@ -276,8 +276,8 @@ class QASRL_SD_GenerationClient[SID : Reader : Writer](
                     ^.float := "left",
                     ^.`type` := "text",
                     ^.placeholder := (
-                      if(qaIndex == 0) ("Question about \"" + Text.normalizeToken(sentence(prompt.verbIndex)) + "\" (required)")
-                      else ("Question about \"" + Text.normalizeToken(sentence(prompt.verbIndex)) + "\"" + s" (+${math.round(100 * nextPotentialBonus).toInt}c)")
+                      if(qaIndex == 0) ("Question about \"" + Text.normalizeToken(sentence(prompt.targetIndex)) + "\" (required)")
+                      else ("Question about \"" + Text.normalizeToken(sentence(prompt.targetIndex)) + "\"" + s" (+${math.round(100 * nextPotentialBonus).toInt}c)")
                       ),
                     ^.padding := s"1px",
                     ^.width := "480px",
@@ -382,12 +382,12 @@ class QASRL_SD_GenerationClient[SID : Reader : Writer](
     def render(s: State) = {
       AsyncContent(
         AsyncContentProps(
-          getContent = () => makeAjaxRequest(QASRLGenerationAjaxRequest(workerIdOpt, prompt)),
-          willLoad = ((response: QASRLGenerationAjaxResponse) => scope.setState(State.initFromResponse(response))),
+          getContent = () => makeAjaxRequest(QANomGenerationAjaxRequest(workerIdOpt, prompt)),
+          willLoad = ((response: QANomGenerationAjaxResponse) => scope.setState(State.initFromResponse(response))),
           render = {
             case Loading => <.div("Retrieving data...")
             case Loaded(
-            QASRLGenerationAjaxResponse(
+            QANomGenerationAjaxResponse(
             GenerationStatSummary(numVerbsCompleted, numQuestionsWritten, workerStatsOpt),
             sentence,
             _)
@@ -523,7 +523,7 @@ class QASRL_SD_GenerationClient[SID : Reader : Writer](
                             MultiContigSpanHighlightableSentence(
                               MultiContigSpanHighlightableSentenceProps(
                                 sentence = sentence,
-                                styleForIndex = i => TagMod(Styles.targetWord).when(i == prompt.verbIndex),
+                                styleForIndex = i => TagMod(Styles.targetWord).when(i == prompt.targetIndex),
                                 highlightedSpans = (
                                   inProgressAnswerOpt.map(_ -> (^.backgroundColor := "#FF8000")) ::
                                     (curAnswerSpans.map(_ -> (^.backgroundColor := "#FFFF00")) ++

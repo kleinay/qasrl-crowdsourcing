@@ -45,8 +45,6 @@ class QASRLValidationHITManager[SID : Reader : Writer](
   override def promptFinished(prompt: QASRLValidationPrompt[SID]): Unit = {
     val assignments = promptToAssignments(prompt)
 
-    val validQuestions = QASRLValidationAnswer.validQuestions(prompt.questions, assignments.map(_.response))
-
 //    accuracyStatsActor ! QASRLValidationFinished(prompt, validQuestions)
     promptToAssignments = promptToAssignments - prompt
   }
