@@ -15,7 +15,7 @@ import nlpdata.util.Text
 import nlpdata.util.HasTokens.ops._
 
 
-val isProduction = false // sandbox. change to true for production
+val isProduction = true // sandbox. change to true for production
 val projectName = "qasrl-crowd-eval" // make sure it matches the SBT project;
 // this is how the .js file is found to send to the server
 

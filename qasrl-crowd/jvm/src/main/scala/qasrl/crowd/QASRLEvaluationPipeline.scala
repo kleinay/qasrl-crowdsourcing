@@ -25,8 +25,8 @@ import scala.collection.JavaConverters._
 import com.typesafe.scalalogging.StrictLogging
 
 class QASRLEvaluationPipeline[SID : Reader : Writer : HasTokens](
-  val allPrompts: Vector[QASRLArbitrationPrompt[SID]], // IDs of sentences to annotate
-  val numValidationsForPrompt: Int,
+  val allPrompts: Vector[QASRLArbitrationPrompt[SID]], // prompts to annotate
+  val numArbitratorsForPrompt: Int,
   stage: Stage,
   frozenEvaluationHITTypeId: Option[String] = None,
   validationAgreementDisqualTypeLabel: Option[String] = None,
@@ -101,6 +101,7 @@ class QASRLEvaluationPipeline[SID : Reader : Writer : HasTokens](
   val promptsByGroup: Map[String, Vector[QASRLArbitrationPrompt[SID]]] =
     allPrompts.groupBy(assignGroupToArbPrompt)
 
+  val activeGroups: List[String] = promptsByGroup.keys.toList
 
   lazy val (taskPageHeadLinks, taskPageBodyLinks) = {
     import scalatags.Text.all._
@@ -182,7 +183,7 @@ class QASRLEvaluationPipeline[SID : Reader : Writer : HasTokens](
       Props {
         arbManagerPeek = new QASRLEvaluationHITManager(
           arbHelper,
-          if (config.isProduction) (_ => numValidationsForPrompt) else (_ => 1),
+          if (config.isProduction) (_ => numArbitratorsForPrompt) else (_ => 1),
           if (config.isProduction) 100 else 20,
           promptsByGroup(group).iterator)
         arbManagerPeek
@@ -194,10 +195,11 @@ class QASRLEvaluationPipeline[SID : Reader : Writer : HasTokens](
     (arbManager, arbManagerPeek, arbHelper, arbActor)
   }
 
-  // now create 3 tasks for 3 groups
+  // now create k tasks for k active groups (groups that got any prompt)
   val tasksObjects : List[(ActorRef, QASRLEvaluationHITManager[SID],
-    HITManager.Helper[QASRLArbitrationPrompt[SID], QANomResponse], ActorRef)] = groups.map(grp =>
-      createArbitrationTask(grp))
+    HITManager.Helper[QASRLArbitrationPrompt[SID], QANomResponse], ActorRef)] =
+    activeGroups.map(grp => createArbitrationTask(grp))
+
   // decompose to lists of manager, managerPeeks, etc.
   val arbManagers = tasksObjects.map(_._1)
   val arbManagerPeeks = tasksObjects.map(_._2)
@@ -296,11 +298,11 @@ class QASRLEvaluationPipeline[SID : Reader : Writer : HasTokens](
 
 
   def info(): Unit = {
-    val totalPrompts = allPrompts.length * numValidationsForPrompt
+    val totalAssignments = allPrompts.length * numArbitratorsForPrompt
 
     val completedCount = allInfos.map(_.assignments.length).sum
     val uploadedCount = allInfos.length
-    val groupsHitTypeIds : String = (groups zip arbHelpers).map{
+    val groupsHitTypeIds : String = (activeGroups zip arbHelpers).map{
       case (grp : String, hlp: HITManager.Helper[QASRLArbitrationPrompt[SID], QANomResponse]) =>
         s"$grp: ${hlp.taskSpec.hitTypeId}"}
       .mkString("\n")
@@ -309,7 +311,7 @@ class QASRLEvaluationPipeline[SID : Reader : Writer : HasTokens](
     println(s"Active Phase: $stage")
     println()
     println(f"Total HITs in batch: ${allPrompts.length}")
-    println(f"Assignments: $completedCount/$totalPrompts (completed / total)")
+    println(f"Assignments: $completedCount/$totalAssignments (completed / total)")
     println(f"Uploaded arbitration hits to MTurk: $uploadedCount")
   }
 }
