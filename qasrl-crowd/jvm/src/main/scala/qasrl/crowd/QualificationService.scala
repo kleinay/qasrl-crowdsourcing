@@ -3,6 +3,7 @@ package qasrl.crowd
 import com.amazonaws.services.mturk.model._
 import com.typesafe.scalalogging.StrictLogging
 import spacro.tasks.TaskConfig
+import upickle.Js.False
 
 import scala.collection.JavaConverters._
 
@@ -73,6 +74,25 @@ class QualificationService(implicit val config: TaskConfig) extends StrictLoggin
         new DisassociateQualificationFromWorkerRequest()
           .withQualificationTypeId(qualTypeId)
           .withWorkerId(qual.getWorkerId)
+      )
+    }
+  }
+
+  def verifyWorkerIsAssociatedWithQualification(qualTypeId: String, workerId: String): Unit = {
+    val qualifiedWorkers : List[String] = config.service.listWorkersWithQualificationType(
+      new ListWorkersWithQualificationTypeRequest()
+        .withQualificationTypeId(qualTypeId)
+        .withMaxResults(100)
+    ).getQualifications.asScala.toList.map(_.getWorkerId)
+    // if worker is not with qualification, grant him
+    if (!qualifiedWorkers.contains(workerId)) {
+      logger.info(s"Associating qualification: $qualTypeId   to worker: $workerId")
+      config.service.associateQualificationWithWorker(
+        new AssociateQualificationWithWorkerRequest()
+          .withQualificationTypeId(qualTypeId)
+          .withIntegerValue(1)
+          .withWorkerId(workerId)
+          .withSendNotification(false)
       )
     }
   }

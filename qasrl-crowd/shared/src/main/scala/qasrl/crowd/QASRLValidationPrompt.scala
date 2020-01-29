@@ -29,4 +29,5 @@ case class QASRLArbitrationPrompt[SID](
   def isVerbals : List[Boolean] = responses.map(_.isVerbal)
   def qas : List[VerbQA] = responses.flatMap(_.qas)
   def questions : List[String] = qas.map(_.question)
+  def generators : List[String] = genResponses.map(_._1)
 }

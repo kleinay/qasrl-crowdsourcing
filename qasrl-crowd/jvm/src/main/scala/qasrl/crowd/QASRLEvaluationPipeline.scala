@@ -55,10 +55,51 @@ class QASRLEvaluationPipeline[SID : Reader : Writer : HasTokens](
     .withLocaleValues(new Locale().withCountry("IN"))
     .withRequiredToPreview(false)
 
+  // todo hard code the desired groups of workers here
+  val workersInGroup : Map[String, List[String]] = Map(
+    "Group 1" -> List("A1FS8SBR4SDWYG", "A2A4UAFZ5LW71K"),
+    "Group 2" -> List("A21LONLNBOB8Q", "A98E8M4QLI9RS"),
+    "Group 3" -> List("AJQGWGESKQT4Y", "A3IR7DFEKLLLO", "A25AX0DNHKJCQT")
+  )
+  val groups : List[String] = workersInGroup.keys.toList
 
-  val productionArbitratorQualName = "Arbitrator qualification for verbal-noun Q-A task"
-  val productionQualType = qual.findOrCreate(productionArbitratorQualName, """Access granted to the live annotation round in the arbitration task of verbal-noun Q-A""".stripMargin)
-  val inProductionReq = qual.createQualificationReq(productionQualType, shouldHave = true)
+  val arbGroupRequirements : Map[String, QualificationRequirement] = groups.map { gr =>
+    val productionArbitratorQualName = s"Arbitrator qualification for verbal-noun Q-A task [$gr]"
+    val productionQualType = qual.findOrCreate(productionArbitratorQualName, s"""Access granted to the live annotation round in the arbitration task of verbal-noun Q-A [$gr]""".stripMargin)
+    val inProductionReq = qual.createQualificationReq(productionQualType, shouldHave = true)
+    gr -> inProductionReq
+  }.toMap
+
+  // grant qualification accordingly (if required)
+  def grantGroupQualToWorkers(): Unit = for ((grp, workers) <- workersInGroup) {
+    workers.foreach(worker => qual.verifyWorkerIsAssociatedWithQualification(arbGroupRequirements(grp).getQualificationTypeId, worker))
+  }
+  grantGroupQualToWorkers
+
+  // group prompts to groups by mutual-exclusion of source workers (=generators).
+  private val worker2group : Map[String, String] = for {
+    (grp, workers) <- workersInGroup
+    worker <- workers
+  } yield worker -> grp
+
+  private def nextGroup(grp: String): String = {
+    groups((groups.indexOf(grp)+1) % groups.size)
+  }
+
+  private def assignGroupToArbPrompt(prompt: QASRLArbitrationPrompt[SID]): String = {
+    val generators : List[String] = prompt.generators
+    val generatorsGroups : Set[String] = generators.flatMap(w => worker2group.get(w)).toSet
+    // if both generators from the same group - take subsequent group (arbitrarily)
+    if (generatorsGroups.size == 1)
+      nextGroup(generatorsGroups.head)
+    else {   // generators come from two different groups. Take a different group
+      (groups.toSet -- generatorsGroups).head
+    }
+  }
+
+  // assign prompts to tasks by group
+  val promptsByGroup: Map[String, Vector[QASRLArbitrationPrompt[SID]]] =
+    allPrompts.groupBy(assignGroupToArbPrompt)
 
 
   lazy val (taskPageHeadLinks, taskPageBodyLinks) = {
@@ -89,11 +130,17 @@ class QASRLEvaluationPipeline[SID : Reader : Writer : HasTokens](
     (headLinks, bodyLinks)
   }
 
+  lazy val sampleArbPrompt = allPrompts.head
+
   // arbitration task definition
 
-  val arbHITType = HITType(
-    title = s"Consolidate decision and Question-Answer pairs about a verbal noun",
-    description = s"""
+  def createArbitrationTask(group: String):
+  (ActorRef, QASRLEvaluationHITManager[SID], HITManager.Helper[QASRLArbitrationPrompt[SID], QANomResponse], ActorRef) =
+  {
+    val arbHITType = HITType(
+      title = s"Consolidate decision and Question-Answer pairs about a verbal noun [$group]",
+      description =
+        s"""
       Given a sentence, a noun, and possibly several Q&A pairs collected from different annotators,
       You should: (1) Decide whether the target noun is a verbal noun.
       (2) Identify the most naturally phrased question in English
@@ -104,54 +151,68 @@ class QASRLEvaluationPipeline[SID : Reader : Writer : HasTokens](
       You should delete incorrect answers, modify existing ones if needed, and add new answers if missing.
       Maintain high agreement with our expert annotator team to stay qualified.
     """.trim,
-    reward = settings.arbitrationReward,
-    keywords = "language,english,question answering",
-    qualRequirements = Array[QualificationRequirement](
-      approvalRateRequirement, localeRequirement, inProductionReq
-    ),
-    autoApprovalDelay = 2592000L, // 30 days
-    assignmentDuration = 600L)
+      reward = settings.arbitrationReward,
+      keywords = "language,english,question answering",
+      qualRequirements = Array[QualificationRequirement](
+        approvalRateRequirement, localeRequirement, arbGroupRequirements(group)
+      ),
+      autoApprovalDelay = 2592000L, // 30 days
+      assignmentDuration = 600L)
 
-  lazy val arbAjaxService = new Service[QASRLValidationAjaxRequest[SID]] {
-    override def processRequest(request: QASRLValidationAjaxRequest[SID]) = request match {
-      case QASRLValidationAjaxRequest(workerIdOpt, id) =>
-        QASRLValidationAjaxResponse(None, id.tokens)
+    lazy val arbAjaxService = new Service[QASRLValidationAjaxRequest[SID]] {
+      override def processRequest(request: QASRLValidationAjaxRequest[SID]) = request match {
+        case QASRLValidationAjaxRequest(workerIdOpt, id) =>
+          QASRLValidationAjaxResponse(None, id.tokens)
+      }
     }
+
+    lazy val arbTaskSpec = TaskSpecification.NoWebsockets[
+      QASRLArbitrationPrompt[SID], QANomResponse, QASRLValidationAjaxRequest[SID]](
+      settings.evaluationTaskKey, arbHITType, arbAjaxService, Vector(sampleArbPrompt),
+      taskPageHeadElements = taskPageHeadLinks,
+      taskPageBodyElements = taskPageBodyLinks,
+      frozenHITTypeId = frozenEvaluationHITTypeId)
+
+    import config.actorSystem
+
+    var arbManagerPeek: QASRLEvaluationHITManager[SID] = null
+
+    lazy val arbHelper = new HITManager.Helper(arbTaskSpec)
+    lazy val arbManager: ActorRef = actorSystem.actorOf(
+      Props {
+        arbManagerPeek = new QASRLEvaluationHITManager(
+          arbHelper,
+          if (config.isProduction) (_ => numValidationsForPrompt) else (_ => 1),
+          if (config.isProduction) 100 else 20,
+          promptsByGroup(group).iterator)
+        arbManagerPeek
+      })
+
+    lazy val arbActor = actorSystem.actorOf(Props(new TaskManager(arbHelper, arbManager)))
+
+    // Return
+    (arbManager, arbManagerPeek, arbHelper, arbActor)
   }
 
-  lazy val sampleArbPrompt = allPrompts.head
+  // now create 3 tasks for 3 groups
+  val tasksObjects : List[(ActorRef, QASRLEvaluationHITManager[SID],
+    HITManager.Helper[QASRLArbitrationPrompt[SID], QANomResponse], ActorRef)] = groups.map(grp =>
+      createArbitrationTask(grp))
+  // decompose to lists of manager, managerPeeks, etc.
+  val arbManagers = tasksObjects.map(_._1)
+  val arbManagerPeeks = tasksObjects.map(_._2)
+  val arbHelpers = tasksObjects.map(_._3)
+  val arbActors = tasksObjects.map(_._4)
 
-  lazy val arbTaskSpec = TaskSpecification.NoWebsockets[
-    QASRLArbitrationPrompt[SID], QANomResponse, QASRLValidationAjaxRequest[SID]](
-    settings.evaluationTaskKey, arbHITType, arbAjaxService, Vector(sampleArbPrompt),
-    taskPageHeadElements = taskPageHeadLinks,
-    taskPageBodyElements = taskPageBodyLinks,
-    frozenHITTypeId = frozenEvaluationHITTypeId)
+  val arbHitTypeIds : List[String] = arbHelpers.map(_.taskSpec.hitTypeId)
 
-  import config.actorSystem
-
-  var arbManagerPeek: QASRLEvaluationHITManager[SID] = null
-
-  lazy val arbHelper = new HITManager.Helper(arbTaskSpec)
-  lazy val arbManager: ActorRef = actorSystem.actorOf(
-    Props {
-      arbManagerPeek = new QASRLEvaluationHITManager(
-        arbHelper,
-        if(config.isProduction) (_ => numValidationsForPrompt) else (_ => 1),
-        if(config.isProduction) 100 else 20,
-        allPrompts.iterator)
-      arbManagerPeek
-    })
-
-  lazy val arbActor = actorSystem.actorOf(Props(new TaskManager(arbHelper, arbManager)))
-
-  lazy val server = new Server(List(arbTaskSpec))
+  lazy val server = new Server(arbHelpers.map(_.taskSpec))
 
   // used to schedule data-saves
   private[this] var schedule: List[Cancellable] = Nil
   def startSaves(interval: FiniteDuration = 5 minutes): Unit = {
     if(schedule.exists(_.isCancelled) || schedule.isEmpty) {
-      schedule = List(arbManager).map(actor =>
+      schedule = arbManagers.map(actor =>
         config.actorSystem.scheduler.schedule(
           2 seconds, interval, actor, SaveData)(
           config.actorSystem.dispatcher, actor)
@@ -160,32 +221,40 @@ class QASRLEvaluationPipeline[SID : Reader : Writer : HasTokens](
   }
   def stopSaves = schedule.foreach(_.cancel())
 
-  def setValHITsActive(n: Int) = {
+  def setValHITsActive(n: Int) = for (arbManager <- arbManagers) {
     arbManager ! SetNumHITsActive(n)
   }
 
   import TaskManager.Message._
   def start(interval: FiniteDuration = 30 seconds) = {
     server
-    logger.info(s"Arbitration HitTypeId: ${arbTaskSpec.hitTypeId}")
+    arbHelpers.foreach(hlp =>
+      logger.info(s"Arbitration HitTypeId: ${hlp.taskSpec.hitTypeId}")
+    )
     startSaves()
-    arbActor ! Start(interval, delay = 3 seconds)
+    for (arbActor <- arbActors) {
+      arbActor ! Start(interval, delay = 3 seconds)
+    }
   }
   def stop() = {
-    arbActor ! Stop
+    for (arbActor <- arbActors) {
+      arbActor ! Stop
+    }
     stopSaves
   }
-  def delete() = {
-    arbActor ! Delete
+  def delete() = for (arbActor <- arbActors) {
+      arbActor ! Delete
   }
-  def expire() = {
+  def expire() = for (arbActor <- arbActors) {
     arbActor ! Expire
   }
   def update() = {
     server
-    arbActor ! Update
+    for (arbActor <- arbActors) {
+      arbActor ! Update
+    }
   }
-  def save() = {
+  def save() = for (arbManager <- arbManagers) {
     arbManager ! SaveData
   }
 
@@ -194,11 +263,14 @@ class QASRLEvaluationPipeline[SID : Reader : Writer : HasTokens](
 
   def allInfos = alternativePromptReaderOpt match {
     case None =>
-      hitDataService.getAllHITInfo[QASRLArbitrationPrompt[SID], QANomResponse](arbTaskSpec.hitTypeId).get
+      arbHelpers.flatMap(hlp =>
+        hitDataService.getAllHITInfo[QASRLArbitrationPrompt[SID], QANomResponse](hlp.taskSpec.hitTypeId).get)
     case Some(altReader) =>
-      hitDataService.getAllHITInfo[QASRLArbitrationPrompt[SID], QANomResponse](
-        arbTaskSpec.hitTypeId
-      )(altReader, implicitly[Reader[QANomResponse]]).get
+      arbHelpers.flatMap(hlp =>
+        hitDataService.getAllHITInfo[QASRLArbitrationPrompt[SID], QANomResponse](
+          hlp.taskSpec.hitTypeId
+        )(altReader, implicitly[Reader[QANomResponse]]).get
+      )
   }
 
   def latestInfos(n: Int = 5) = allInfos
@@ -218,7 +290,7 @@ class QASRLEvaluationPipeline[SID : Reader : Writer : HasTokens](
   }
 
 
-  def printFeedbacks(n: Int = 15) = arbManagerPeek.feedbacks.take(n).foreach(a =>
+  def printFeedbacks(n: Int = 15) = arbManagerPeeks.flatMap(_.feedbacks).take(n).foreach(a =>
     println(a.workerId + " " + a.feedback)
   )
 
@@ -228,11 +300,13 @@ class QASRLEvaluationPipeline[SID : Reader : Writer : HasTokens](
 
     val completedCount = allInfos.map(_.assignments.length).sum
     val uploadedCount = allInfos.length
-
-    println(s"Arbitration HitTypeId: ${arbTaskSpec.hitTypeId}")
-    println(s"Active Phase: $stage")
+    val groupsHitTypeIds : String = (groups zip arbHelpers).map{
+      case (grp : String, hlp: HITManager.Helper[QASRLArbitrationPrompt[SID], QANomResponse]) =>
+        s"$grp: ${hlp.taskSpec.hitTypeId}"}
+      .mkString("\n")
+    println(s"Arbitration HitTypeIds: $groupsHitTypeIds")
     println()
-    println(s"Production Qualification Id: ${productionQualType.getQualificationTypeId}")
+    println(s"Active Phase: $stage")
     println()
     println(f"Total HITs in batch: ${allPrompts.length}")
     println(f"Assignments: $completedCount/$totalPrompts (completed / total)")

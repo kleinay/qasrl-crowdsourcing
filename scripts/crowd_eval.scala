@@ -96,7 +96,6 @@ def progress() = {
 
   val completedPrompts = savedPrompts.count(_.assignments.nonEmpty)
 
-  println(s"HitTypeId: ${exp.arbTaskSpec.hitTypeId}")
   println(f"uploaded: $uploadedPrompts / $totalPrompts ")
   println(f"Completed: $completedPrompts / $totalPrompts ")
 }
