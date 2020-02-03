@@ -100,6 +100,9 @@ class QASRLEvaluationPipeline[SID : Reader : Writer : HasTokens](
   // assign prompts to tasks by group
   val promptsByGroup: Map[String, Vector[QASRLArbitrationPrompt[SID]]] =
     allPrompts.groupBy(assignGroupToArbPrompt)
+// For sandbox preview
+//  val promptsByGroup: Map[String, Vector[QASRLArbitrationPrompt[SID]]] =
+//    Map ("all" -> allPrompts)
 
   val activeGroups: List[String] = promptsByGroup.keys.toList
 
