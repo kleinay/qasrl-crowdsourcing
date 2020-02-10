@@ -55,6 +55,9 @@ class QASRLEvaluationPipeline[SID : Reader : Writer : HasTokens](
     .withLocaleValues(new Locale().withCountry("IN"))
     .withRequiredToPreview(false)
 
+
+
+
   // todo hard code the desired groups of workers here
   val workersInGroup : Map[String, List[String]] = Map(
     "Group 1" -> List("A1FS8SBR4SDWYG", "A2A4UAFZ5LW71K"),
@@ -96,6 +99,14 @@ class QASRLEvaluationPipeline[SID : Reader : Writer : HasTokens](
       (groups.toSet -- generatorsGroups).head
     }
   }
+
+  /*
+   temporal code - for duplicated_annotation IAA experiment -
+      Split prompts' responses to two sets of 2:2 generators each.
+      Then, replace upcoming occurrences of allPrompts with allPromptsSplitted.
+
+  //val allPromptsSplitted = allPrompts.flatMap(IAA_Consolidated_Experiment.split_arb_prompt_by_worker_groups(_, workersInGroup))
+  */
 
   // assign prompts to tasks by group
   val promptsByGroup: Map[String, Vector[QASRLArbitrationPrompt[SID]]] =
