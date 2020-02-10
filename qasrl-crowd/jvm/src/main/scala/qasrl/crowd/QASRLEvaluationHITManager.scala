@@ -92,7 +92,7 @@ class QASRLEvaluationHITManager[SID : Reader : Writer](
 
     // grant bonus as appropriate
     import assignment.workerId
-    val numQuestions = hit.prompt.genResponses.size
+    val numQuestions = hit.prompt.qas.size
     val totalBonus = settings.arbitrationBonus(numQuestions)
     if(totalBonus > 0.0) {
       helper.config.service.sendBonus(
@@ -100,7 +100,7 @@ class QASRLEvaluationHITManager[SID : Reader : Writer](
           .withWorkerId(workerId)
           .withBonusAmount(f"$totalBonus%.2f")
           .withAssignmentId(assignment.assignmentId)
-          .withReason(s"Bonus of ${dollarsToCents(totalBonus)}c awarded for validating $numQuestions questions.")
+          .withReason(s"Bonus of ${dollarsToCents(totalBonus)}c awarded for consolidating $numQuestions questions.")
       )
     }
 
