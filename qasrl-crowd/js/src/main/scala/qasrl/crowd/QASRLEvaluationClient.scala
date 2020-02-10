@@ -89,7 +89,10 @@ class QASRLEvaluationClient[SID: Writer : Reader](
           case _ => VerbQA(targetIdx, questions(idx), Nil)
         }}
       // finalQAs are those QAs selected by arbitrator as final annotation
-      val finalQAs : List[VerbQA] = allQAs.filter(_.answers.nonEmpty)
+      val finalQAs : List[VerbQA] =
+        if (state.isVerbal)
+          allQAs.filter(_.answers.nonEmpty)
+        else Nil
       val response = QANomResponse(targetIdx, state.isVerbal, verbForm, finalQAs)
       setResponse(response)
     }
