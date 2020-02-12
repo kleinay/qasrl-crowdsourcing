@@ -105,6 +105,19 @@ def saveArbitrationData(filename: String) = {
   setup.saveArbitrationData(filename, nonEmptyValidations)
 }
 
+def saveUncompletedArbitrationData(filename: String) = {
+  val uncompleted_hitinfos = exp.uncompleted_hitinfos
+  import qasrl.crowd.DataIO
+  import com.github.tototoshi.csv.{CSVReader, CSVWriter}
+  val contents = DataIO.makeOrigGenerationQAPairTSV(SentenceId.toString, uncompleted_hitinfos)
+  val csv = CSVWriter.open(filename, encoding = "utf-8")
+  csv.writeRow(DataIO.qasrlColumns)
+  for (qasrl <- contents) {
+    // will iterate in order over the case class fields
+    csv.writeRow(qasrl.productIterator.toList)
+  }
+}
+
 
 
 

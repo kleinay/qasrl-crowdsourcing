@@ -203,7 +203,7 @@ class QASRLEvaluationPipeline[SID : Reader : Writer : HasTokens](
     HITManager.Helper[QASRLArbitrationPrompt[SID], QANomResponse], ActorRef)] =
     activeGroups.map(grp => createArbitrationTask(grp))
 
-  // decompose to lists of manager, managerPeeks, etc.
+  // decompose to lists of manager, managerPeeks, helpers, actors.
   val arbManagers = tasksObjects.map(_._1)
   val arbManagerPeeks = tasksObjects.map(_._2)
   val arbHelpers = tasksObjects.map(_._3)
@@ -299,6 +299,9 @@ class QASRLEvaluationPipeline[SID : Reader : Writer : HasTokens](
     println(a.workerId + " " + a.feedback)
   )
 
+  def uncompleted_hitinfos = allInfos.filter(_.assignments.length < numArbitratorsForPrompt)
+
+  def uncompleted_prompts: List[QASRLArbitrationPrompt[SID]] = uncompleted_hitinfos.map(_.hit.prompt)
 
   def info(): Unit = {
     val totalAssignments = allPrompts.length * numArbitratorsForPrompt

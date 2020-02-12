@@ -199,6 +199,24 @@ object DataIO extends LazyLogging {
     }
   }
 
+  // take arbitration infos and generate their original generation-infos csv. Use for re-annotating some arb-infos.
+  def makeOrigGenerationQAPairTSV[SID: HasTokens](
+                                                   writeId: SID => String, // serialize sentence ID for distribution in data file
+                                                   arbInfos: List[HITInfo[QASRLArbitrationPrompt[SID], QANomResponse]])(
+                                               implicit inflections: Inflections): Iterable[QANom] = {
+
+    for {
+      ((sid, targetIndex), arbHitInfos) <- arbInfos.groupBy(idAndTargetArbitration)
+      idString = writeId(sid)
+      HITInfo(arbHIT, arbAssignments) <- arbHitInfos.sortBy(_.hit.prompt.targetIndex)
+      arbPrompt = arbHIT.prompt
+      genPrompt = arbPrompt.genPrompt
+      verbForm = genPrompt.verbForm
+      (gen_wid, genResponse) <- arbPrompt.genResponses
+      genAssignment = Assignment[QANomResponse]("", "", "", gen_wid, 0, 0, genResponse, "")
+      qanomRow <- genAssignmentToQANomTSVRows(genAssignment, sid, idString, targetIndex, verbForm)
+    } yield qanomRow
+  }
 
   private def getAllPrepositions[SID: HasTokens](question: String) = {
     val qTokens = question.init.split(" ").toVector.map(_.lowerCase)
