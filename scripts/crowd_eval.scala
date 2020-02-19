@@ -14,6 +14,7 @@ import com.github.tototoshi.csv.CSVReader
 import nlpdata.util.Text
 import nlpdata.util.HasTokens.ops._
 
+val qasrlPath = Paths.get("annot.wikipedia.dev.2.csv")
 
 val isProduction = true // sandbox. change to true for production
 val projectName = "qasrl-crowd-eval" // make sure it matches the SBT project;
@@ -27,8 +28,8 @@ val projectName = "qasrl-crowd-eval" // make sure it matches the SBT project;
 // Ports and domains on te-srv4
 val domain = "u.cs.biu.ac.il/~stanovg/qasrl" // change to your domain, or keep localhost for testing
 val interface = "0.0.0.0"
-val httpPort = 5907
-val httpsPort = 5907
+val httpPort = 5906
+val httpsPort = 5906
 
 // Uncomment the phase you want to activate
 //val phase = Trap
@@ -40,7 +41,6 @@ val liveDataPath = Paths.get(s"data/live.$phaseName")
 //val sentsPath = Some(Paths.get(s"data/$phaseName.csv"))
 val sentsPath = None
 
-val qasrlPath = Paths.get("annot.wikipedia.dev.1.1.csv")
 
 val numEvalsPerPrompt = 1
 
@@ -106,16 +106,19 @@ def saveArbitrationData(filename: String) = {
 }
 
 def saveUncompletedArbitrationData(filename: String) = {
-  val uncompleted_hitinfos = exp.uncompleted_hitinfos
+  import setup.inflections
+  val uncompleted_hitinfos = exp.uncompleted_batch_hitinfos // take this batch's uncompleted hits
   import qasrl.crowd.DataIO
   import com.github.tototoshi.csv.{CSVReader, CSVWriter}
-  val contents = DataIO.makeOrigGenerationQAPairTSV(SentenceId.toString, uncompleted_hitinfos)
+  val f : SentenceId => String = SentenceId.toString
+  val contents = DataIO.makeOrigGenerationQAPairTSV(f, uncompleted_hitinfos)
   val csv = CSVWriter.open(filename, encoding = "utf-8")
   csv.writeRow(DataIO.qasrlColumns)
   for (qasrl <- contents) {
     // will iterate in order over the case class fields
     csv.writeRow(qasrl.productIterator.toList)
   }
+  contents
 }
 
 

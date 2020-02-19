@@ -11,13 +11,19 @@ object IAA_Consolidated_Experiment {
     val generator2genResponse : Map[String, QANomResponse] = arbPrompt.genResponses.toMap
     val generators = arbPrompt.generators.toSet
     val generatorPairs = generators.subsets.filter(_.size==2)
-    // there must exist such a pair when #-groups < #-workers  (pigeon-holes)
-    val sameGroupWorkerPair: Set[String] = generatorPairs.find(pair => groups.exists(grp => pair.subsetOf(grp.toSet))).get
-
-    val p1 = QASRLArbitrationPrompt(arbPrompt.genPrompt, sameGroupWorkerPair.toList.map(w => (w, generator2genResponse(w))))
-    val otherWorkers = generators -- sameGroupWorkerPair
-    val p2 = QASRLArbitrationPrompt(arbPrompt.genPrompt, otherWorkers.toList.map(w => (w, generator2genResponse(w))))
-    // return
-    List(p1, p2)
+    val sameGroupWrkPairOpt: Option[Set[String]] = generatorPairs.find(pair => groups.exists(grp => pair.subsetOf(grp.toSet)))
+    // there must exist such a pair when #-groups < #-workers  (pigeon-holes),
+    //    e.g. HIT with 4 generators when there are only 3 groups
+    if (sameGroupWrkPairOpt.isEmpty)
+      // otherwise - just return the prompt as is
+      List(arbPrompt)
+    else {
+      val sameGroupWorkerPair: Set[String] = sameGroupWrkPairOpt.get
+      val p1 = QASRLArbitrationPrompt(arbPrompt.genPrompt, sameGroupWorkerPair.toList.map(w => (w, generator2genResponse(w))))
+      val otherWorkers = generators -- sameGroupWorkerPair
+      val p2 = QASRLArbitrationPrompt(arbPrompt.genPrompt, otherWorkers.toList.map(w => (w, generator2genResponse(w))))
+      // return
+      List(p1, p2)
+    }
   }
 }

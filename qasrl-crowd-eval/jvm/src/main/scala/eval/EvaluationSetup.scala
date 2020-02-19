@@ -109,7 +109,10 @@ class EvaluationSetup(generationQanomAnnotPath: Path,
     } yield QASRLArbitrationPrompt[SentenceId](genPrompt, genWorkerId2qanomResponses)
 
     // Additional filtering:  filter out prompts for which all generators agreed target is not verbal
-    val arbPrompts = allArbPrompts.filter(_.genResponses.exists(_._2.isVerbal))
+//    val arbPrompts = allArbPrompts.filter(_.genResponses.exists(_._2.isVerbal))
+
+    // Stronger Additional filtering:  filter out prompts for which all generators agreed no-QA-Applicable (or non-verbal)
+    val arbPrompts = allArbPrompts.filter(_.genResponses.exists(_._2.qas.nonEmpty))
 
     arbPrompts.toVector
   }

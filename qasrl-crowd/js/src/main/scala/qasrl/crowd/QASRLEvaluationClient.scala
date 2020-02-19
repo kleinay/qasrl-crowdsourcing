@@ -103,42 +103,52 @@ class QASRLEvaluationClient[SID: Writer : Reader](
 
     def updateCurrentAnswers(highlightingState: SpanHighlightingState) = {
       scope.state >>= (st =>
-        scope.modState(
-          answerSpanOptics(st.curQuestion).set(highlightingState.spans(st.curQuestion))
-        )
+        if (prompt.qas.nonEmpty)
+          scope.modState(
+            answerSpanOptics(st.curQuestion).set(highlightingState.spans(st.curQuestion))
+          )
+        else
+          Callback.empty
         )
     }
 
 
     def toggleInvalidAtIndex(highlightedAnswers: Map[Int, Answer])(questionIndex: Int) =
-      scope.modState(
-        State.answers.modify(answers =>
-          answers.updated(
-            questionIndex,
-            if (answers(questionIndex).isInvalid) highlightedAnswers(questionIndex)
-            else InvalidQuestion)
+      if (prompt.qas.nonEmpty)
+        scope.modState(
+          State.answers.modify(answers =>
+            answers.updated(
+              questionIndex,
+              if (answers(questionIndex).isInvalid) highlightedAnswers(questionIndex)
+              else InvalidQuestion)
+          )
         )
-      )
+      else
+        Callback.empty
 
     def toggleRedundantAtIndex(highlightedAnswers: Map[Int, Answer])(questionIndex: Int) = {
-      scope.modState(
-        State.answers.modify(answers =>
-          answers.updated(
-            questionIndex,
-            if (answers(questionIndex).isRedundant) highlightedAnswers(questionIndex)
-            else RedundantQuestion
-          )
-        ))
+      if (prompt.qas.nonEmpty)
+        scope.modState(
+          State.answers.modify(answers =>
+            answers.updated(
+              questionIndex,
+              if (answers(questionIndex).isRedundant) highlightedAnswers(questionIndex)
+              else RedundantQuestion
+            )
+          ))
+      else
+        Callback.empty
     }
 
     def handleKey(highlightedAnswers: Map[Int, Answer])(e: ReactKeyboardEvent): Callback = {
-      def nextQuestion = scope.modState(State.curQuestion.modify(i => (i + 1) % questions.size))
+      val questions_size = math.min(1, questions.size)
+      def nextQuestion = scope.modState(State.curQuestion.modify(i => (i + 1) % questions_size))
 
-      def prevQuestion = scope.modState(State.curQuestion.modify(i => (i + questions.size - 1) % questions.size))
+      def prevQuestion = scope.modState(State.curQuestion.modify(i => (i + questions.size - 1) % questions_size))
 
       def toggleInvalid = scope.zoomStateL(State.curQuestion).state >>= toggleInvalidAtIndex(highlightedAnswers)
 
-      if (isNotAssigned) {
+      if (isNotAssigned || prompt.qas.isEmpty) {
         Callback.empty
       } else CallbackOption.keyCodeSwitch(e) {
         case KeyCode.Up | KeyCode.W => prevQuestion
@@ -240,7 +250,7 @@ class QASRLEvaluationClient[SID: Writer : Reader](
     }
 
     def stylesForConflicts(state: State): Int => TagMod = {
-      val curVerbIndex : Int = prompt.qas(state.curQuestion).verbIndex
+      val curVerbIndex : Int = prompt.genPrompt.targetIndex
       val conflicts : Set[Int] = if (state.isVerbal) yieldConflictTokens(state) else Set()
 
       idx: Int =>
@@ -252,23 +262,25 @@ class QASRLEvaluationClient[SID: Writer : Reader](
     }
 
     private def highlightSpans(state: State, inProgressAnswerOpt: Option[Span]): List[(Span, TagMod)] = {
-      val currentAnswers: List[Span] = state.answers(state.curQuestion).getSpans
-      val otherAnswers = (for {
-        i <- state.answers.indices
-        if i != state.curQuestion
-        span <- state.answers(i).getSpans
-      } yield span).toList
-
-      val inProgress: Option[(Span, TagMod)] = inProgressAnswerOpt.map(_ -> (^.backgroundColor := "#FF8000"))
-      val current = currentAnswers.map(_ -> (^.backgroundColor := "#FFFF00"))
-      val other = otherAnswers.map(_ -> (^.backgroundColor := "#DDDDDD"))
-      val allDone = (current ++ other).map(Some(_))
-
-      // don't highlight no spans when in isVerbal==False state
-      if (state.isVerbal)
-        (inProgress :: allDone).flatten
-      else
+      // don't highlight no spans when in isVerbal==False state, or when there are no questions
+      if (prompt.qas.isEmpty || !state.isVerbal) {
         List()
+      }
+      else {
+        val currentAnswers: List[Span] = state.answers(state.curQuestion).getSpans
+        val otherAnswers = (for {
+          i <- state.answers.indices
+          if i != state.curQuestion
+          span <- state.answers(i).getSpans
+        } yield span).toList
+
+        val inProgress: Option[(Span, TagMod)] = inProgressAnswerOpt.map(_ -> (^.backgroundColor := "#FF8000"))
+        val current = currentAnswers.map(_ -> (^.backgroundColor := "#FFFF00"))
+        val other = otherAnswers.map(_ -> (^.backgroundColor := "#DDDDDD"))
+        val allDone = (current ++ other).map(Some(_))
+
+        (inProgress :: allDone).flatten
+      }
     }
 
     def isSubmitEnabled(state: State): Boolean = {
@@ -287,7 +299,7 @@ class QASRLEvaluationClient[SID: Writer : Reader](
 
               SpanHighlighting(
                 SpanHighlightingProps(
-                  isEnabled = !isNotAssigned && state.answers(state.curQuestion).isAnswer,
+                  isEnabled = !isNotAssigned && prompt.qas.nonEmpty && state.answers(state.curQuestion).isAnswer,
                   enableSpanOverlap = true,
                   update = updateCurrentAnswers,
                   render = {
@@ -335,8 +347,8 @@ class QASRLEvaluationClient[SID: Writer : Reader](
                               sentence = sentence,
                               styleForIndex = stylesForConflicts(state),
                               highlightedSpans = highlightSpans(state, inProgressAnswerOpt),
-                              hover = if (state.isVerbal) hover(state.curQuestion) else (_=>Callback.empty),
-                              touch = if (state.isVerbal) touch(state.curQuestion) else (_=>Callback.empty),
+                              hover = if (state.isVerbal && prompt.qas.nonEmpty) hover(state.curQuestion) else (_=>Callback.empty),
+                              touch = if (state.isVerbal && prompt.qas.nonEmpty) touch(state.curQuestion) else (_=>Callback.empty),
                               render = (elements =>
                                 <.p(
                                   Styles.largeText,
@@ -379,20 +391,26 @@ class QASRLEvaluationClient[SID: Writer : Reader](
                               <.p(),
                               <.p(
                                 "Ask about the noun '" + Text.normalizeToken(sentence(prompt.targetIndex)) + "' using the verb ",
-                                <.span(Styles.verbFormPurple, prompt.verbForm),
+                                <.span(Styles.verbFormPurple, verbForm),
                                 <.span(":"))
                             ),
 
-                            <.ul(
-                              ^.classSet1("list-unstyled"),
-                              (0 until questions.size).toVdomArray { index =>
-                                <.li(
-                                  ^.key := s"question-$index",
-                                  ^.display := "block",
-                                  qaField(state, sentence, highlightedAnswers)(index))
-                              }
-                            ),
-                            <.p(s"Bonus: ${dollarsToCents(settings.arbitrationBonus(questions.size))}c")
+                            <.div(    // div for all elements that should be hidden when there are no qas in arbPrompt
+                              <.ul(
+                                ^.classSet1("list-unstyled"),
+                                (0 until questions.size).toVdomArray { index =>
+                                  <.li(
+                                    ^.key := s"question-$index",
+                                    ^.display := "block",
+                                    qaField(state, sentence, highlightedAnswers)(index))
+                                }
+                              ),
+                              <.p(s"Bonus: ${dollarsToCents(settings.arbitrationBonus(questions.size))}c")
+                            ).when(questions.nonEmpty),
+                            // alternatively:
+                            <.p(
+                              "There were no question generated for this target noun."
+                            ).when(questions.isEmpty)
 
                           ).when(state.isVerbal),
 

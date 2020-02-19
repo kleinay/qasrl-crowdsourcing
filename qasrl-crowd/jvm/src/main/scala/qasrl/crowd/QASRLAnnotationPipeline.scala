@@ -712,8 +712,8 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
    */
   def batchSize: Int = allNominalPrompts.size
   val batchPrompts = allNominalPrompts
-  lazy val batchGenInfos = allGenInfos.filter(gi => allNominalPrompts.contains(gi.hit.prompt))
-  lazy val batchHitIds = batchGenInfos.map(_.hit.hitId)
+  def batchGenInfos = allGenInfos.filter(gi => allNominalPrompts.contains(gi.hit.prompt))
+  def batchHitIds = batchGenInfos.map(_.hit.hitId)
   def batchAssignmentIds = batchGenInfos.flatMap(_.assignments.map(_.assignmentId))
   def batchFeedbacks = genManagerPeek.feedbacks.filter(a => batchHitIds.contains(a.hitId))
 

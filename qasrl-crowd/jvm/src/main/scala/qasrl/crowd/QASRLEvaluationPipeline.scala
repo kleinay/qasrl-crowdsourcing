@@ -1,5 +1,7 @@
 package qasrl.crowd
 
+import java.nio.file.{Files, Paths}
+
 import qasrl.crowd.util.PosTagger
 import qasrl.crowd.util.implicits._
 import qasrl.labeling.SlotBasedLabel
@@ -64,6 +66,11 @@ class QASRLEvaluationPipeline[SID : Reader : Writer : HasTokens](
     "Group 2" -> List("A21LONLNBOB8Q", "A98E8M4QLI9RS"),
     "Group 3" -> List("AJQGWGESKQT4Y", "A3IR7DFEKLLLO", "A25AX0DNHKJCQT")
   )
+  // for sandbox: biunlp username
+//  val workersInGroup : Map[String, List[String]] = Map(
+//    "all" -> List("A3UENPLNM9AQBK", "AZC7J87AH18DW")
+//  )
+
   val groups : List[String] = workersInGroup.keys.toList
 
   val arbGroupRequirements : Map[String, QualificationRequirement] = groups.map { gr =>
@@ -289,6 +296,13 @@ class QASRLEvaluationPipeline[SID : Reader : Writer : HasTokens](
       )
   }
 
+  val batchSize: Int = allPrompts.size
+  val batchPrompts = allPrompts
+  def batchInfos = allInfos.filter(gi => batchPrompts.contains(gi.hit.prompt))
+  def batchHitIds = batchInfos.map(_.hit.hitId)
+  def batchAssignmentIds = batchInfos.flatMap(_.assignments.map(_.assignmentId))
+  def batchFeedbacks = arbManagerPeeks.flatMap(_.feedbacks).filter(a => batchHitIds.contains(a.hitId))
+
   def latestInfos(n: Int = 5) = allInfos
     .filter(_.assignments.nonEmpty)
     .sortBy(_.assignments.map(_.submitTime).max)
@@ -310,15 +324,46 @@ class QASRLEvaluationPipeline[SID : Reader : Writer : HasTokens](
     println(a.workerId + " " + a.feedback)
   )
 
-  def uncompleted_hitinfos = allInfos.filter(_.assignments.length < numArbitratorsForPrompt)
+  def getAssignmentPrompt(a: spacro.Assignment[QANomResponse]): QASRLArbitrationPrompt[SID] = {
+    hitDataService.getHIT[QASRLArbitrationPrompt[SID]](a.hitTypeId, a.hitId).get.prompt
+  }
 
-  def uncompleted_prompts: List[QASRLArbitrationPrompt[SID]] = uncompleted_hitinfos.map(_.hit.prompt)
+  def exportFeedbacks(feedbackFileName: String): Unit = {
+    // only feedbacks of current batch
+    val header : String = "qasrl_id\tsentence\tverb_idx\tverb_form\tfeedback\n"
+    val feedbacks = batchFeedbacks.groupBy(a => getAssignmentPrompt(a)).flatMap {
+      case (prompt, assignments) => assignments.map(assignment =>
+        s"${prompt.id}\t${prompt.id.tokens.mkString(" ")}\t${prompt.targetIndex}\t${prompt.verbForm}\t${assignment.feedback}")
+    }
+    val path = Paths.get(feedbackFileName)
+    Files.write(path, (header + feedbacks.mkString("\n")).getBytes())
+  }
+
+  def exportAllFeedbacks(feedbackFileName: String): Unit = {
+    // all feedback of label
+    val header : String = "qasrl_id\tverb_idx\tverb_form\tfeedback\n"
+    val feedbacks = arbManagerPeeks.flatMap(_.feedbacks).groupBy(a => getAssignmentPrompt(a)).flatMap {
+      case (prompt, assignments) => assignments.map(assignment =>
+        s"${prompt.id}\t${prompt.targetIndex}\t${prompt.verbForm}\t${assignment.feedback}")
+    }
+    val path = Paths.get(feedbackFileName)
+    Files.write(path, (header + feedbacks.mkString("\n")).getBytes())
+  }
+
+  def all_uncompleted_hitinfos = allInfos.filter(_.assignments.length < numArbitratorsForPrompt)
+  def uncompleted_batch_hitinfos = batchInfos.filter(_.assignments.length < numArbitratorsForPrompt)
+
+  def uncompleted_batch_prompts: List[QASRLArbitrationPrompt[SID]] = uncompleted_batch_hitinfos.map(_.hit.prompt)
+
+  def finishedHITInfosByPrompt = arbHelpers.flatMap(_.finishedHITInfosByPromptIterator.toList)
+  def completedPrompts : List[QASRLArbitrationPrompt[SID]] = finishedHITInfosByPrompt.map(_._1)
 
   def info(): Unit = {
-    val totalAssignments = allPrompts.length * numArbitratorsForPrompt
+    val currentBatchPromptsFinished = completedPrompts.filter(fp => batchPrompts.contains(fp))
+    val uploadedCount = batchInfos.length
 
-    val completedCount = allInfos.map(_.assignments.length).sum
-    val uploadedCount = allInfos.length
+    val totalAssignments = batchSize * numArbitratorsForPrompt
+    val completedAssCount = batchInfos.map(_.assignments.length).sum
     val groupsHitTypeIds : String = (activeGroups zip arbHelpers).map{
       case (grp : String, hlp: HITManager.Helper[QASRLArbitrationPrompt[SID], QANomResponse]) =>
         s"$grp: ${hlp.taskSpec.hitTypeId}"}
@@ -327,8 +372,8 @@ class QASRLEvaluationPipeline[SID : Reader : Writer : HasTokens](
     println()
     println(s"Active Phase: $stage")
     println()
-    println(f"Total HITs in batch: ${allPrompts.length}")
-    println(f"Assignments: $completedCount/$totalAssignments (completed / total)")
+    println(f"HITs (prompts): ${currentBatchPromptsFinished.size}/$batchSize (completed / total)")
+    println(f"Assignments: $completedAssCount/$totalAssignments (completed / total)")
     println(f"Uploaded arbitration hits to MTurk: $uploadedCount")
   }
 }
