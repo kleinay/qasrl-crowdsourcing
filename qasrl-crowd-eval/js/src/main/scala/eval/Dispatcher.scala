@@ -15,7 +15,7 @@ import scalajs.js.JSApp
 
 import upickle.default._
 
-object Dispatcher extends QASRLEvaluationDispatcher[SentenceId] with JSApp {
+object Dispatcher extends QASRLEvaluationDispatcher[SentenceId] {
 
   val dataToggle = VdomAttr("data-toggle")
   val dataPlacement = VdomAttr("data-placement")

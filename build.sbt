@@ -2,7 +2,7 @@ import sbt.Keys.libraryDependencies
 
 val catsVersion = "0.9.0"
 val scalaJSReactVersion = "1.1.0"
-val monocleVersion = "1.4.0-M2"
+val monocleVersion = "1.4.0"
 val circeVersion = "0.8.0"
 
 lazy val root = project.in(file("."))
@@ -19,7 +19,7 @@ lazy val commonSettings = Seq(
   addCompilerPlugin("org.scalamacros" %% "paradise" % "2.1.0" cross CrossVersion.full),
   addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.4"),
   resolvers += Resolver.sonatypeRepo("snapshots"),
-  libraryDependencies += "com.github.julianmichael" %%% "nlpdata" % "0.1-SNAPSHOT",
+  libraryDependencies += "org.julianmichael" %%% "nlpdata" % "0.1.0",
   libraryDependencies += "org.typelevel" %% "cats" % catsVersion,
   libraryDependencies += "com.github.julien-truffaut" %%% "monocle-core"  % monocleVersion,
   libraryDependencies += "com.github.julien-truffaut" %%% "monocle-macro" % monocleVersion,
@@ -57,7 +57,7 @@ lazy val crowd = crossProject.in(file("qasrl-crowd"))
   name := "qasrl-crowd",
   version := "0.1-SNAPSHOT",
   libraryDependencies ++= Seq(
-    "com.github.julianmichael" %%% "spacro" % "0.1-SNAPSHOT",
+    "org.julianmichael" %%% "spacro" % "0.1.0",
     "com.lihaoyi" %%% "upickle" % "0.4.3")
 ).jvmSettings(commonJVMSettings).jvmSettings(
   libraryDependencies ++= Seq(

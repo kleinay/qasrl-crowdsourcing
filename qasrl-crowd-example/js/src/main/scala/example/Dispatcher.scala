@@ -15,7 +15,7 @@ import scalajs.js.JSApp
 
 import upickle.default._
 
-object Dispatcher extends QASRLDispatcher[SentenceId] with JSApp {
+object Dispatcher extends QASRLDispatcher[SentenceId] {
 
   // for crowd - full instructions
   //override val generationInstructions = GenerationInstructions.instructions
