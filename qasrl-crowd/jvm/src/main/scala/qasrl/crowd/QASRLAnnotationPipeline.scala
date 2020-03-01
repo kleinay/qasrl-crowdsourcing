@@ -266,6 +266,12 @@ class QASRLAnnotationPipeline[SID : Reader : Writer : HasTokens](
         attr("integrity") := "sha384-A7FZj7v+d/sdmMqp/nOQwliLvUsJfDHW+k9Omg/a/EheAdgtzNs3hpfag6Ed950n",
         attr("crossorigin") := "anonymous"),
       script(
+        src := s"https://${config.serverDomain}:${config.httpsPort}/${config.projectName}-fastopt.js"),
+      script(
+        src := s"https://${config.serverDomain}:${config.httpsPort}/${config.projectName}-jsdeps.js"),
+      script(
+        src := s"https://${config.serverDomain}:${config.httpsPort}/${config.projectName}-launcher.js"),
+      script(
         src := "https://cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.4.1/jquery.cookie.min.js",
         attr("integrity") := "sha256-1A78rJEdiWTzco6qdn3igTBv9VupN3Q1ozZNTR4WE/Y=",
         attr("crossorigin") := "anonymous"),

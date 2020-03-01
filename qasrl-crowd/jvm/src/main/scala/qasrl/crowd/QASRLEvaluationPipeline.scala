@@ -134,6 +134,12 @@ class QASRLEvaluationPipeline[SID : Reader : Writer : HasTokens](
         attr("crossorigin") := "anonymous"))
     val bodyLinks = List(
       script(
+        src := s"https://${config.serverDomain}:${config.httpsPort}/${config.projectName}-fastopt.js"),
+      script(
+        src := s"https://${config.serverDomain}:${config.httpsPort}/${config.projectName}-jsdeps.js"),
+      script(
+        src := s"https://${config.serverDomain}:${config.httpsPort}/${config.projectName}-launcher.js"),
+      script(
         src := "https://code.jquery.com/jquery-3.1.1.slim.min.js",
         attr("integrity") := "sha384-A7FZj7v+d/sdmMqp/nOQwliLvUsJfDHW+k9Omg/a/EheAdgtzNs3hpfag6Ed950n",
         attr("crossorigin") := "anonymous"),

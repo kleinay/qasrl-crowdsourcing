@@ -35,8 +35,6 @@ lazy val commonJVMSettings = Seq()
 lazy val commonJSSettings = Seq(
   relativeSourceMaps := true,
   scalaJSStage in Global := FastOptStage,
-  persistLauncher in Compile := true,
-  persistLauncher in Test := false,
   skip in packageJSDependencies := false)
 
 lazy val qasrl = crossProject.in(file("qasrl"))
@@ -113,10 +111,12 @@ lazy val example = crossProject.in(file("qasrl-crowd-example"))
   libraryDependencies += "com.github.tototoshi" %% "scala-csv" % "1.3.5"
 ).jsSettings(commonJSSettings)
 
-lazy val exampleJS = example.js.dependsOn(qasrlJS, crowdJS)
+lazy val exampleJS = example.js.dependsOn(qasrlJS, crowdJS).settings(
+  scalaJSUseMainModuleInitializer := true,
+  mainClass := Some("example.Dispatcher")
+)
 lazy val exampleJVM = example.jvm.dependsOn(qasrlJVM, crowdJVM).settings(
   (resources in Compile) += (fastOptJS in (exampleJS, Compile)).value.data,
-  (resources in Compile) += (packageScalaJSLauncher in (exampleJS, Compile)).value.data,
   (resources in Compile) += (packageJSDependencies in (exampleJS, Compile)).value
 )
 
@@ -128,9 +128,11 @@ lazy val eval = crossProject.in(file("qasrl-crowd-eval"))
   libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.2.3"
 ).jsSettings(commonJSSettings)
 
-lazy val evalJS = eval.js.dependsOn(qasrlJS, crowdJS)
+lazy val evalJS = eval.js.dependsOn(qasrlJS, crowdJS).settings(
+  scalaJSUseMainModuleInitializer := true,
+  mainClass := Some("eval.Dispatcher")
+)
 lazy val evalJVM = eval.jvm.dependsOn(qasrlJVM, crowdJVM).settings(
   (resources in Compile) += (fastOptJS in (evalJS, Compile)).value.data,
-  (resources in Compile) += (packageScalaJSLauncher in (evalJS, Compile)).value.data,
   (resources in Compile) += (packageJSDependencies in (evalJS, Compile)).value
 )
